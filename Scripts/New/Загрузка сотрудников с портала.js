@@ -1,5 +1,5 @@
 //-=Раздел объявления переменных=-
-excelFileUrl = 'x-local:///c:/order2.xls';
+excelFileUrl = 'x-local:///c:/pololin_sa/Docs/Заявки/Заявка шаблон/С портала/order.xls';
 logFileUrl = 'c:/log.html';
 userCode = 0;
 fullName = 1;
@@ -70,7 +70,7 @@ function findDep(depName, org) {
     if (ArrayCount(itemsDep) > 1) {
         return arr = [2];
     } else if (ArrayCount(itemsDep) == 1) {
-        return arr = [ArrayFirstElem(itemsDep.id), ArrayFirstElem(itemsDep.name)];
+        return arr = [ArrayFirstElem(itemsDep).id, ArrayFirstElem(itemsDep).name];
     } else if (ArrayCount(itemsDep) == 0) {
         try {
             newDep = OpenNewDoc('x-local://wtv/wtv_subdivision.xmd');
@@ -92,11 +92,11 @@ function findDep(depName, org) {
 
 //Поиск должности по имени в базе
 function findPos(posName, org, dep) {
-    itemsPos = XQuery("for $elem in positions where $elem/name='" + posName + "' return $elem");
+    itemsPos = XQuery("for $elem in positions where $elem/name='" + posName + "'and $elem/org_id='" + org[0] + "' and $elem/parent_object_id='" + dep[0]+"' return $elem");
     if (ArrayCount(itemsPos) > 1) {
         return arr = [2];
     } else if (ArrayCount(itemsPos) == 1) {
-        return arr = [ArrayFirstElem(itemsPos.id), ArrayFirstElem(itemsPos.name)];
+        return arr = [ArrayFirstElem(itemsPos).id, ArrayFirstElem(itemsPos).name];
     } else if (ArrayCount(itemsPos) == 0) {
         try {
             newPos = OpenNewDoc('x-local://wtv/wtv_position.xmd');

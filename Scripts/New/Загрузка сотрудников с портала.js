@@ -1,5 +1,5 @@
 //-=Раздел объявления переменных=-
-excelFileUrl = 'x-local:///c:/order.xls';
+excelFileUrl = 'x-local:///c:/order2.xls';
 logFileUrl = 'c:/log.html';
 userCode = 0;
 fullName = 1;
@@ -43,7 +43,7 @@ function initCodeOrgStructure() {
 }
 
 //Проверка присутствия сотрудника в базе
-function checkUser(code, org, fullname) { //!!!нужно ли fullname?
+function checkUser(code, org) {
     arrUsers = XQuery("for $elem in collaborators where $elem/code='" + codeOrgStruct[org] + code + "' return $elem");
     if (ArrayCount(arrUsers) > 1) {
         return 2;
@@ -52,13 +52,6 @@ function checkUser(code, org, fullname) { //!!!нужно ли fullname?
     } else if (ArrayCount(arrUsers) == 0) {
         return 0;
     }
-    //arrNames = fullname.split(' ');
-    // arrUsers = XQuery("for $elem in collaborators where $elem/code='" + codeOrgStruct[org] + code + "' and $elem/org_name='" + lineArray[i][orgName] + "' return $elem");
-    // if (ArrayCount(arrUsers) > 1) {
-
-    // } else if (ArrayCount(arrUsers) == 1) {
-    //     return 1;
-    // } else return 0;
 }
 
 //Поиск организации по имени в базе
@@ -82,14 +75,14 @@ function findDep(depName, org) {
         try {
             newDep = OpenNewDoc('x-local://wtv/wtv_subdivision.xmd');
             newDep.BindToDb(DefaultDb);
-            newDep.TopElem.name = StrTitleCase(StrLowerCase(depName));
+            newDep.TopElem.name = depName;
             newDep.TopElem.org_id = Int(org[0]);
             if (org[1] == 'ПАО НЛМК') {
                 newDep.TopElem.code = '!delete';
                 newDep.TopElem.custom_elems.ObtainChildByKey('flagDelete').value = true;
             }
             newDep.Save();
-            return arr = [newDep.DocID, StrTitleCase(StrLowerCase(depName))];
+            return arr = [newDep.DocID, depName];
         } catch (e) {
             alert('Не удалось создать новое позразделение по причине: ' + ExtractUserError(e));
             return arr = [0];
@@ -108,9 +101,9 @@ function findPos(posName, org, dep) {
         try {
             newPos = OpenNewDoc('x-local://wtv/wtv_position.xmd');
             newPos.BindToDb(DefaultDb);
-            newPos.TopElem.name = StrTitleCase(StrLowerCase(depName));
+            newPos.TopElem.name = StrTitleCase(StrLowerCase(posName));
             newPos.TopElem.org_id = Int(org[0]);
-            newPoc.TopElem.position_parent_id = Int(dep[0]); //!!!проверить свойство
+            newPos.TopElem.parent_object_id = Int(dep[0]);
             if (org[1] == 'ПАО НЛМК') {
                 newPos.TopElem.code = '!delete';
                 newPos.TopElem.custom_elems.ObtainChildByKey('flagDelete').value = true;
@@ -170,24 +163,27 @@ try {
     sourceList = OpenDoc(excelFileUrl, 'format=excel');
 } catch (e) {
     alert('Невозможно открыть файл с данными: ' + ExtractUserError(e));
+    return;
 }
 lineArray = ArrayFirstElem(sourceList.TopElem);
 for (var i = 0; i < ArrayCount(lineArray); i++) {
-    objUser = checkUser(Trim(lineArray[i][userCode]), Trim(lineArray[i][orgName]), Trim(lineArray[i][fullName]));
+    objUser = checkUser(Trim(lineArray[i][userCode]), Trim(lineArray[i][orgName]));
     if (objUser == 2) {
-        multipleUsers.push('Строка ' + i + 1 + ': табельный номер ' + String(lineArray[i][userCode]) + ', организация ' + lineArray[i][orgName]);
+        multipleUsers.push('Строка ' + Int(i + 1) + ': табельный номер ' + String(lineArray[i][userCode]) + ', организация ' + lineArray[i][orgName]);
     } else if (objUser == 0) {
         //новый юзер
         try {
             newUser = OpenNewDoc('x-local://wtv/wtv_collaborator.xmd');
             newUser.BindToDb(DefaultDb);
-            newUser.TopElem.code = codeOrgStruct[lineArray[i][orgName]] + lineArray[i][userCode];
-            newUser.TopElem.custom_elems.ObtainChildByKey("userCode").value = lineArray[i][userCode];
-            newUser.TopElem.custom_elems.ObtainChildByKey("flagUpdate").value = true;
+            newUser.TopElem.code = codeOrgStruct[lineArray[i][orgName]] + Trim(lineArray[i][userCode]);
+            newUser.TopElem.custom_elems.ObtainChildByKey("userCode").value = Trim(lineArray[i][userCode]);
+            if (lineArray[i][orgName] == 'ПАО "НЛМК"') {
+                newUser.TopElem.custom_elems.ObtainChildByKey("flagForSync").value = true;
+            }
             if (codeOrgStruct[lineArray[i][orgName]] == 'LP') {
-                newUser.TopElem.login = 'DO*' + lineArray[i][userCode];
+                newUser.TopElem.login = 'DO*' + Trim(lineArray[i][userCode]);
             } else {
-                newUser.TopElem.login = 'DO*' + codeOrgStruct[lineArray[i][orgName]] + '*' + lineArray[i][userCode];
+                newUser.TopElem.login = 'DO*' + codeOrgStruct[lineArray[i][orgName]] + '*' + Trim(lineArray[i][userCode]);
             }
             if (lineArray[i][passUser] == '-$R#-' || lineArray[i][passUser] == '') {
                 newUser.TopElem.change_password = true;
@@ -219,10 +215,10 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
                     } else {
                         switch (linkPos[0]) {
                             case 0:
-                                anyError.push('Не создана должность ' + lineArray[0][posName] + '. Сотрудник из строки ' + i + 1 + ' не обработан');
+                                anyError.push('Не создана должность ' + lineArray[i][posName] + '. Сотрудник из строки ' + Int(i + 1) + ' не обработан');
                                 break;
                             case 2:
-                                anyError.push('Не удалось однозначно определить должность ' + lineArray[i][posName] + ' в WT. Сотрудник из строки ' + i + 1 + ' не обработан.');
+                                anyError.push('Не удалось однозначно определить должность ' + lineArray[i][posName] + ' в WT. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
                                 break;
                             default:
                                 break;
@@ -232,10 +228,10 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
                 } else {
                     switch (linkDep[0]) {
                         case 0:
-                            anyError.push('Не создано подразделение ' + lineArray[0][depName] + '. Сотрудник из строки ' + i + 1 + ' не обработан');
+                            anyError.push('Не создано подразделение ' + lineArray[i][depName] + '. Сотрудник из строки ' + Int(i + 1) + ' не обработан');
                             break;
                         case 2:
-                            anyError.push('Не удалось однозначно определить подразделение ' + lineArray[i][depName] + ' в WT. Сотрудник из строки ' + i + 1 + ' не обработан.');
+                            anyError.push('Не удалось однозначно определить подразделение ' + lineArray[i][depName] + ' в WT. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
                             break;
                         default:
                             break;
@@ -245,10 +241,10 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
             } else {
                 switch (linkOrg[0]) {
                     case 0:
-                        anyError.push('Не удалось найти организацию ' + lineArray[i][orgName] + ' в WT. Сотрудник из строки ' + i + 1 + ' не обработан.');
+                        anyError.push('Не удалось найти организацию ' + lineArray[i][orgName] + ' в WT. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
                         break;
                     case 2:
-                        anyError.push('Не удалось однозначно определить организацию ' + lineArray[i][orgName] + ' в WT. Сотрудник из строки ' + i + 1 + ' не обработан.');
+                        anyError.push('Не удалось однозначно определить организацию ' + lineArray[i][orgName] + ' в WT. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
                         break;
                     default:
                         break;
@@ -263,7 +259,7 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
         processLines += 1;
     } else if (objUser == 1)
         //есть юзер
-        duplicateUser.push('Строка ' + i + 1 + ': табельный номер ' + lineArray[i][userCode] + ', организация ' + lineArray[i][orgName]);
+        duplicateUser.push('Строка ' + Int(i + 1) + ': табельный номер ' + lineArray[i][userCode] + ', организация ' + lineArray[i][orgName]);
 }
 
 writeLog(multipleUsers, duplicateUser, anyError);

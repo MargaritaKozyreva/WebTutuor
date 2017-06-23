@@ -1,3 +1,4 @@
+//-=Раздел описания глобальных переменных=-
 excelFileUrl = 'x-local:///c:/order.xls';
 logFileUrl = 'c:/log.html';
 orgFlag = 0;
@@ -16,7 +17,9 @@ logActivateTest = '';
 activateCodeTest = '';
 //**************************************
 
+//-=Раздел описания функций=-
 
+//поиск организации в WT
 function findOrg(orgName) {
     if (StrLowerCase(orgName) == 'виз') {
         itemsOrg = XQuery("for $elem in orgs where $elem/name='ООО \"ВИЗ-СТАЛЬ\"' return $elem");
@@ -30,6 +33,7 @@ function findOrg(orgName) {
         return arr = [0];
 }
 
+//Создание новго подразделения
 function createDep(deptName, org) {
     try {
         newDep = OpenNewDoc('x-local://wtv/wtv_subdivision.xmd');
@@ -46,6 +50,7 @@ function createDep(deptName, org) {
     return arr = [newDep.DocID, deptName];
 }
 
+//Создание новой должности
 function createPos(posName, org, dep) {
     try {
         newPos = OpenNewDoc('x-local://wtv/wtv_position.xmd');
@@ -63,6 +68,7 @@ function createPos(posName, org, dep) {
     return arr = [newPos.DocID, posName];
 }
 
+//Создание нового сотрудника
 function createUser(infoUser) {
     if (Trim(infoUser[fullName] != '')) {
         orgCode = codeOrgStruct[StrLowerCase(infoUser[orgFlag])];
@@ -71,10 +77,10 @@ function createUser(infoUser) {
             newUser.BindToDb(DefaultDb);
             newUser.TopElem.code = orgCode + infoUser[userCode];
             newUser.TopElem.custom_elems.ObtainChildByKey('userCode').value = infoUser[userCode];
-            newUser.TopElem.custom_elems.ObtainChildByKey('flagForSync').value = true;
             if (orgCode == 'EK') {
                 newUser.TopElem.login = 'DO*' + orgCode + '*' + infoUser[userCode];
             } else {
+                newUser.TopElem.custom_elems.ObtainChildByKey('flagForSync').value = true;
                 newUser.TopElem.login = 'DO*' + infoUser[userCode];
             }
             newUser.TopElem.change_password = true;
@@ -122,6 +128,7 @@ function createUser(infoUser) {
     }
 }
 
+//Назначение тестов
 function activateTest(userInfo, XQUser) {
     resutlXQGroups = XQuery("for $elem in groups where $elem/code='" + Trim(userInfo[groupName]) + "' return $elem");
     if (ArrayOptFirstElem(resutlXQGroups) != undefined) {
@@ -162,10 +169,12 @@ function activateTest(userInfo, XQUser) {
     return 1;
 }
 
+//Генерация сообщения для лога
 function createMessage(str) {
     logLine += str + '</br>';
 }
 
+//Запись лог-сообщения в файл лога
 function writeLog() {
     try {
         PutFileData(logFileUrl, logLine);
@@ -175,6 +184,7 @@ function writeLog() {
 }
 //***********************************************
 
+//-=Тело скрипта=-
 try {
     sourceList = OpenDoc(excelFileUrl, 'format=excel');
 } catch (e) {
@@ -234,6 +244,8 @@ for (var i = 0; i < ArrayCount(source); i++) {
         }
     }
     alert('Обработка строки ' + i + ' завершена');
-    createMessage(tmpLine+';');
+    createMessage(tmpLine + ';');
 }
 writeLog();
+
+//****************************

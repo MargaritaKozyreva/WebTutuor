@@ -1,5 +1,5 @@
 //-=Раздел объявления переменных=-
-excelFileUrl = 'x-local:///c:/list.xls';//поменять путь
+excelFileUrl = 'x-local:///c:/list.xls';
 logFileUrl = 'c:/log.html';
 userCode = 0;
 fullName = 1;
@@ -12,16 +12,16 @@ orgId = 0;
 logMsg = [];
 //--------------------------------------------------
 
-//-=Раздел объявления функций=-
 
+//-=Раздел объявления функций=-
 function searchOrg() {
-    orgs = XQuery('for $elem in orgs where $elem/name="ПАО \"НЛМК\"" and $elem/disp_name="ПАО НЛМК" return $elem');
-    if (ArrayCount(orgs) > 1) {
+    itemsOrg = XQuery("for $elem in orgs where $elem/name='ПАО \"НЛМК\"' and $elem/disp_name='ПАО НЛМК' return $elem");
+    if (ArrayCount(itemsOrg) > 1) {
         logMsg.push('Не удалось однозначно опеределить организацию. Обработка прервана');
         return [2];
-    } else if (ArrayCount(orgs) == 1) {
-        orgId = Int(ArrayFirstElem(orgs).id);
-        orgName = ArrayFirstElem(orgs).disp_name
+    } else if (ArrayCount(itemsOrg) == 1) {
+        orgId = Int(ArrayFirstElem(itemsOrg).id);
+        orgName = ArrayFirstElem(itemsOrg).disp_name
         return arr = [1];
     } else {
         logMsg.push('Не удалось найти организацию. Обработка прервана');
@@ -29,10 +29,30 @@ function searchOrg() {
     }
 }
 
-function updateData(arr, dep, pos) {
-    statusDep = dataDep(arr, dep);
+function processUpdate(srcArr, depName, posName, user) {
+    procUpdate = updateData(srcArr, depName, posName);
+    if (procUpdate.length == 4) {
+        try {
+            doc = OpenDoc(UrlFromDocID(user.id));
+            doc.TopElem.org_id = Int(orgId);
+            doc.TopElem.org_name = orgName;
+            doc.TopElem.position_parent_id = Int(procUpdate[0]);
+            doc.TopElem.position_parent_name = procUpdate[1];
+            doc.TopElem.position_id = Int(procUpdate[2]);
+            doc.TopElem.position_name = procUpdate[3];
+            doc.Save();
+            return 1;
+        } catch (e) {
+            logMsg.push('Не удалось обновить данные сотрудника с кодом LP' + Trim(srcArr[i][userCode]) + ' по причине: ' + ExtractUserError(e));
+            return 0;
+        }
+    }
+}
+
+function updateData(arrU, dep, pos) {
+    statusDep = dataDep(arrU, dep);
     if (statusDep.length == 2) {
-        statusPos = dataPos(arr, statusDep, pos);
+        statusPos = dataPos(arrU, statusDep, pos);
         if (statusPos.length != 2) {
             return [0];
         }
@@ -43,7 +63,10 @@ function updateData(arr, dep, pos) {
 }
 
 function dataDep(arrData, dept) {
-    depts = XQuery("for $elem in subdivisions where $elem/name='" + dept + "' and $elem/org_id='" + orgId + "' return $elem");
+    queryStr="for $elem in subdivisions where $elem/name='" + dept + "' and $elem/org_id=" + orgId + " return $elem";
+    logMsg.push(queryStr);
+    //alert(queryStr);
+    depts = XQuery(queryStr);
     if (ArrayCount(depts) == 0) {
         newDep = createDep(dept);
         if (newDep.length == 2) {
@@ -51,7 +74,7 @@ function dataDep(arrData, dept) {
         } else {
             return [0];
         }
-    } else if (ArrayCount(depts) > 2) {
+    } else if (ArrayCount(depts) > 1) {
         logMsg.push('В организации найдено более 1 подразделения с названием ' + dept);
         return [2];
     } else {
@@ -94,7 +117,7 @@ function createPos(deptId, namePos) {
     try {
         newPos = OpenNewDoc('x-local://wtv/wtv_position.xmd');
         newPos.BindToDb(DefaultDb);
-        newPos.TopElem.name = nameDep;
+        newPos.TopElem.name = namePos;
         newPos.TopElem.org_id = Int(orgId);
         newPos.TopElem.parent_object_id = Int(deptId);
         newPos.Save();
@@ -105,25 +128,19 @@ function createPos(deptId, namePos) {
     }
 }
 
-function processUpdate(srcArr, depName, posName, user) {
-    procUpdate = updateData(srcArr, depName, posName);
-    if (procUpdate.length == 4) {
-        try {
-            doc = OpenDoc(UrlFromDocID(user.id));
-            doc.TopElem.org_id = Int(orgId);
-            doc.TopElem.org_name = orgName;
-            doc.TopElem.position_parent_id = Int(procUpdate[0]);
-            doc.TopElem.position_parent_name = procUpdate[1];
-            doc.TopElem.position_id = Int(procUpdate[2]);
-            doc.TopElem.position_name = procUpdate[3];
-            doc.Save();
-            return 1;
-        } catch (e) {
-            logMsg.push('Не удалось обновить данные сотрудника с кодом LP' + Trim(srcArr[i][userCode]) + ' по причине: ' + ExtractUserError(e));
-            return 0;
-        }
+function writeLog() {
+    logLine = '';
+    for (var i = 0; i < ArrayCount(logMsg); i++) {
+        logLine += logMsg + '</br>';
+    }
+    try {
+        PutFileData(logFileUrl, logLine);
+    } catch (e) {
+        alert('Невозможно создать лог-файл: ' + ExtractUserError(e));
     }
 }
+//------------------------------------------------
+
 
 //-=Тело скрипта=-
 try {
@@ -134,14 +151,15 @@ try {
 }
 srcArr = ArrayFirstElem(source.TopElem);
 statusOrg = searchOrg();
-if (statusOrg.length == 2) {
+if (statusOrg[0] == 1) {
     for (var i = 0; i < ArrayCount(srcArr); i++) {
         if (srcArr[i][userCode] != '') {
             if (StrContains(StrLowerCase(srcArr[i][userCode]), 'итого по цеху')) {
                 continue;
             } else if (srcArr[i][fullName] == '' && srcArr[i][position] == '') {
                 depName = Trim(StrTitleCase(srcArr[i][userCode]));
-                alert(depName);
+                //alert(depName);
+                continue;
             } else {
                 //значит сотрудник
                 users = XQuery("for $elem in collaborators where $elem/code='LP" + Trim(srcArr[i][userCode]) + "' return $elem");
@@ -152,6 +170,7 @@ if (statusOrg.length == 2) {
                         logMsg.push('Множественное совпадение сотрудников по коду LP' + ArrayFirstElem(users).code);
                     };
                     for (user in users) {
+                        alert('depName=' + depName);
                         statusUpdate = processUpdate(srcArr[i], depName, Trim(StrTitleCase(srcArr[i][position])), user);
                         if (!statusUpdate) {
                             continue;
@@ -162,6 +181,7 @@ if (statusOrg.length == 2) {
         }
     }
 } else {
-    alert('Обработка прервана из-за ошибки. Смотри лог-файл.');
-    return;
+    alert('Обработка прервана из-за ошибки. Смотри лог-файл.')
 }
+writeLog();
+//----------------------------------------------

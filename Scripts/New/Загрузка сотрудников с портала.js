@@ -80,7 +80,7 @@ function findOrg(orgName) {
 
 //Поиск поздазделеия по имени в базе
 function findDep(depName, org) {
-    itemsDep = XQuery("for $elem in subdivisions where $elem/name='" + depName + "' and $elem/org_id='" + org[0] + "' return $elem");
+    itemsDep = XQuery("for $elem in subdivisions where $elem/name='" + depName + "' and $elem/org_id=" + org[0] + " return $elem");
     if (ArrayCount(itemsDep) > 1) {
         return arr = [2];
     } else if (ArrayCount(itemsDep) == 1) {
@@ -106,7 +106,7 @@ function findDep(depName, org) {
 
 //Поиск должности по имени в базе
 function findPos(posName, org, dep) {
-    itemsPos = XQuery("for $elem in positions where $elem/name='" + posName + "'and $elem/org_id='" + org[0] + "' and $elem/parent_object_id='" + dep[0] + "' return $elem");
+    itemsPos = XQuery("for $elem in positions where $elem/name='" + posName + "'and $elem/org_id=" + org[0] + " and $elem/parent_object_id=" + dep[0] + " return $elem");
     if (ArrayCount(itemsPos) > 1) {
         return arr = [2];
     } else if (ArrayCount(itemsPos) == 1) {

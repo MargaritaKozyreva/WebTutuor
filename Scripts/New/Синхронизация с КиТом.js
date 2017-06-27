@@ -30,7 +30,7 @@ function searchOrg() {
 }
 
 function processUpdate(srcArr, depName, posName, user) {
-    procUpdate = updateData(srcArr, depName, posName);
+    procUpdate = updateData(depName, posName);
     if (procUpdate.length == 4) {
         try {
             doc = OpenDoc(UrlFromDocID(user.id));
@@ -43,16 +43,19 @@ function processUpdate(srcArr, depName, posName, user) {
             doc.Save();
             return 1;
         } catch (e) {
-            logMsg.push('Не удалось обновить данные сотрудника с кодом LP' + Trim(srcArr[i][userCode]) + ' по причине: ' + ExtractUserError(e));
+            logMsg.push('Не удалось обновить данные сотрудника с кодом LP' + Trim(srcArr[userCode]) + ' по причине: ' + ExtractUserError(e));
             return 0;
         }
+    } else {
+        logMsg.push('Не удалось корректно свзять структуру подразделений для сотрудника ' + srcArr[fullName]);
+        return 0;
     }
 }
 
-function updateData(arrU, dep, pos) {
-    statusDep = dataDep(arrU, dep);
+function updateData(dep, pos) {
+    statusDep = dataDep(dep);
     if (statusDep.length == 2) {
-        statusPos = dataPos(arrU, statusDep, pos);
+        statusPos = dataPos(statusDep, pos);
         if (statusPos.length != 2) {
             return [0];
         }
@@ -62,11 +65,8 @@ function updateData(arrU, dep, pos) {
     return arr = [statusDep[0], statusDep[1], statusPos[0], statusPos[1]];
 }
 
-function dataDep(arrData, dept) {
-    queryStr="for $elem in subdivisions where $elem/name='" + dept + "' and $elem/org_id=" + orgId + " return $elem";
-    logMsg.push(queryStr);
-    //alert(queryStr);
-    depts = XQuery(queryStr);
+function dataDep(dept) {
+    depts = XQuery("for $elem in subdivisions where $elem/name='" + dept + "' and $elem/org_id=" + orgId + " return $elem");
     if (ArrayCount(depts) == 0) {
         newDep = createDep(dept);
         if (newDep.length == 2) {
@@ -96,8 +96,8 @@ function createDep(nameDep) {
     }
 }
 
-function dataPos(arrData, dept, pos) {
-    poss = XQuery("for $elem in positions where $elem/name='" + pos + "' and $elem/org_id='" + orgId + "' and $elem/parent_object_id='" + dept[0] + "' return $elem");
+function dataPos(dept, pos) {
+    poss = XQuery("for $elem in positions where $elem/name='" + pos + "' and $elem/org_id=" + orgId + " and $elem/parent_object_id=" + dept[0] + " return $elem");
     if (ArrayCount(poss) == 0) {
         newPos = createPos(dept[0], pos);
         if (newPos.length == 2) {
@@ -105,7 +105,7 @@ function dataPos(arrData, dept, pos) {
         } else {
             return [0];
         }
-    } else if (ArrayCount(poss) > 2) {
+    } else if (ArrayCount(poss) > 1) {
         logMsg.push('В подразделении ' + dept[1] + ' организации найдено более 1 должности с названием ' + pos);
         return [2];
     } else {
@@ -131,7 +131,7 @@ function createPos(deptId, namePos) {
 function writeLog() {
     logLine = '';
     for (var i = 0; i < ArrayCount(logMsg); i++) {
-        logLine += logMsg + '</br>';
+        logLine += logMsg[i] + '</br>';
     }
     try {
         PutFileData(logFileUrl, logLine);
@@ -158,10 +158,8 @@ if (statusOrg[0] == 1) {
                 continue;
             } else if (srcArr[i][fullName] == '' && srcArr[i][position] == '') {
                 depName = Trim(StrTitleCase(srcArr[i][userCode]));
-                //alert(depName);
                 continue;
             } else {
-                //значит сотрудник
                 users = XQuery("for $elem in collaborators where $elem/code='LP" + Trim(srcArr[i][userCode]) + "' return $elem");
                 if (ArrayCount(users) == 0) {
                     continue;
@@ -170,7 +168,6 @@ if (statusOrg[0] == 1) {
                         logMsg.push('Множественное совпадение сотрудников по коду LP' + ArrayFirstElem(users).code);
                     };
                     for (user in users) {
-                        alert('depName=' + depName);
                         statusUpdate = processUpdate(srcArr[i], depName, Trim(StrTitleCase(srcArr[i][position])), user);
                         if (!statusUpdate) {
                             continue;
@@ -183,5 +180,10 @@ if (statusOrg[0] == 1) {
 } else {
     alert('Обработка прервана из-за ошибки. Смотри лог-файл.')
 }
-writeLog();
+if (ArrayCount(logMsg) > 0) {
+    writeLog();
+    alert('Обработка завершена. См. лог-файл')
+}
+
+
 //----------------------------------------------

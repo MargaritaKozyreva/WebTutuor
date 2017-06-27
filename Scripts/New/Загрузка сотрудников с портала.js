@@ -22,7 +22,7 @@ anyError = [];
 function initCodeOrgStructure() {
     codeOrgStruct['ПАО "НЛМК"'] = 'LP';
     codeOrgStruct['ООО "НЛМК-ИТ"'] = 'LP';
-    codeOrgStruct['ОАО "СТОЙЛЕНСКИЙ ГОК"'] = 'SG';
+    codeOrgStruct['ОАО "СТОЙЛЕНСКИЙ  ГОК"'] = 'SG';
     codeOrgStruct['ООО "ВИЗ-СТАЛЬ"'] = 'EK';
     codeOrgStruct['ОАО "АЛТАЙ-КОКС"'] = 'AK';
     codeOrgStruct['ООО "НЛМК-Сорт"'] = 'EK';
@@ -43,13 +43,27 @@ function initCodeOrgStructure() {
 }
 
 //Проверка присутствия сотрудника в базе
-function checkUser(code, org) {
-    arrUsers = XQuery("for $elem in collaborators where $elem/code='" + codeOrgStruct[org] + code + "' return $elem");
-    if (ArrayCount(arrUsers) > 1) {
-        return 2;
-    } else if (ArrayCount(arrUsers) == 1) {
-        return 1;
-    } else if (ArrayCount(arrUsers) == 0) {
+//function checkUser(code, org) {
+function checkUser(arr) {
+    arrUsers = XQuery("for $elem in collaborators where $elem/code='" + codeOrgStruct[arr[orgName]] + arr[userCode] + "' return $elem");
+    arrCount = ArrayCount(arrUsers);
+    if (arrCount > 0) {
+        for (user in arrUsers) {
+            try {
+                doc = OpenDoc(UrlFromDocID(user.id));
+                doc.TopElem.password = arr[passUser];
+                doc.TopElem.email = StrLowerCase(arr[emailUser]);
+                doc.Save();
+            } catch (e) {
+                anyError.push('Не удалось обновить информацию о сотруднике с кодом ' + codeOrgStruct[arr[orgName]] + arr[userCode] + ' по причине: ' + ExtractUserError(e));
+            }
+        }
+        if (arrCount == 1) {
+            return 1;
+        } else if (arrCount > 1) {
+            return 2;
+        }
+    } else if (arrCount == 0) {
         return 0;
     }
 }
@@ -92,7 +106,7 @@ function findDep(depName, org) {
 
 //Поиск должности по имени в базе
 function findPos(posName, org, dep) {
-    itemsPos = XQuery("for $elem in positions where $elem/name='" + posName + "'and $elem/org_id='" + org[0] + "' and $elem/parent_object_id='" + dep[0]+"' return $elem");
+    itemsPos = XQuery("for $elem in positions where $elem/name='" + posName + "'and $elem/org_id='" + org[0] + "' and $elem/parent_object_id='" + dep[0] + "' return $elem");
     if (ArrayCount(itemsPos) > 1) {
         return arr = [2];
     } else if (ArrayCount(itemsPos) == 1) {
@@ -167,7 +181,7 @@ try {
 }
 lineArray = ArrayFirstElem(sourceList.TopElem);
 for (var i = 0; i < ArrayCount(lineArray); i++) {
-    objUser = checkUser(Trim(lineArray[i][userCode]), Trim(lineArray[i][orgName]));
+    objUser = checkUser(lineArray[i]);
     if (objUser == 2) {
         multipleUsers.push('Строка ' + Int(i + 1) + ': табельный номер ' + String(lineArray[i][userCode]) + ', организация ' + lineArray[i][orgName]);
     } else if (objUser == 0) {
@@ -191,7 +205,7 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
             } else {
                 newUser.TopElem.password = lineArray[i][passUser];
             }
-            newUser.TopElem.email = lineArray[i][emailUser];
+            newUser.TopElem.email = StrLowerCase(Trim(lineArray[i][emailUser]));
             try {
                 newUser.TopElem.lastname = String(lineArray[i][fullName]).split(' ')[0];
                 newUser.TopElem.firstname = String(lineArray[i][fullName]).split(' ')[1];
@@ -260,6 +274,7 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
     } else if (objUser == 1)
         //есть юзер
         duplicateUser.push('Строка ' + Int(i + 1) + ': табельный номер ' + lineArray[i][userCode] + ', организация ' + lineArray[i][orgName]);
+
 }
 
 writeLog(multipleUsers, duplicateUser, anyError);

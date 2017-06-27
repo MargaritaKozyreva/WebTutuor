@@ -1,11 +1,11 @@
 //-=Раздел объявления переменных=-
-excelFileUrl = 'x-local:///c:/list.xls';
+excelFileUrl = 'x-local:///c:/list3.xls';
 logFileUrl = 'c:/log.html';
 userCode = 0;
 fullName = 1;
 dateBir = 2;
 dateReceipt = 3;
-position = 4;
+position = 8;
 //depName = '';
 orgName = '';
 orgId = 0;
@@ -38,8 +38,6 @@ function processUpdate(srcArr, depName, posName, user) {
             doc = OpenDoc(UrlFromDocID(user.id));
             doc.TopElem.org_id = Int(orgId);
             doc.TopElem.org_name = orgName;
-            depDel.push(doc.TopElem.position_parent_id);
-            posDel.push(doc.TopElem.position_id);
             doc.TopElem.position_parent_id = Int(procUpdate[0]);
             doc.TopElem.position_parent_name = procUpdate[1];
             doc.TopElem.position_id = Int(procUpdate[2]);
@@ -169,7 +167,7 @@ if (statusOrg[0] == 1) {
                     continue;
                 } else if (ArrayCount(users) > 0) {
                     if (ArrayCount(users) > 1) {
-                        logMsg.push('Множественное совпадение сотрудников по коду LP' + ArrayFirstElem(users).code);
+                        logMsg.push('Множественное совпадение сотрудников по коду ' + ArrayFirstElem(users).code);
                     };
                     for (user in users) {
                         statusUpdate = processUpdate(srcArr[i], depName, Trim(StrTitleCase(srcArr[i][position])), user);
@@ -185,30 +183,30 @@ if (statusOrg[0] == 1) {
     alert('Обработка прервана из-за ошибки. Смотри лог-файл.')
 }
 
-for (var i = 0; i < ArrayCount(posDel); i++) {
-    poss = XQuery('for $elem in position where $elem/id=' + posDel[i] + ' return $elem');
-    if (ArrayCount(poss) > 0) {
-        for (pos in poss) {
-            doc = OpenDoc(UrlFromDocID(ArrayFirstElem(poss).id));
-            doc.TopElem.basic_collaborator_id.Clear();
-            doc.Save();
-            DeleteDoc(UrlFromDocID(ArrayFirstElem(poss).id));
-        }
-    }
-}
+// for (i = 0; i < ArrayCount(posDel); i++) {
+//     poss = XQuery('for $elem in positions where $elem/id=' + posDel[i] + ' return $elem');
+//     if (ArrayCount(poss) > 0) {
+//         for (pos in poss) {
+//             doc = OpenDoc(UrlFromDocID(ArrayFirstElem(poss).id));
+//             doc.TopElem.basic_collaborator_id.Clear();
+//             doc.Save();
+//             DeleteDoc(UrlFromDocID(ArrayFirstElem(poss).id));
+//         }
+//     }
+// }
 
-for (var i = 0; i < ArrayCount(depDel); i++) {
-    deps = XQuery('for $elem in subdivisions where id=' + depDel[i] + ' return $elem');
-    if (ArrayCount(deps) > 0) {
-        for (dep in deps) {
-            doc = OpenDoc(UrlFromDocID(ArrayFirstElem(deps).id));
-            doc.TopElem.func_managers.Clear();
-            doc.Save();
-            DeleteDoc(UrlFromDocID(ArrayFirstElem(deps).id));
-        }
+// for (i = 0; i < ArrayCount(depDel); i++) {
+//     deps = XQuery('for $elem in subdivisions where $elem/id=' + depDel[i] + ' return $elem');
+//     if (ArrayCount(deps) > 0) {
+//         for (dep in deps) {
+//             doc = OpenDoc(UrlFromDocID(ArrayFirstElem(deps).id));
+//             doc.TopElem.func_managers.Clear();
+//             doc.Save();
+//             DeleteDoc(UrlFromDocID(ArrayFirstElem(deps).id));
+//         }
 
-    }
-}
+//     }
+// }
 
 if (ArrayCount(logMsg) > 0) {
     writeLog();

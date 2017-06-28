@@ -1,12 +1,11 @@
 //-=Раздел объявления переменных=-
-excelFileUrl = 'x-local:///c:/list.xls';
+//excelFileUrl = 'x-local:///c:/list.xls';
 logFileUrl = 'c:/log.html';
 userCode = 0;
 fullName = 1;
 dateBir = 2;
 dateReceipt = 3;
 position = 8;
-//depName = '';
 orgName = '';
 orgId = 0;
 logMsg = [];
@@ -145,32 +144,31 @@ function writeLog() {
 
 
 //-=Тело скрипта=-
+alert('Синхронизация стартовала!');
+linkSourceFile = XQuery("for $elem in resources where $elem/code='listKIT' return $elem");
+itemFile = ArrayFirstElem(linkSourceFile);
+docResource = OpenDoc(UrlFromDocID(itemFile.id));
+excelFileUrl = docResource.TopElem.file_url;
+
+// try {
+//     source = OpenDoc(excelFileUrl, 'format=excel');
+// } catch (e) {
+//     alert('Невозможно открыть исходник по причине: ' + ExtractUserError(e));
+//     return;
+// }
+
 try {
     source = OpenDoc(excelFileUrl, 'format=excel');
 } catch (e) {
-    alert('Невозможно открыть исходник по причине: ' + ExtractUserError(e));
-    return;
+    alert("Невозможно открыть документ " + excelFileUrl + " из БД по причине: " + ExtractUserError(e));
 }
-
-// linkSourceFile = XQuery("for $elem in resources where $elem/code='sync' return $elem");
-// itemFile = ArrayFirstElem(linkSourceFile);
-// docResource = OpenDoc(UrlFromDocID(itemFile.id));
-// //excelFileUrl = docResource.TopElem.file_url;
-// alert(excelFileUrl);
-// try {
-//     path = 'x-local:///wt_data/attachments/6436299903675348474.xls';
-//     source = OpenDoc(path, 'format=excel');
-//     //sourceList = OpenDoc('x-local://C:/6434351178204278038.xls', 'format=excel');
-// } catch (e) {
-//     alert("Невозможно открыть документ " + excelFileUrl + " из БД по причине: " + ExtractUserError(e));
-// }
 
 srcArr = ArrayFirstElem(source.TopElem);
 statusOrg = searchOrg();
 if (statusOrg[0] == 1) {
     for (var i = 0; i < ArrayCount(srcArr); i++) {
         if (srcArr[i][userCode] != '') {
-            if (StrContains(StrLowerCase(srcArr[i][userCode]), 'итого по цеху')) {
+            if (StrContains(StrLowerCase(srcArr[i][userCode]), 'итого')) {
                 continue;
             } else if (srcArr[i][fullName] == '' && srcArr[i][position] == '') {
                 depName = Trim(StrTitleCase(srcArr[i][userCode]));
@@ -200,6 +198,6 @@ if (ArrayCount(logMsg) > 0) {
     writeLog();
     alert('Обработка завершена. См. лог-файл')
 }
-
+alert('Синхронизация закончена!');
 
 //----------------------------------------------

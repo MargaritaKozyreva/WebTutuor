@@ -1,6 +1,6 @@
 //-=Раздел описания глобальных переменных=-
-excelFileUrl = 'x-local:///c:/order.xls';
-logFileUrl = 'c:/log.html';
+//excelFileUrl = 'x-local:///c:/order.xls';
+//logFileUrl = 'c:/log.html';
 orgFlag = 0;
 userCode = 1;
 fullName = 2;
@@ -192,7 +192,7 @@ function createMessage(str) {
 //Запись лог-сообщения в файл лога
 function writeLog() {
     try {
-        PutFileData(logFileUrl, logLine);
+        PutFileData(Param.urlLog, logLine);
     } catch (e) {
         alert('Невозможно создать лог-файл: ' + ExtractUserError(e));
     }
@@ -201,7 +201,8 @@ function writeLog() {
 
 //-=Тело скрипта=-
 try {
-    sourceList = OpenDoc(excelFileUrl, 'format=excel');
+    //url = 'x-local:///' + StrReplace(Param.urlSource, '\\', "/");
+    sourceList = OpenDoc('x-local:///' + StrReplace(Param.urlSource, '\\', "/"), 'format=excel');
 } catch (e) {
     alert('Ошибка при открытии файла ' + ExtractUserError(e));
     return;

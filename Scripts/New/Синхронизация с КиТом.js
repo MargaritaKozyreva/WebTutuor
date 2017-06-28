@@ -1,5 +1,5 @@
 //-=Раздел объявления переменных=-
-excelFileUrl = 'x-local:///c:/list3.xls';
+excelFileUrl = 'x-local:///c:/list.xls';
 logFileUrl = 'c:/log.html';
 userCode = 0;
 fullName = 1;
@@ -151,6 +151,20 @@ try {
     alert('Невозможно открыть исходник по причине: ' + ExtractUserError(e));
     return;
 }
+
+// linkSourceFile = XQuery("for $elem in resources where $elem/code='sync' return $elem");
+// itemFile = ArrayFirstElem(linkSourceFile);
+// docResource = OpenDoc(UrlFromDocID(itemFile.id));
+// //excelFileUrl = docResource.TopElem.file_url;
+// alert(excelFileUrl);
+// try {
+//     path = 'x-local:///wt_data/attachments/6436299903675348474.xls';
+//     source = OpenDoc(path, 'format=excel');
+//     //sourceList = OpenDoc('x-local://C:/6434351178204278038.xls', 'format=excel');
+// } catch (e) {
+//     alert("Невозможно открыть документ " + excelFileUrl + " из БД по причине: " + ExtractUserError(e));
+// }
+
 srcArr = ArrayFirstElem(source.TopElem);
 statusOrg = searchOrg();
 if (statusOrg[0] == 1) {
@@ -182,32 +196,6 @@ if (statusOrg[0] == 1) {
 } else {
     alert('Обработка прервана из-за ошибки. Смотри лог-файл.')
 }
-
-// for (i = 0; i < ArrayCount(posDel); i++) {
-//     poss = XQuery('for $elem in positions where $elem/id=' + posDel[i] + ' return $elem');
-//     if (ArrayCount(poss) > 0) {
-//         for (pos in poss) {
-//             doc = OpenDoc(UrlFromDocID(ArrayFirstElem(poss).id));
-//             doc.TopElem.basic_collaborator_id.Clear();
-//             doc.Save();
-//             DeleteDoc(UrlFromDocID(ArrayFirstElem(poss).id));
-//         }
-//     }
-// }
-
-// for (i = 0; i < ArrayCount(depDel); i++) {
-//     deps = XQuery('for $elem in subdivisions where $elem/id=' + depDel[i] + ' return $elem');
-//     if (ArrayCount(deps) > 0) {
-//         for (dep in deps) {
-//             doc = OpenDoc(UrlFromDocID(ArrayFirstElem(deps).id));
-//             doc.TopElem.func_managers.Clear();
-//             doc.Save();
-//             DeleteDoc(UrlFromDocID(ArrayFirstElem(deps).id));
-//         }
-
-//     }
-// }
-
 if (ArrayCount(logMsg) > 0) {
     writeLog();
     alert('Обработка завершена. См. лог-файл')

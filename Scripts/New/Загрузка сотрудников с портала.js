@@ -51,7 +51,12 @@ function checkUser(arr) {
         for (user in arrUsers) {
             try {
                 doc = OpenDoc(UrlFromDocID(user.id));
-                doc.TopElem.password = arr[passUser];
+                if (Trim(arr[passUser]) == '' || Trim(arr[passUser]) == '-$R#-') {
+                    doc.TopElem.password = '';
+                    doc.TopElem.change_password = true;
+                } else {
+                    doc.TopElem.password = Trim(arr[passUser]);
+                }
                 doc.TopElem.email = StrLowerCase(arr[emailUser]);
                 doc.Save();
             } catch (e) {

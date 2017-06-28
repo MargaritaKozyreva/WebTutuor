@@ -7,3 +7,5 @@ for (elem in learnToDel) {
 		DeleteDoc(UrlFromDocID(elem.id));
 	} catch (err) {}
 }
+
+for $elem in collaborators where doc-contains($elem/id, 'wt_data', '[flagForSync=true]','collaborators') return $elem

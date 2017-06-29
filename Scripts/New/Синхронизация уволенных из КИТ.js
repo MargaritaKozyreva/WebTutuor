@@ -140,15 +140,15 @@ function writeLog() {
     try {
         PutFileData(logFileUrl, logLine);
     } catch (e) {
-        alert('!Синхронизация с КиТ. Невозможно создать лог-файл: ' + ExtractUserError(e));
+        alert('Невозможно создать лог-файл: ' + ExtractUserError(e));
     }
 }
 //------------------------------------------------
 
 
 //-=Тело скрипта=-
-alert('!Синхронизация с КиТ. Обработка стартовала.');
-linkSourceFile = XQuery("for $elem in resources where $elem/code='listKiT' return $elem");
+alert('Синхронизация стартовала!');
+linkSourceFile = XQuery("for $elem in resources where $elem/code='listKIT_dismiss' return $elem");
 itemFile = ArrayFirstElem(linkSourceFile);
 docResource = OpenDoc(UrlFromDocID(itemFile.id));
 excelFileUrl = docResource.TopElem.file_url;
@@ -169,7 +169,7 @@ if (statusOrg[0] == 1) {
                 depName = Trim(StrTitleCase(srcArr[i][userCode]));
                 continue;
             } else {
-                users = XQuery("for $elem in collaborators where $elem/code='LP" + Trim(srcArr[i][userCode]) + "' return $elem");
+                users = XQuery("for $elem in collaborators where $elem/code='LP" + Trim(srcArr[i][userCode]) + "'and $elem/is_dismiss=1 return $elem");
                 if (ArrayCount(users) == 0) {
                     continue;
                 } else if (ArrayCount(users) > 0) {
@@ -178,23 +178,21 @@ if (statusOrg[0] == 1) {
                     };
                     for (user in users) {
                         statusUpdate = processUpdate(srcArr[i], depName, Trim(StrTitleCase(srcArr[i][position])), user);
-                        // if (!statusUpdate) {
-                        //     continue;
-                        // }
+                        if (!statusUpdate) {
+                            continue;
+                        }
                     }
                 }
             }
         }
     }
 } else {
-    alert('!Синхронизация с КиТ. Обработка прервана из-за ошибки: не найдено организация.')
+    alert('Обработка прервана из-за ошибки. Смотри лог-файл.')
 }
-
 if (ArrayCount(logMsg) > 0) {
     writeLog();
-    alert('!Синхронизация с КиТ. Обработка завершена. См. лог-файл')
-} else {
-    alert('!Синхронизация с КиТ. Обработка замершена.');
+    alert('Обработка завершена. См. лог-файл')
 }
+alert('Синхронизация закончена!');
 
 //----------------------------------------------

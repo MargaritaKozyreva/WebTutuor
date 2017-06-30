@@ -170,6 +170,7 @@ if (statusOrg[0] == 1) {
                 continue;
             } else {
                 users = XQuery("for $elem in collaborators where $elem/code='LP" + Trim(srcArr[i][userCode]) + "'and $elem/is_dismiss=1 return $elem");
+                //users = XQuery("for $elem in collaborators where $elem/code='LP" + Trim(srcArr[i][userCode]) + "' return $elem");
                 if (ArrayCount(users) == 0) {
                     continue;
                 } else if (ArrayCount(users) > 0) {
@@ -178,9 +179,9 @@ if (statusOrg[0] == 1) {
                     };
                     for (user in users) {
                         statusUpdate = processUpdate(srcArr[i], depName, Trim(StrTitleCase(srcArr[i][position])), user);
-                        if (!statusUpdate) {
-                            continue;
-                        }
+                        // if (!statusUpdate) {
+                        //     continue;
+                        // }
                     }
                 }
             }

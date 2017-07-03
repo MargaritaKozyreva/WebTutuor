@@ -1,6 +1,4 @@
 //-=Раздел описания глобальных переменных=-
-//excelFileUrl = 'x-local:///c:/order.xls';
-//logFileUrl = 'c:/log.html';
 orgFlag = 0;
 userCode = 1;
 fullName = 2;
@@ -37,41 +35,57 @@ function findOrg(orgName) {
 
 //Создание новго подразделения
 function createDep(deptName, org) {
-    try {
-        newDep = OpenNewDoc('x-local://wtv/wtv_subdivision.xmd');
-        newDep.BindToDb(DefaultDb);
-        newDep.TopElem.code = '!delete';
-        newDep.TopElem.name = deptName;
-        newDep.TopElem.org_id = Int(org[0]);
-        if (org[1] == 'ПАО НЛМК') {
-            newDep.TopElem.custom_elems.ObtainChildByKey('flagDelete').value = true;
+    XQDep = XQuery("for $elem in subdivisions where $elem/name='" + deptName + "' and $elem/org_id=" + org[0] + " return $elem");
+    if (ArrayCount(XQDep) == 0) {
+        try {
+            newDep = OpenNewDoc('x-local://wtv/wtv_subdivision.xmd');
+            newDep.BindToDb(DefaultDb);
+            newDep.TopElem.code = '!delete';
+            newDep.TopElem.name = deptName;
+            newDep.TopElem.org_id = Int(org[0]);
+            if (org[1] == 'ПАО НЛМК') {
+                newDep.TopElem.custom_elems.ObtainChildByKey('flagDelete').value = true;
+            }
+            newDep.Save();
+        } catch (e) {
+            alert('Не удалось создать новое позразделение по причине: ' + ExtractUserError(e));
+            return arr = [0];
         }
-        newDep.Save();
-    } catch (e) {
-        alert('Не удалось создать новое позразделение по причине: ' + ExtractUserError(e));
+        return arr = [newDep.DocID, deptName];
+    } else if (ArrayCount(XQDep) > 1) {
+        logCreateUser += 'Не удалось создать новое подразделение. Множественное совпадение подразделения ' + deptName + ' в организации ' + org[1] + '.';
         return arr = [0];
+    } else {
+        return arr = [ArrayFirstElem(XQDep).id, ArrayFirstElem(XQDep).name];
     }
-    return arr = [newDep.DocID, deptName];
 }
 
 //Создание новой должности
 function createPos(posName, org, dep) {
-    try {
-        newPos = OpenNewDoc('x-local://wtv/wtv_position.xmd');
-        newPos.BindToDb(DefaultDb);
-        newPos.TopElem.code = '!delete';
-        newPos.TopElem.name = posName;
-        newPos.TopElem.org_id = Int(org[0]);
-        newPos.TopElem.parent_object_id = Int(dep[0]);
-        if (org[1] == 'ПАО НЛМК') {
-            newPos.TopElem.custom_elems.ObtainChildByKey('flagDelete').value = true;
+    XQPos = XQuery("for $elem in positions where $elem/name='" + posName + "' and $elem/org_id=" + org[0] + " and $elem/parent_object_id=" + dep[0] + " return $elem");
+    if (ArrayCount(XQPos) == 0) {
+        try {
+            newPos = OpenNewDoc('x-local://wtv/wtv_position.xmd');
+            newPos.BindToDb(DefaultDb);
+            newPos.TopElem.code = '!delete';
+            newPos.TopElem.name = String(StrTitleCase(posName));
+            newPos.TopElem.org_id = Int(org[0]);
+            newPos.TopElem.parent_object_id = Int(dep[0]);
+            if (org[1] == 'ПАО НЛМК') {
+                newPos.TopElem.custom_elems.ObtainChildByKey('flagDelete').value = true;
+            }
+            newPos.Save();
+        } catch (e) {
+            alert('Не удалось создать новую должность по причине: ' + ExtractUserError(e));
+            return arr = [0];
         }
-        newPos.Save();
-    } catch (e) {
-        alert('Не удалось создать новую должность по причине: ' + ExtractUserError(e));
+        return arr = [newPos.DocID, posName];
+    } else if (ArrayCount(XQPos) > 1) {
+        logCreateUser += 'Не удалось создать новую должность. Множественное совпадение должности ' + posName + ' в подразделении ' + deptName + ' организации ' + org[1] + '.';
         return arr = [0];
+    } else {
+        return arr = [ArrayFirstElem(XQPos).id, ArrayFirstElem(XQPos).name];
     }
-    return arr = [newPos.DocID, posName];
 }
 
 //Создание нового сотрудника
@@ -97,7 +111,6 @@ function createUser(infoUser) {
                 newUser.TopElem.middlename = String(infoUser[fullName]).split(' ')[2];
             } catch (e) {
                 logCreateUser += 'Не верный формат поля ФИО в исходном документе у сотрудника ' + source[i][fullName] + '. Сотрудник не обработан.'
-                //alert('Не верный формат поля ФИО в исходном документе у сотрудника ' + source[i][fullName] + '. Сотрудник не будет обработан.');
                 return 0;
             }
 
@@ -107,7 +120,6 @@ function createUser(infoUser) {
                 newUser.TopElem.org_name = linkOrg[1];
             } else if (linkOrg.length == 1) {
                 logCreateUser += 'Невозможно однозначно определить организацию для сотрудника ' + infoUser[fullName] + ' или в БД не найдено организации.';
-                //alert('Невозможно однозначно определить организацию для сотрудника ' + infoUser[fullName] + ' или в БД не найдено организации.');
                 return 0;
             }
 
@@ -134,11 +146,8 @@ function createUser(infoUser) {
             newUser.Save();
         } catch (e) {
             logCreateUser += 'Невозможно создать нового сотрудника по причине: ' + ExtractUserError(e);
-            //alert('Невозможно создать нового сотрудника по причине: ' + ExtractUserError(e));
             return 0;
         }
-        //logCreateUser += 'Создан новый сотрудник' + infoUser[fullName] + '; ';
-        //alert('Создан новый пользователь ' + infoUser[fullName]);
         return 1;
     }
 }
@@ -153,7 +162,6 @@ function activateTest(userInfo, XQUser) {
                 resultXQTests = XQuery("for $elem in assessments where $elem/code='" + Trim(arrCodeTests[j]) + "' return $elem");
                 if (ArrayCount(resultXQTests) > 1 || ArrayCount(resultXQTests) == 0) {
                     logActivateTest += 'Не удалось однозначно опеределить назначаемый тест или не найден тест с кодом ' + Trim(arrCodeTests[j] + '. Назначение тестов прервано.');
-                    //alert('Не удалось однозначно опеределить назначаемый тест или не найден тест с кодом ' + Trim(arrCodeTests[j]));
                     return 0;
                 } else {
                     reappointment = Param.reappointment == '1' || Param.reappointment == 'true' || Param.reappointment == true;
@@ -166,7 +174,6 @@ function activateTest(userInfo, XQUser) {
                         activateCodeTest += ArrayFirstElem(resultXQTests).code + ' ';
                     } catch (e) {
                         logActivateTest += 'При назначении теста произошла ошибка: ' + ExtractUserError(e);
-                        //alert('При назначении теста произошла ошибка: ' + ExtractUserError(e));
                         return 0;
                     }
                 }
@@ -201,7 +208,6 @@ function writeLog() {
 
 //-=Тело скрипта=-
 try {
-    //url = 'x-local:///' + StrReplace(Param.urlSource, '\\', "/");
     sourceList = OpenDoc('x-local:///' + StrReplace(Param.urlSource, '\\', "/"), 'format=excel');
 } catch (e) {
     alert('Ошибка при открытии файла ' + ExtractUserError(e));
@@ -210,8 +216,7 @@ try {
 
 source = ArrayFirstElem(sourceList.TopElem);
 for (var i = 0; i < ArrayCount(source); i++) {
-    if (i == 0) continue;
-    //tmpLine = "<b>Результат обработки строки " + i + ": " + '</b>';
+    //if (i == 0) continue;
     logActivateTest = '';
     activateCodeTest = '';
     try {
@@ -242,9 +247,6 @@ for (var i = 0; i < ArrayCount(source); i++) {
                     }
                 } else {
                     tmpLine += logCreateUser;
-                    // if (source[i][orgFlag] !== '') {
-                    //     return;
-                    // }
                 }
             } else if (ArrayCount(resultXQUsers) > 1) {
                 tmpLine += 'не удалось однозначно сопоставить загружаемого сотрудника ' + source[i][fullName] + ' по коду ' + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + source[i][userCode] + '; ';
@@ -263,7 +265,6 @@ for (var i = 0; i < ArrayCount(source); i++) {
             return;
         }
     }
-    //alert('Обработка строки ' + i + ' завершена');
     createMessage(tmpLine + ';');
 }
 writeLog();

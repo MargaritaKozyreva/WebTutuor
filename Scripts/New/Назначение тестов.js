@@ -207,6 +207,7 @@ try {
     alert('Ошибка при открытии файла ' + ExtractUserError(e));
     return;
 }
+
 source = ArrayFirstElem(sourceList.TopElem);
 for (var i = 0; i < ArrayCount(source); i++) {
     if (i == 0) continue;

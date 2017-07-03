@@ -179,9 +179,6 @@ if (statusOrg[0] == 1) {
                     };
                     for (user in users) {
                         statusUpdate = processUpdate(srcArr[i], depName, Trim(StrTitleCase(srcArr[i][position])), user);
-                        // if (!statusUpdate) {
-                        //     continue;
-                        // }
                     }
                 }
             }

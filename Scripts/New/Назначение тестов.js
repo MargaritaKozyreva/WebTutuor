@@ -161,7 +161,7 @@ function activateTest(userInfo, XQUser) {
             for (var j = 0; j < arrCodeTests.length; j++) {
                 resultXQTests = XQuery("for $elem in assessments where $elem/code='" + Trim(arrCodeTests[j]) + "' return $elem");
                 if (ArrayCount(resultXQTests) > 1 || ArrayCount(resultXQTests) == 0) {
-                    logActivateTest += 'Не удалось однозначно опеределить назначаемый тест или не найден тест с кодом ' + Trim(arrCodeTests[j] + '. Назначение тестов прервано.');
+                    logActivateTest += 'Не удалось однозначно опеределить назначаемый тест или не найден тест с кодом ' + Trim(arrCodeTests[j] + '.');
                     return 0;
                 } else {
                     reappointment = Param.reappointment == '1' || Param.reappointment == 'true' || Param.reappointment == true;
@@ -216,7 +216,7 @@ try {
 
 source = ArrayFirstElem(sourceList.TopElem);
 for (var i = 0; i < ArrayCount(source); i++) {
-    //if (i == 0) continue;
+    if (i == 0) continue;
     logActivateTest = '';
     activateCodeTest = '';
     try {
@@ -270,3 +270,7 @@ for (var i = 0; i < ArrayCount(source); i++) {
 writeLog();
 
 //****************************
+
+
+a = "МАШИНИСТ ШИХТОПОДАЧИ";
+alert(String(StrTitleCase(StrRangePos(a, 0, 1))) + String(StrLowerCase(StrRightRangePos(а, 1))));

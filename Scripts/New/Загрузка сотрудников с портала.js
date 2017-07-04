@@ -227,7 +227,8 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
                 if (linkDep.length == 2) {
                     newUser.TopElem.position_parent_id = linkDep[0];
                     newUser.TopElem.position_parent_name = linkDep[1];
-                    linkPos = findPos(Trim(lineArray[i][posName]), linkOrg, linkDep);
+                    pos = StrTitleCase(String(Trim(lineArray[i][posName])).substr(0,1)) + String(Trim(lineArray[i][posName])).substr(1);
+                    linkPos = findPos(pos, linkOrg, linkDep);
                     if (linkPos.length == 2) {
                         newUser.TopElem.position_id = linkPos[0];
                         newUser.TopElem.position_name = linkPos[1];

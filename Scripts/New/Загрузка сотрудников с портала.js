@@ -40,6 +40,7 @@ function initCodeOrgStructure() {
     codeOrgStruct['ООО "НПД"'] = 'LP';
     codeOrgStruct['ОАО "ДОЛОМИТ"'] = 'LP';
     codeOrgStruct['ОАО "СТАГДОК"'] = 'LP';
+    codeOrgStruct['ООО "Торговый дом НЛМК"'] = 'LP';
 }
 
 //Проверка присутствия сотрудника в базе
@@ -216,7 +217,7 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
                 newUser.TopElem.firstname = String(lineArray[i][fullName]).split(' ')[1];
                 newUser.TopElem.middlename = String(lineArray[i][fullName]).split(' ')[2];
             } catch (e) {
-                alert('Не верный формат ФИО ' + lineArray[i][fullName]);
+                alert('Неверный формат ФИО ' + lineArray[i][fullName]);
                 continue;
             }
             linkOrg = findOrg(Trim(lineArray[i][orgName]));

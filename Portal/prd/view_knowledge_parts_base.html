@@ -1,0 +1,240 @@
+<%
+if (global_settings.disp_knowlcntrl)
+{
+	try
+	{
+		KO.Name;
+		iKnowledgeObjectID = Int(KOID);
+		teKnowledgeObject = KO;
+	}
+	catch(_podsunuli_lazhu_)
+	{
+		iKnowledgeObjectID = curObjectID;
+		teKnowledgeObject = curObject;
+	}
+	
+	if (iKnowledgeObjectID != null && ArrayOptFind(common.knowledge_parts_objects, "PrimaryKey == " + CodeLiteral(teKnowledgeObject.Name)) != undefined)
+	{
+		try
+		{
+			SHOW_IMMEDIATELY = (SHOW_IMMEDIATELY == true);
+		}
+		catch(_shizerr9308_)
+		{
+			SHOW_IMMEDIATELY = false;
+		}
+		if (!SHOW_IMMEDIATELY)
+		{
+%>
+	<div style="width: 100%;">
+		<a href="#" style="text-decoration:none; font-size: 12" onclick="$('img#_knouleje_minus_img').toggle();$('div#_knouleje_div').toggle('normal');$('img#_knouleje_plus_img').toggle(); return false;"><img id="_knouleje_plus_img" src="pics/plus.jpg" border="0" style="display: inline"><img id="_knouleje_minus_img" src="pics/minus.jpg" border="0" style="display: none">&nbsp;<%=tools_web.get_web_str("c_knowledge_management")%></a>
+	</div>
+<%
+		}
+%>
+	<div id="_knouleje_div" style="display: <%=(SHOW_IMMEDIATELY ? "inline":"none")%>">
+		<table width="100%"  border="0" cellspacing="0" cellpadding="3">
+			<tr>
+				<td class="tableHeaderWithTextLeft"><img src="pics/1blank.gif" width="0" height="0"/></td>
+				<td class="tableHeaderWithText"><%=tools_web.get_web_str("vkpb_knowledge_parts_title")%></td>
+				<td class="tableHeaderWithText"><%=tools_web.get_web_str("vkpb_parent_value")%></td>
+				<td class="tableHeaderWithText"><%=tools_web.get_web_str("vkpb_classifier")%></td>
+				<td class="tableHeaderWithText"><%=tools_web.get_web_str("vkpb_need_request")%></td>
+				<td class="tableHeaderWithTextRight"><img src="pics/1blank.gif" width="0" height="0"/></td>
+			</tr>
+			<tr>
+				<td class="tableHeaderNoTextLeft"><img src="pics/1blank.gif" width="0" height="0"/></td>
+				<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+				<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+				<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+				<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+				<td class="tableHeaderNoTextRight"><img src="pics/1blank.gif" width="0" height="0"/></td>
+			</tr>	
+			<tbody id="_KnouledgeKlassifierTBody"></tbody>
+			<tr>
+				<td class="tableFooterLeft"><img src="pics/1blank.gif" width="0" height="0" /></td>
+				<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+				<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+				<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+				<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+				<td class="tableFooterRight"><img src="pics/1blank.gif" width="0" height="0" /></td>
+			</tr>
+		</table>
+		<br/>
+		<table width="100%"  border="0" cellspacing="0" cellpadding="3">
+			<tr>
+				<td class="tableHeaderWithTextLeft"><img src="pics/1blank.gif" width="0" height="0"/></td>
+				<td class="tableHeaderWithText" width="100%"><%=tools_web.get_web_str("vkpb_tag_name")%></td>
+				<td class="tableHeaderWithTextRight"><img src="pics/1blank.gif" width="0" height="0"/></td>
+			</tr>
+			<tr>
+				<td class="tableHeaderNoTextLeft"><img src="pics/1blank.gif" width="0" height="0"/></td>
+				<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+				<td class="tableHeaderNoTextRight"><img src="pics/1blank.gif" width="0" height="0"/></td>
+			</tr>	
+			<tbody id="_KnouledgeTagTBody"></tbody>
+			<tr>
+				<td class="tableFooterLeft"><img src="pics/1blank.gif" width="0" height="0" /></td>
+				<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+				<td class="tableFooterRight"><img src="pics/1blank.gif" width="0" height="0" /></td>
+			</tr>
+		</table>
+		<center><img src="pics/progress.gif" id="_knowlejeloading" style="display:none"/></nobr></center>
+		<table width="100%" border="0" cellspacing="0" cellpadding="0" class="activator" id="_table_of_knouleje_kontrolz">
+			<tr>
+			<td align="center" class="activator">
+				<input type="button" value="<%=tools_web.get_web_str("vkpb_sel_klassif")%>..." onClick="_addKnouledgeKlassifierz(true);" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+				<input type="button" value="<%=tools_web.get_web_str("vkpb_add_prof")%>..." onClick="_addKnouledgeFromProfile();" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+				<input type="button" value="<%=tools_web.get_web_str('vkpb_select_key_words')%>..." onClick="_addKnouledgeTagz(true);" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+			</td>
+			</tr>
+			<tr>
+			<td align="center">
+				<input type="button" value="<%=tools_web.get_web_str("c_save")%>" onClick="_SaveKlassifierz();" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+			</td>
+			</tr>
+		</table>
+		<input type="hidden" name="_knoulejepartz_cnt" id="_knoulejepartz_cnt" value="0"/>
+		<input type="hidden" name="_knoulejepartz_lizd" id="_knoulejepartz_lizd" value="<%=(teKnowledgeObject != null ? ArrayMerge(teKnowledgeObject.knowledge_parts, "This.PrimaryKey", ";") : "")%>"/>
+		<input type="hidden" name="_knoulejetagz_lizd" id="_knoulejetagz_lizd" value="<%=(teKnowledgeObject != null ? ArrayMerge(teKnowledgeObject.tags, "This.PrimaryKey", ";") : "")%>"/>
+		<input type="hidden" name="_knoulejetagz_cnt" id="_knoulejetagz_cnt" value="0"/>
+	</div>
+	<script language="javascript">
+	<!--
+		function _SaveKlassifierz()
+		{
+			$("table#_table_of_knouleje_kontrolz").hide();
+			$("img#_knowlejeloading").show();
+			$.getJSON("knowledge_acknowledgement.html", {whattodo: "insert_knowledge_parts_into_doc", knowledge_parts_ids: $("input#_knoulejepartz_lizd").val(), tags_ids: $("input#_knoulejetagz_lizd").val(), doc_id: "<%=iKnowledgeObjectID%>", rand: Math.random()}, function(json){ $("table#_table_of_knouleje_kontrolz").show(); $("img#_knowlejeloading").hide(); window.alert(json.operation_status_result_message);});
+		}
+		
+		function _addKnouledgeFromProfile()
+		{
+			var pars=new Object(); pars.check_access = true;
+			var strAttr="status:no;dialogWidth:780px;dialogHeight:550px;help:no;resizable:1";
+			xShowModalDialog("dlg_select.html?doc_id=<%=curDocID%>&catalog_name=knowledge_profile&typein=0&multi_select=0&rand="+Math.random(), pars, strAttr);
+			if (!pars.handle ) return false;
+			
+			$.getJSON("knowledge_acknowledgement.html", {whattodo: "get_knowledge_parts_from_profile", knowledge_profile_id: pars.element_id, rand: Math.random()}, function(json){ $("table#_table_of_knouleje_kontrolz").show(); $("img#_knowlejeloading").hide(); $("tbody#_KnouledgeKlassifierTBody").empty(); $.each(json, function(i,item){_addKlassifier(item);}); $("input#_knoulejepartz_lizd").val(pars.selected_object_ids); });
+		}
+		
+		function _addKnouledgeKlassifierz(isSelect)
+		{
+			var pars=new Object(); pars.check_access = true;
+			var strAttr="status:no;dialogWidth:780px;dialogHeight:550px;help:no;resizable:1";
+			
+			if (pars.display_object_ids == "") pars.display_object_ids = "0";
+			
+			pars.selected_object_ids = $("input#_knoulejepartz_lizd").val();
+			pars.can_be_empty = true;
+			if (isSelect)
+			{
+				xShowModalDialog("dlg_select.html?doc_id=<%=curDocID%>&catalog_name=knowledge_part&typein=0&multi_select=1&rand="+Math.random(), pars, strAttr);
+				if (!pars.handle ) return false;
+			}
+			$("table#_table_of_knouleje_kontrolz").hide();
+			$("img#_knowlejeloading").show();
+			
+			$.getJSON("knowledge_acknowledgement.html", {whattodo: "get_knowledge_parts_by_id", knowledge_parts_ids: pars.selected_object_ids, rand: Math.random()}, function(json){ $("table#_table_of_knouleje_kontrolz").show(); $("img#_knowlejeloading").hide(); $("tbody#_KnouledgeKlassifierTBody").empty(); $("input#_knoulejepartz_cnt").val(0); $.each(json, function(i,item){_addKlassifier(item);}); $("input#_knoulejepartz_lizd").val(pars.selected_object_ids); });
+		}
+		
+		function _addKlassifier(oJSClassifier)
+		{
+			var item_count = parseInt($("#_knoulejepartz_cnt").val());
+			var _class = item_count % 2 ? "tableRowEven" : "tableRowOdd";
+			
+			var trow=document.createElement("TR");
+			trow.valign="middle";
+			
+			_class = item_count % 2 ? "tableRowEven" : "tableRowOdd";
+			
+			$(trow).append($("<td/>").addClass(_class + "Left").append($("<img src='pics/1blank.gif' width='1' height='1'/>")));
+			
+			var tcol=document.createElement("TD");
+			tcol.className = _class;
+			tcol.innerHTML = oJSClassifier.knowledge_part_name;
+			var tinput=document.createElement("INPUT");
+			tinput.type="hidden"; 
+			tinput.id="knouledje_part_id" + item_count;
+			tinput.name="knouledje_part_id" + item_count;
+			tinput.value = oJSClassifier.knowledge_part_id;
+			$(tcol).append(tinput);
+			$(trow).append(tcol);
+			
+			tcol=document.createElement("TD");
+			tcol.className = _class;
+			tcol.innerHTML = oJSClassifier.parent_knowledge_part_name;
+			$(trow).append(tcol);
+			
+			tcol=document.createElement("TD");
+			tcol.className = _class;
+			tcol.innerHTML = oJSClassifier.knowledge_classifier_name;
+			$(trow).append(tcol);
+			
+			tcol=document.createElement("TD");
+			tcol.className = _class;
+			tcol.innerHTML = (oJSClassifier.require_acknowledgement , "+", "&nbsp");
+			$(trow).append(tcol);
+			
+			$(trow).append($("<td/>").addClass(_class + "Right").append($("<img src='pics/1blank.gif' width='1' height='1'/>")));
+			
+			$('tbody#_KnouledgeKlassifierTBody').append(trow);
+			$("#_knoulejepartz_cnt").val(item_count+1);
+		}
+		
+		function _addKnouledgeTagz(isSelect)
+		{
+			var pars=new Object(); pars.check_access = true;
+			var strAttr="status:no;dialogWidth:780px;dialogHeight:550px;help:no;resizable:1";
+			
+			if (pars.display_object_ids == "") pars.display_object_ids = "0";
+			
+			pars.selected_object_ids = $("input#_knoulejetagz_lizd").val();
+			pars.can_be_empty = true;
+			if (isSelect)
+			{
+				xShowModalDialog("dlg_select.html?doc_id=<%=curDocID%>&catalog_name=tag&typein=0&multi_select=1&rand="+Math.random(), pars, strAttr);
+				if (!pars.handle ) return false;
+			}
+			$("table#_table_of_knouleje_kontrolz").hide();
+			$("img#_knowlejeloading").show();
+			
+			$.getJSON("knowledge_acknowledgement.html", {whattodo: "get_tags_by_id", tags_ids: pars.selected_object_ids, rand: Math.random()}, function(json){ $("table#_table_of_knouleje_kontrolz").show(); $("img#_knowlejeloading").hide(); $("tbody#_KnouledgeTagTBody").empty(); $("input#_knoulejetagz_cnt").val(0); $.each(json, function(i,item){_addTagg(item);}); $("input#_knoulejetagz_lizd").val(pars.selected_object_ids); });
+		}
+		
+		function _addTagg(oJSTag)
+		{
+			var item_count = parseInt($("#_knoulejetagz_cnt").val());
+			var _class = item_count % 2 ? "tableRowEven" : "tableRowOdd";
+			
+			var trow=document.createElement("TR");
+			trow.valign="middle";
+			
+			_class = item_count % 2 ? "tableRowEven" : "tableRowOdd";
+			
+			$(trow).append($("<td/>").addClass(_class + "Left").append($("<img src='pics/1blank.gif' width='1' height='1'/>")));
+			
+			var tcol=document.createElement("TD");
+			tcol.className = _class;
+			tcol.innerHTML = oJSTag.tag_name;
+			var tinput=document.createElement('INPUT');
+			tinput.type='hidden'; 
+			tinput.id='tagg_id' + item_count;
+			tinput.name='tagg_id' + item_count;
+			tinput.value = oJSTag.tag_id;
+			$(tcol).append(tinput);
+			$(trow).append(tcol);
+			$(trow).append($("<td/>").addClass(_class + "Right").append($("<img src='pics/1blank.gif' width='1' height='1'/>")));
+			
+			$('tbody#_KnouledgeTagTBody').append(trow);
+			$("#_knoulejetagz_cnt").val(item_count+1);
+		}
+		
+		_addKnouledgeKlassifierz(false);
+		_addKnouledgeTagz(false);
+	-->
+	</script>
+<%
+	}
+}
+%>

@@ -1,0 +1,344 @@
+<%
+	Server.Execute( "include/user_init.html" )
+	
+	if (Request.Query.HasProperty("whattodo"))
+		sWhatToDo = Request.Query.GetProperty("whattodo");
+	else
+		sWhatToDo = null;
+	
+	
+	function JSON_getKnowledgeInfo(arrOfInt_KnowledgePartIDs_Param)
+	{
+		xarrKnowParts = QueryCatalogByKeys("knowledge_parts", "id", arrOfInt_KnowledgePartIDs_Param);
+		var sJSON_Return ="";
+		iX = 0;
+		for (catKnowPart in xarrKnowParts)
+		{
+			if (iX > 0)
+				sJSON_Return += ",";
+			catParentKnowledgePart = catKnowPart.parent_object_id.OptForeignElem;
+			catKnowledgeClassifier = catKnowPart.knowledge_classifier_id.OptForeignElem;
+			sJSON_Return += '{"knowledge_part_id": ' + catKnowPart.PrimaryKey + ', "knowledge_part_name": "' + HtmlEncode(tools_web.get_cur_lng_name(catKnowPart.name, curLng.short_id)) + '", "parent_knowledge_part_id" : ' + (catParentKnowledgePart!= undefined ? catParentKnowledgePart.id : "null") + ', "parent_knowledge_part_name" : "' + (catParentKnowledgePart != undefined ? HtmlEncode(tools_web.get_cur_lng_name(catParentKnowledgePart.name, curLng.short_id)) : "") + '", "knowledge_classifier_id" : ' + (catKnowledgeClassifier != undefined ? catKnowledgeClassifier.id : "null") + ', "knowledge_classifier_name" : "' +(catKnowledgeClassifier != undefined ? HtmlEncode(tools_web.get_cur_lng_name(catKnowledgeClassifier.name, curLng.short_id)) : "")+'", "full_path":"'+ tools.knowledge_part_path_by_knowledge_part_id(catKnowPart.PrimaryKey) +'", "require_acknowledgement" : ' + (catKnowPart.require_acknowledgement ? "true" : "false") + "}";
+			iX++;
+		}
+		sJSON_Return = "["+sJSON_Return+"]";
+		
+		return EncodeCharset(sJSON_Return,"utf-8");
+	}
+	function JSON_getTagInfo(arrOfInt_TagsIDs_Param)
+	{
+		xarrTags = QueryCatalogByKeys("tags", "id", arrOfInt_TagsIDs_Param);
+		var sJSON_Return ="";
+		iX = 0;
+		for (catTagElem in xarrTags)
+		{
+			if (iX > 0)
+				sJSON_Return += ",";
+			sJSON_Return += '{"tag_id": ' + catTagElem.PrimaryKey + ', "tag_name": "' + HtmlEncode(tools_web.get_cur_lng_name(catTagElem.name, curLng.short_id)) + '"}';
+			iX++;
+		}
+		sJSON_Return = "["+sJSON_Return+"]";
+		
+		return EncodeCharset(sJSON_Return,"utf-8");
+	}
+	
+	switch(sWhatToDo)
+	{
+		case "wipe_from_doc":
+			try
+			{
+				sListOfKP = Request.Query.knowledge_parts_ids;
+				if (sListOfKP != "")
+				{
+					arrKnowledgeIDs = String(sListOfKP).split(";");
+					iKPUpperCount = ArrayCount(arrKnowledgeIDs);
+					for (iX = 0; iX < iKPUpperCount; iX++)
+					{
+						arrKnowledgeIDs[iX] = Int(arrKnowledgeIDs[iX]);
+					}
+				}
+				else
+					arrKnowledgeIDs = Array();
+			}
+			catch(_where_kps_)
+			{
+				sJSONReturn ='{"operation_status_result": 0, "operation_status_result_message":"' + StrReplace( tools_web.get_web_str('ka_err_list'), '"',"'" ) + '"}';
+				Response.Write(EncodeCharset(sJSONReturn,"utf-8"));
+				Cancel();
+			}
+			
+			try
+			{
+				iSDocID = Int(Request.Query.GetProperty("doc_id"));
+				docSKnowledgeParts = OpenDoc(UrlFromDocID(iSDocID));
+			}
+			catch(_notfromdoc_)
+			{
+				sJSONReturn ='{"operation_status_result": 0, "operation_status_result_message":' + CodeLiteral( tools_web.get_web_str('ka_err_doc') ) + '}';
+				Response.Write(EncodeCharset(sJSONReturn,"utf-8"));
+				Cancel();
+			}
+			for (iKnowID in arrKnowledgeIDs)
+			{
+				fldKnow = docSKnowledgeParts.TopElem.knowledge_parts.GetOptChildByKey(iKnowID);
+				if (fldKnow != undefined)
+					fldKnow.Delete();
+			}
+			docSKnowledgeParts.Save();
+			sJSONReturn ='{"operation_status_result": 1, "operation_status_result_message":' + CodeLiteral( tools_web.get_web_str('ka_mess_save') ) + '}';
+			Response.Write(EncodeCharset(sJSONReturn,"utf-8"));
+			Cancel();
+		break;
+		case "insert_knowledge_parts_into_doc":
+			sListOfKP = "";
+			sListOfTags = "";
+			bProcessKP = true;
+			bProcessTags = true;
+			
+			try
+			{
+				if (Request.Query.HasProperty("knowledge_parts_ids"))
+					sListOfKP = Request.Query.knowledge_parts_ids;
+				else
+					bProcessKP = false;
+				
+				if (sListOfKP != "")
+				{
+					arrKnowledgeIDs = String(sListOfKP).split(";");
+					iKPUpperCount = ArrayCount(arrKnowledgeIDs);
+					for (iX = 0; iX < iKPUpperCount; iX++)
+					{
+						arrKnowledgeIDs[iX] = Int(arrKnowledgeIDs[iX]);
+					}
+				}
+				else
+					arrKnowledgeIDs = Array();
+				
+				if (Request.Query.HasProperty("tags_ids"))
+					sListOfTags = Request.Query.tags_ids;
+				else
+					bProcessTags = false;
+				
+				if (sListOfTags != "")
+				{
+					arrTagIDs = String(sListOfTags).split(";");
+					iTagUpperCount = ArrayCount(arrTagIDs);
+					for (iX = 0; iX < iTagUpperCount; iX++)
+					{
+						arrTagIDs[iX] = Int(arrTagIDs[iX]);
+					}
+				}
+				else
+					arrTagIDs = Array();
+				
+				if (!bProcessKP && !bProcessTags)
+					throw "mockery!";
+			}
+			catch(_where_kps_)
+			{
+				sJSONReturn ='{"operation_status_result": 0, "operation_status_result_message":"' + StrReplace( tools_web.get_web_str('ka_err_list'), '"',"'") + '"}';
+				Response.Write(EncodeCharset(sJSONReturn,"utf-8"));
+				Cancel();
+			}
+			try
+			{
+				iSDocID = Int(Request.Query.GetProperty("doc_id"));
+				docSKnowledgeParts = OpenDoc(UrlFromDocID(iSDocID));
+			}
+			catch(_notfromdoc_)
+			{
+				sJSONReturn ='{"operation_status_result": 0, "operation_status_result_message":"' + StrReplace( tools_web.get_web_str('ka_err_doc'), '"',"'" ) + '"}';
+				Response.Write(EncodeCharset(sJSONReturn,"utf-8"));
+				Cancel();
+			}
+			try
+			{
+				bPreserve = Int(Request.Query.GetProperty("preserve"));
+			}
+			catch(_notfromdoc_)
+			{
+				bPreserve = 0;
+			}
+			if (bProcessKP)
+			{
+				xarrKnowParts = QueryCatalogByKeys("knowledge_parts", "id", arrKnowledgeIDs);
+				if (bPreserve <= 0)
+					docSKnowledgeParts.TopElem.knowledge_parts.Clear();
+				
+				for (catKnowPart in xarrKnowParts)
+				{
+					fldFreshKnowledgePart = docSKnowledgeParts.TopElem.knowledge_parts.ObtainChildByKey(catKnowPart.PrimaryKey);
+					fldFreshKnowledgePart.knowledge_part_name = catKnowPart.name;
+					fldFreshKnowledgePart.require_acknowledgement = catKnowPart.require_acknowledgement;
+					fldFreshKnowledgePart.full_path = tools.knowledge_part_path_by_knowledge_part_id(catKnowPart.PrimaryKey)
+				}
+			}
+			
+			if (bProcessTags)
+			{
+				xarrTags = QueryCatalogByKeys("tags", "id", arrTagIDs);
+				if (bPreserve <= 0)
+					docSKnowledgeParts.TopElem.tags.Clear();
+				
+				for (catTagElem in xarrTags)
+				{
+					fldFreshKnowledgePart = docSKnowledgeParts.TopElem.tags.ObtainChildByKey(catTagElem.PrimaryKey);
+				}
+			}
+			docSKnowledgeParts.Save();
+			
+			sJSONReturn ='{"operation_status_result": 1, "operation_status_result_message":"' + StrReplace( tools_web.get_web_str('ka_mess_save'), '"', "'" ) + '"}';
+			Response.Write(EncodeCharset(sJSONReturn,"utf-8"));
+			Cancel();
+		break;
+		case "get_knowledge_parts_by_id":
+			try
+			{
+				iSDocID = Int(Request.Query.GetProperty("is_from_doc"));
+			}
+			catch(_notfromdoc_)
+			{
+				iSDocID = null;
+			}
+			
+			try
+			{
+				if (iSDocID != null)
+				{
+					fldSKnowledgeParts = OpenDoc(UrlFromDocID(iSDocID)).TopElem.knowledge_parts;
+					arrKnowledgeIDs = ArrayExtract(fldSKnowledgeParts, "knowledge_part_id");
+				}
+				else
+					arrKnowledgeIDs = String(Request.Query.knowledge_parts_ids).split(";");
+				iKPUpperCount = ArrayCount(arrKnowledgeIDs);
+				for (iX = 0; iX < iKPUpperCount; iX++)
+				{
+					arrKnowledgeIDs[iX] = Int(arrKnowledgeIDs[iX]);
+				}
+			}
+			catch(_somecrap_)
+			{
+				arrKnowledgeIDs = Array();
+			}
+			
+			Response.Write(JSON_getKnowledgeInfo(arrKnowledgeIDs));
+			Cancel();
+		break;
+		case "get_tags_by_id":
+			try
+			{
+				iSDocID = Int(Request.Query.GetProperty("is_from_doc"));
+			}
+			catch(_notfromdoc_)
+			{
+				iSDocID = null;
+			}
+			
+			try
+			{
+				if (iSDocID != null)
+				{
+					fldTagsElems = OpenDoc(UrlFromDocID(iSDocID)).TopElem.tags;
+					arrTagsIDs = ArrayExtract(fldTagsElems, "tag_id");
+				}
+				else
+					arrTagsIDs = String(Request.Query.tags_ids).split(";");
+				iTagUpperCount = ArrayCount(arrTagsIDs);
+				for (iX = 0; iX < iTagUpperCount; iX++)
+				{
+					arrTagsIDs[iX] = Int(arrTagsIDs[iX]);
+				}
+			}
+			catch(_somecrap_)
+			{
+				arrTagsIDs = Array();
+			}
+			
+			Response.Write(JSON_getTagInfo(arrTagsIDs));
+			Cancel();
+		break;
+		case "get_knowledge_parts_from_profile":
+			try
+			{
+				teKnowledgeProfile = OpenDoc(UrlFromDocID(Int(Request.Query.GetProperty("knowledge_profile_id")))).TopElem;
+			}
+			catch(_notfromdoc_)
+			{
+				sJSONReturn ='{"operation_status_result": 0, "operation_status_result_message":"' + StrReplace( tools_web.get_web_str('c_close'), '"',"'") + '"}';
+				Response.Write(EncodeCharset(sJSONReturn,"utf-8"));
+				Cancel();
+			}
+			
+			Response.Write(JSON_getKnowledgeInfo(ArrayExtract(teKnowledgeProfile.knowledge_parts, "knowledge_part_id")));
+			Cancel();
+		break;
+		case "mass_approval":
+			try
+			{
+				sListOfKP = Request.Query.knowledge_parts_ids;
+				if (sListOfKP != "")
+				{
+					arrKnowledgeIDs = String(sListOfKP).split(";");
+					iKPUpperCount = ArrayCount(arrKnowledgeIDs);
+					for (iX = 0; iX < iKPUpperCount; iX++)
+					{
+						arrKnowledgeIDs[iX] = Int(arrKnowledgeIDs[iX]);
+					}
+				}
+				else
+					arrKnowledgeIDs = Array();
+			}
+			catch(_where_kps_)
+			{
+				sJSONReturn ='{"operation_status_result": 0, "operation_status_result_message":"' + StrReplace(tools_web.get_web_str('ka_err_list'), '"',"'") + '"}';
+				Response.Write(EncodeCharset(sJSONReturn,"utf-8"));
+				Cancel();
+			}
+			
+			try
+			{
+				iSDocID = Int(Request.Query.GetProperty("doc_id"));
+				docSKnowledgeParts = OpenDoc(UrlFromDocID(iSDocID));
+			}
+			catch(_notfromdoc_)
+			{
+				sJSONReturn ='{"operation_status_result": 0, "operation_status_result_message":"' + StrReplace(tools_web.get_web_str('ka_err_doc'), '"',"'") + '"}';
+				Response.Write(EncodeCharset(sJSONReturn,"utf-8"));
+				Cancel();
+			}
+				
+			for (iKnowID in arrKnowledgeIDs)
+			{
+				fldFreshKnowledgePart = docSKnowledgeParts.TopElem.knowledge_parts.GetOptChildByKey(iKnowID);
+				if (fldFreshKnowledgePart != undefined)
+					fldFreshKnowledgePart.require_acknowledgement = false;
+			}
+			docSKnowledgeParts.Save();
+			sJSONReturn ='{"operation_status_result": 1, "operation_status_result_message":"' + StrReplace(tools_web.get_web_str('ka_mess_save'), '"',"'") + '"}';
+			Response.Write(EncodeCharset(sJSONReturn,"utf-8"));
+			Cancel();
+		break;
+		case "acknowledge":
+		default:
+			knowledge_part_id = Int(Request.Form.knowledge_part_id);
+			doc_id = Int(Request.Form.doc_id);
+			document_id = Int(Request.Form.object_id);
+			mode = Request.Form.mode;
+			
+			_expert = ArrayOptFirstElem(XQuery("for $e in experts where $e/person_id = " + curUserID + " return $e" ));
+			if (_expert != undefined)
+			{
+				_knowledgePart = OpenDoc(UrlFromDocID(knowledge_part_id)).TopElem;
+				if (_knowledgePart.experts.GetOptChildByKey(_expert.PrimaryKey) != undefined)
+				{
+					_curDoc = OpenDoc(UrlFromDocID(document_id));
+					_curDoc.TopElem.knowledge_parts.GetChildByKey(knowledge_part_id).require_acknowledgement = false;
+					_curDoc.Save();
+				}
+			}
+			
+			_href = "view_doc.html?mode=" + mode + "&knowledge_part_id=" + knowledge_part_id + "&doc_id=" + doc_id;
+			Response.Redirect( _href );
+		break;
+	}
+%>

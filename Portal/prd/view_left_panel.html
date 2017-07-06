@@ -1,0 +1,133 @@
+<%
+try
+{
+if ( curDoc != null )
+{
+
+_left_child_flag = ( ! curDoc.attributes.no_disp_childs && curDoc.attributes.left_disp_childs );
+_parent_doc_id = ( _left_child_flag ? curDocID : curDoc.parent_document_id );
+
+if ( _left_child_flag || ( ! curDoc.attributes.is_main_item && curDoc.parent_document_id.HasValue ) )	
+{
+	_parent_docs = XQuery( 'for $elem in documents where $elem/parent_document_id = ' + _parent_doc_id + ' order by $elem/position return $elem' );
+
+	if ( ArrayOptFirstElem( _parent_docs ) != undefined )
+	{
+		_len = Int( curWebCommon.count_left_panel_unit );
+%>
+<table class="leftPanelTable" width="100%" border="0" cellspacing="0" cellpadding="0">
+	<tr> 
+		<td class="tableLeftHeader" colspan="3"><div class="LeftHeaderText"><%=( curDoc.parent_document_id.HasValue ? curDoc.parent_document_id.ForeignElem.name : tools.get_web_str('vdb_subdocs') )%></div></td> 
+	</tr> 
+<%
+		_doc_counter = 0;
+		_full_flag = false;
+		for ( _doc in _parent_docs )
+		{
+			if ( ! _left_child_flag && _doc_counter >= _len )
+			{
+				_full_flag = true;
+				break;
+			}
+		
+			if ( global_settings.settings.check_access_on_lists )
+				try
+				{
+					if ( tools_web.check_access( _doc, curUserID, curUser, Session ) == false )
+						continue;
+				}
+				catch(_opa_)
+				{
+					continue;
+				}
+%>
+	<tr> 
+		<td class="newsColumnDigestLeft"><img src="pics/1blank.gif" width="0" height="0" /></td>
+		<td class="horDivider"><img src="pics/1blank.gif" width="0" height="0" /></td> 
+		<td class="newsColumnDigestRight"><img src="pics/1blank.gif" width="0" height="0" /></td>
+	</tr> 
+	<tr> 
+		<td class="newsColumnDigestLeft"><img src="pics/1blank.gif" width="0" height="0" /></td>
+		<td class="newsColumnDigest">
+		
+		<table border="0" cellspacing="0" cellpadding="0">
+		<tr>
+<%
+			if ( _doc.id == curDocID )
+			{
+%>		
+			<td class="LeftPanelSelectedItem"><img src="pics/1blank.gif" width="0" height="0" border="0"/></td>	
+			<td width="auto" class="selectedLeftMenuItem"><%=_doc.name%></td>
+			<td class="LeftPanelSelectedItemRight"><img src="pics/1blank.gif" width="0" height="0" border="0"/> </td>
+<%
+			}
+			else
+			{
+				if ( _doc.is_link )
+				{
+%>	
+			<td class="LeftPanelNoSelectedItem"><img src="pics/1blank.gif" width="0" height="0" border="0"/></td>	
+			<td width="auto"><a class="LeftMenuItem" href="<%=_doc.link_href%>" <%=( _doc.link_target == '' ? '' : 'TARGET="' + _doc.link_target + '"' )%>><%=_doc.name%></a></td>
+			<td class="LeftPanelNoSelectedItemRight"><img src="pics/1blank.gif" width="0" height="0" /></td>
+<%
+				}
+				else
+				{
+%>
+			<td class="LeftPanelNoSelectedItem"><img src="pics/1blank.gif" width="0" height="0" border="0"/></td>
+			<td width="auto"><a class="LeftMenuItem" href="<%=tools_web.put_query_string( _doc.id , _doc.template )%>"><%=_doc.name%></a></td>
+			<td class="LeftPanelNoSelectedItemRight"><img src="pics/1blank.gif" width="0" height="0" border="0"/></td>
+<%
+				}
+			}
+%>
+			</tr>
+		</table>
+		
+		</td> 
+		<td class="newsColumnDigestRight"><img src="pics/1blank.gif" width="0" height="0" border="0"/></td>
+	</tr> 
+<%
+			_doc_counter++;
+		}
+
+		if ( _full_flag )
+		{
+%>
+	<tr> 
+		<td class="newsColumnDigestLeft"><img src="pics/1blank.gif" width="0" height="0" /></td>
+		<td class="horDivider"><img src="pics/1blank.gif" width="0" height="0" /></td> 
+		<td class="newsColumnDigestRight"><img src="pics/1blank.gif" width="0" height="0" /></td>
+	</tr> 
+	<tr>
+		<td class="newsColumnDigestLeft"><img src="pics/1blank.gif" width="0" height="0" /></td>
+		<td class="newsColumnDigest">
+		
+		<table width="100%" border="0" cellspacing="0" cellpadding="0">
+		<tr>
+			<td align="right"><a class="LeftMenuItem" href="<%=tools_web.put_query_string( _parent_doc_id, curDoc.parent_document_id.ForeignElem.template )%>"><%=tools.get_web_str('vlp_all_links')%></a><img src="pics/more.gif" width="14" height="14"/></td>
+		</tr>
+		</table>
+			
+		</td> 
+		<td class="newsColumnDigestRight"><img src="pics/1blank.gif" width="0" height="0" /></td>
+	</tr>
+<%
+		}
+%>
+	<tr> 
+		<td class="tableLeftFooter" colspan="3"><img src="pics/1blank.gif" width="0" height="0" /></td> 
+	</tr> 
+</table>
+<%
+	}
+}
+
+}
+}
+catch ( err )
+{
+	alert( err );
+	Response.Write( err );
+}
+%>

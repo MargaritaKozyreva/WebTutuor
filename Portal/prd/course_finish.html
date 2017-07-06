@@ -1,0 +1,71 @@
+<%
+Server.Execute( "include/user_init.html" );
+
+move_to = Request.Query.HasProperty( 'move_to' ) ? Request.Query.move_to : '';
+
+activeLearningID = Int( Request.Query.object_id );
+
+try
+{
+	curSid = Request.Query.sid;
+
+	if ( ! tools.check_sum_sid( activeLearningID, curSid ) )
+		throw '_crack_fuck_';
+}
+catch ( ehuu )
+{
+	Server.Execute( "view_access_panel.html" );
+	Cancel();
+}
+
+
+learningDocID = tools.active_learning_finish( activeLearningID );
+
+tools.create_notification( '10', learningDocID );
+
+try
+{
+	if ( Request.QueryString.m == '1' )
+		Response.Redirect( "view_doc.html?mode=groups&doc_id=" + Request.QueryString.doc_id );
+}
+catch ( e )
+{
+}
+
+try
+{
+	_redirect="view_doc.html"
+	switch ( move_to )
+	{
+		case 'learning':
+					try
+					{
+						_doc_id = ArrayFirstElem( XQuery( "for $document in documents where $document/code = 'learnings' return $document" ) ).id;	
+						_redirect="view_doc.html?mode=learning&doc_id=" + _doc_id;
+					}
+					catch ( e )
+					{
+					}
+					break;
+		case 'active_learning':
+					try
+					{
+						_doc_id = ArrayFirstElem( XQuery( "for $document in documents where $document/code = 'active_learnings' return $document" ) ).id;	
+						_redirect="view_doc.html?mode=active_learning&doc_id=" + _doc_id;
+					}
+					catch ( e )
+					{
+					}
+					break;
+		default:
+					_redirect="view_doc.html"
+	}
+	Response.Redirect( _redirect );	
+	
+}
+catch ( e )
+{
+	Response.Redirect( "view_doc.html" );
+}
+
+%>

@@ -1,0 +1,165 @@
+<%
+	Server.Execute( "include/user_init.html" )
+
+	docPaResponse = OpenDoc( UrlFromDocID( Int(Request.Form.pa_id) ) )
+	
+	curAssessmentAppraiseID = docPaResponse.TopElem.assessment_appraise_id;
+	curAssessmentAppraise = OpenDoc( UrlFromDocID( curAssessmentAppraiseID )).TopElem;
+	
+	/* ---=== IMPERSONATE BLOCK ===--- */	
+	try
+	{
+		Session.ImpersonatePersonID = Int(Session.ImpersonatePersonID);
+	}
+	catch(_no_trace_)
+	{
+		Session.ImpersonatePersonID = null;
+	}
+	arrImpersonates = ArraySelect(curAssessmentAppraise.impersonate_persons, "impersonator_id == " + curUserID + " && face_person_id.HasValue && (from_date.HasValue == false || from_date <= DateNewTime(Date())) && (to_date.HasValue == false || to_date >= DateNewTime(Date()))");
+	
+	if (Session.ImpersonatePersonID != null && ArrayOptFind(arrImpersonates, "face_person_id == " + Session.ImpersonatePersonID) != undefined)
+		_bIsFakePerson = true;
+	else
+		_bIsFakePerson = false;
+	
+	if (_bIsFakePerson)
+	{
+		curPersonID = Session.ImpersonatePersonID;
+		curPerson = OpenDoc(UrlFromDocID(curPersonID)).TopElem;
+		Session.ImpersonatePersonID = curPersonID;
+	}
+	else
+	{
+		curPersonID = curUserID;
+		curPerson = curUser;
+		Session.ImpersonatePersonID = null;
+	}
+	
+	/* ---=== ================= ===--- */
+
+	if (global_settings.settings.check_wf_access_assessment)
+	{
+		curPA = docPaResponse.TopElem;
+		IS_HUMAN = !curPA.flag_appraise_department;
+		
+		_temp_assessment_plan = ArrayFirstElem(XQuery( 'for $assessment_plan in assessment_plans where $assessment_plan/assessment_appraise_id = ' + docPaResponse.TopElem.assessment_appraise_id +(IS_HUMAN ? ' and $assessment_plan/person_id = ' + curPA.person_id : ' and $assessment_plan/department_id = ' + curPA.department_id) + ' return $assessment_plan' ));
+		
+		if (curAssessmentAppraise.flag_use_plan)
+		{
+			curAssessmentPlanID = _temp_assessment_plan.id;
+			curAssessmentPlan = OpenDoc( UrlFromDocID( curAssessmentPlanID ) ).TopElem;	
+		}
+		else
+		{
+			curAssessmentPlanID = docPaResponse.DocID;
+			curAssessmentPlan = curPA;
+		}
+	
+		Server.Execute( "view_assessment_access_variables.html" );
+		if (IS_MODIFY == false)
+		{
+			Response.Redirect( "view_doc.html" );
+			Cancel();
+		}
+	}
+	
+	
+	
+	
+	//Int( Request.Form.assessment_appraise_id );	
+	rcount = 0;
+	isflawed = "1";
+	try
+	{
+		isflawed = Request.Form.isflawed;
+		rcount=Int(Request.Form.recommends_count);
+	}
+	catch(_hren_)
+	{
+	}
+
+
+	docPaResponse.TopElem.assessment_result_recommends.Clear()
+	
+	for (i = 0; i< rcount; i++)
+	{
+		try
+		{			
+			rt_id = eval("Request.Form.rt_id_" + i);
+			_rt = docPaResponse.TopElem.assessment_result_recommends.ObtainChildByKey( rt_id );
+			_rt.assessment_result_recommend_name = eval("Request.Form.rt_name_" + i);
+			
+		}
+		catch(_oblomalis_)
+		{
+			continue;
+		}
+
+	}
+
+	comment = ( Request.Form.HasProperty("comment") ? Request.Form.comment : '');
+    
+    if (Request.Form.HasProperty("save_comment") && Request.Form.GetProperty("save_comment") == "1")
+		docPaResponse.TopElem.comment = comment;
+	else
+		tools_ass.place_pa_comment( docPaResponse, curPersonID, undefined, comment);
+    
+	docPaResponse.TopElem.integral_mark = Request.Form.integral_mark;
+
+	if (isflawed =="1")
+		docPaResponse.TopElem.is_done = false;
+	else
+		docPaResponse.TopElem.is_done = true;
+		
+		
+	qcount = (Request.Form.HasProperty("stq_count") ?  Int(Request.Form.stq_count) : 0);
+	for (j = 0; j<qcount; j++)
+	{
+		try
+		{
+			q_id = Int(Request.Form.GetProperty("stq_id_" + j));
+			teQ = OpenDoc(UrlFromDocID(q_id)).TopElem;
+		}
+		catch(_zhopa_)
+		{
+			continue;
+		}
+		
+		if (teQ.type == "3")
+		{
+			q_mark = "";
+			for (_scale in teQ.scales)
+				if (Request.Form.GetOptProperty("stq_mark_" + j + "_" + _scale.id, "") == "1")
+					q_mark += (q_mark != "" ? ";" : "") + _scale.id;
+		}		
+		else
+			q_mark = Request.Form.GetOptProperty("stq_mark_" + j, "");
+		_questions = docPaResponse.TopElem.supplementary_questions.ObtainChildByKey(q_id);
+		_questions.supplementary_question_mark = q_mark;
+	}
+	
+	
+	_href = 'view_doc.html?mode=assessment_appraise&doc_id=' + Request.Form.doc_id +'&pa_id='+Request.Form.pa_id + '&assessment_appraise_id=' + Request.Form.assessment_appraise_id + '&assessment_appraise_type=' + Request.Form.assessment_appraise_type + '&f_id=' + Random(0, 9999999);
+	if (Request.Form.HasProperty("is_post") && Request.Form.GetProperty("is_post") == "1")
+	_href = _href + '&is_post=1';
+	
+	if (Request.Form.HasProperty("custom_post_web_template_id"))
+	try
+	{
+		tools_web.insert_custom_code(Int(Request.Form.GetProperty("custom_post_web_template_id")), null,true,true);
+	}
+	catch(_oi_)
+	{}
+	
+	
+	if ( 1 )
+	{	
+		docPaResponse.Save();
+	}
+	else
+	{
+		//Cancel();
+	}
+//	alert("!! end SAVING !!!");
+	Response.Redirect( _href );
+%>

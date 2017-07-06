@@ -1,0 +1,7 @@
+<%
+Server.Execute( "include/sid_access_init.html" );
+
+eventDoc = tools.event_start( Request.QueryString.event_id );
+
+Response.Redirect( 'view_doc.html?mode=event&object_id=' + Request.QueryString.event_id + '&doc_id=' + Request.QueryString.doc_id );
+%>

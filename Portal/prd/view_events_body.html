@@ -1,0 +1,107 @@
+<%
+_filter = Request.Query.HasProperty( 'filter_id' ) ? Request.Query.filter_id : 'plan';
+dispPublic = Request.Query.HasProperty( 'disp_public' ) && Request.Query.disp_public == '1';
+dispUnnamedPerson = Request.Query.HasProperty( 'disp_unnamed' ) && Request.Query.disp_unnamed == '1';
+	
+curQueryString = tools_web.get_query_string( true, 'filter_id;disp_public;disp_unnamed' );
+%>
+
+<br/>
+<form action="view_doc.html?mode=events&doc_id=<%=curDocID%>" name="refresh_form" method="POST">
+<input type="HIDDEN" name="doc_id" value="<%=curDocID%>">		
+
+<table width="100%" cellspacing="0" cellpadding="4" class="tableBorder">
+	<tr>		
+		<td width="200" align="RIGHT"><b><%=tools.get_web_str('c_status')%>:</b></td>
+		<td align="LEFT">
+		<select name="filter_id" id="filter_id" onchange="document.location.href='<%=curQueryString%>disp_public='+(document.refresh_form.disp_public.checked?'1':'0')+'&filter_id='+this.value+'&disp_unnamed='+(document.refresh_form.disp_unnamed.checked?'1':'0')">
+			<option value="all"><%=tools.get_web_str('c_all')%></option>
+<%
+		for ( _ff in curLngCommon.event_status_types )
+		{
+%>			
+			<option value="<%=_ff.id%>"><%=_ff.name%></option>
+<%
+		}
+%>			
+         </select>
+		 
+<script language="JavaScript">
+selcur=document.getElementById('filter_id');
+selcur.selectedIndex=0;
+for (i=0;i<selcur.options.length;i++)
+    if (selcur.options[i].value=="<%=_filter%>")
+    {
+        selcur.selectedIndex=i;
+		break;
+    }
+</script>
+		</td>
+	</tr>
+	<tr>		
+		<td width="200" align="RIGHT">&nbsp;</td>
+		<td align="LEFT"><input type="checkbox" name="disp_public" onclick="document.location.href='<%=curQueryString%>filter_id=<%=_filter%>&disp_public='+(this.checked?'1':'0')+'&disp_unnamed='+(document.refresh_form.disp_unnamed.checked?'1':'0');return false" <%=( dispPublic ? 'checked="checked"' : '' )%>/><%=tools.get_web_str('veb_disp_public')%></td>
+	</tr>
+	<tr>		
+		<td width="200" align="RIGHT">&nbsp;</td>
+		<td align="LEFT"><input type="checkbox" name="disp_unnamed" onclick="document.location.href='<%=curQueryString%>filter_id=<%=_filter%>&disp_public='+(document.refresh_form.disp_public.checked?'1':'0')+'&disp_unnamed='+(this.checked?'1':'0');return false" <%=( dispUnnamedPerson ? 'checked="checked"' : '' )%>/><%=tools.get_web_str('veb_disp_unnamed_num')%></td>
+	</tr>
+</table>
+</form>	
+
+<%
+	curView = new Object;
+	curView.SetProperty( 'id', '1' );
+	curView.SetProperty( 'catalog_name', 'event' );
+	curView.SetProperty( 'disp_link', 'true' );
+	curView.SetProperty( 'link_field_index', 1 );
+	curView.SetProperty( 'sort_index', 6 );
+	curView.SetProperty( 'sort_direct', '-' );
+
+	curArray = Array();
+	arrForNewHeaders=Array()
+	arrForNewCells=Array()
+	ItemCounter=0
+	if ( curUser.access.access_role == 'admin' )	
+	{
+		curArray = XQuery( "for $elem in events" + ( _filter == 'all' ? '' : " where $elem/status_id = '" + _filter + "'" ) + " return $elem" );
+	}
+	else
+	{
+		curArray = XQuery( "for $elem in event_collaborators where $elem/collaborator_id = " + curUserID + ( _filter == 'all' ? '' : " and $elem/status_id = '" + _filter + "'" ) + " return $elem" );
+		if ( dispPublic )
+			curArray = ArrayUnion( curArray, XQuery( "for $elem in event_collaborators where $elem/collaborator_id = 0" + ( _filter == 'all' ? '' : " and $elem/status_id = '" + _filter + "'" ) + " return $elem" ) );
+        
+		lectorArray = XQuery( 'for $elem in lectors where $elem/person_id = ' + curUserID + ' return $elem' );
+        for ( _lector in lectorArray )
+            curArray = ArrayUnion( curArray, XQuery( "for $elem in event_lectors where $elem/lector_id = " + _lector.id + ( _filter == 'all' ? '' : " and $elem/status_id = '" + _filter + "'" ) + " return $elem" ) );
+			
+		curArray = ArraySelectDistinct( curArray, 'event_id' );
+
+		curView.SetProperty( 'check_access', 'true' );
+		
+		arrForNewHeaders[ItemCounter]='&nbsp;'
+		arrForNewCells[ItemCounter]="ListElem.Name=='event_lector'?'<img src=\"pics/lector.ico\" title=\"'+tools.get_web_str('veb_is_lector')+'\" width=16 height=16 border=0/>':(ListElem.is_collaborator?'<img src=\"pics/collaborator.ico\" title=\"'+tools.get_web_str('veb_is_collaborator')+'\" width=16 height=16 border=0/>':'<img src=\"pics/1blank.gif\" width=16 border=0/>')+(ListElem.is_tutor?'<img src=\"pics/tutor.ico\" title=\"'+tools.get_web_str('veb_is_tutor')+'\" width=16 height=16 border=0/>':'<img src=\"pics/1blank.gif\" width=16 border=0/>')+(ListElem.is_preparation?'<img src=\"pics/preparation.ico\" title=\"'+tools.get_web_str('veb_is_preparation')+'\" width=16 height=16 border=0/>':'')"
+		ItemCounter++
+		
+		curView.SetProperty( 'link_object_field', 'event_id' );
+	}
+	
+	if (dispUnnamedPerson)
+	{
+		arrForNewHeaders[ItemCounter]=tools.get_web_str('veb_unnamed_person_num')
+		arrForNewCells[ItemCounter]="ListElem.unnamed_person_num" 
+		ItemCounter++
+	}
+	
+	if (ItemCounter>0)
+	{
+		curView.SetProperty( 'col_headers', arrForNewHeaders);	
+		curView.SetProperty( 'col_cells', arrForNewCells);
+	}
+
+	curView.SetProperty( 'array', curArray );
+	
+	Server.Execute( 'view_catalog_list.html' );
+%>
+<br/>

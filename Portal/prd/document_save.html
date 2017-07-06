@@ -1,0 +1,374 @@
+<%
+	/*
+		POST DATA:
+			
+			data_x_id - ИД документа. Не обязателен, если data_x_new равен 1 или 2
+			data_x_new - Опциональный флаг, показывающий, создавать новый документ, если не найден ID. Значение "0" - открывать только существующий документ. Значение "1" - открыть документ, и если нет - создать и записать значение в пост дату data_x_id. Значение "2" - создавать в любом случае новый документ и записать значение в пост дату data_x_id. Равен 0 по умолчанию.
+			data_x_doc_form - форма(собственно название каталога), по которой будет создаваться документ. Требуется при использовании data_x_new=1 и data_x_new=2
+			data_x_source_fields - через точку с запятой (;) - список полей источников из POST данных. Если начинается с @, то docResponse.TopElem прибавляться не будут!
+			data_x_destination_fields - через точку с запятой (;) - список полей в документе для записи, в соответствии с source_fields.  Если одно из значений начинается с [encoded], то оно считается преобразованным командой escape, если начинается с [@formula], то значение будет исполняться, в случае неудачи присвоится null
+			data_x_elements - через точку с запятой (;) список ссылок на объекты, которые можно использовать в data_x_source_fields в пределах одной сессии. Например записать a = elements.ObtainChildByKey() и далее присваивать поля уже A. В начале присвоения docResponse.TopElem писать не нужно, всё как в примере. Если начинается с [encoded], то считается преобразованным командой escape
+			data_x_serialized - получает и пытается сохранить данные в виде Query String. Всегда считается преобразованной командой escape;
+			data_x_kill - получает список полей через точку с запятой (;), которые нужно очистить. Если поле является элементом типа Multiple, то удалит его вместе с содержимым. Вначале docResponse.TopElem писать не нужно. Если начинается с [encoded], то считается преобразованным командой escape. Если после пути к полю N содержит {x1,x2,xM}, то будет пытаться удалить из массива N детей с первычными ключами x1,x2,xM. Значения первичных ключей вычисляемые.
+			
+			примечание: в значения source и destination можно подставлять другие постелементы. Например если в POST передано некоторое значение somefield_value равное 666, то если написать в каком либо destination строчку "route_{somefield_value}" в итоге значение будет "route_666" (но это не сработает, если destination начинается с [encoded] )
+			
+			data_x_xml_Z - XML-строка данных, который будет выполняться в .AssignElem(xml)/.LoadData(xml). Всегда считается преобразованной командой escape;
+			data_x_xml_assign_node_Z - корневой узел в виде "TopElem.node.subnode...", которому будет делаться назначение AssignElem. Если не указано, то TopElem. Всегда считается преобразованной командой escape;   
+            data_x_xml_form_Z - форма, по которой будет открываться xml. Опционально.
+			data_x_xml_flag_load_data_Z - если существует и равен 1, будет использован метод .LoadData(), в противном случае .AssignElem(). Опционально.
+			
+			mode - режим, испльзуется в Redirect'e
+			doc_id - id документа, относительно которого происходит проверка прав, испльзуется в Redirect'e
+			href - строка для возврата в Redirect'e, выполняется ТОЛЬКО если mode и doc_id не указаны.
+			parameters - параметры, прикрепляемые к строке Redirect'а, всегда. Опционально.
+			ajax - параметр, указывающий (если равен 1) что не нужне делать редирект обратно на страницу, а всего-лишь написать в поток количество успешно сохраненных документов. В поток пишется количество успешно обработанных документов и больше ничего.
+			xml - параметр, указывающий (если равен 1) что результат нужно вернуть развернуто в формате XML. Срабатывает только если ajax не равен 1
+			json - параметр, указывающий (если равен 1) что результат нужно вернуть в формате JSON следующего вида:
+				{"operation_status_result": 1|0, "operation_status_result_message":"кол-во обработанных записей/общее кол-во записей", "request_count":общее количество записей, "processed_count":обработанной количество записей, "error_messages":перечисление всех ошибок, произошедших во время обработки}
+				срабатывает только если ajax не равен 1 и xml не равен 1
+			feedback_please - если равен 1, в объект Session будет добавлена информация о результате операции следующего вида: Session.document_save_feedback = Object() {operation_status_result: 1(int), operation_status_result_message:"кол-во обработанных записей/общее кол-во записей(string)", request_count:общее количество записей(int), processed_count:обработанное количество записей(int), error_messages:перечисление всех ошибок, произошедших во время обработки(string)}
+			
+			
+			примечание - data_x префикс каждого элемента для сохранения, где x - натуральные числа начиная с 0.
+						_Z - суффикс для субпараметра, где Z  - натуральные числа начиная с 0.
+	*/
+	
+	Server.Execute( "include/user_init.html" );
+
+	function replaceFieldValue( _text )
+	{
+		var _fx_string = String( Trim( _text ) );	
+		var _startindex = _fx_string.indexOf("{", 0);	
+		var _endindex = 0-1;
+		var _field = "";	
+		var _fx_string_len = _fx_string.length;
+		while (_startindex >= 0)
+		{
+			_endindex = _fx_string.indexOf("}",_startindex);
+			if (_endindex < 0 ) break;
+			_field = _fx_string.slice(_startindex + 1, _endindex );
+			if (Request.Form.HasProperty(_field))
+				_fx_string = StrReplace( _fx_string, "{" + _field + "}", Request.Form.GetProperty(_field) );
+			else
+				_startindex = _end_index;
+				_startindex = _fx_string.indexOf("{",_startindex);
+		}
+		
+		return _fx_string;
+	}
+	function cleanIt(sDirtyString)
+	{
+		return StrReplace(StrReplace(StrReplace(StrReplace(StrReplace(sDirtyString, "fromCharCode", ""), "StrReplace", ""), "=", ""), ";", ""), "\n", "");
+	}
+	sErrorInform = "";
+	_x = 0;
+	_xReal = 0;
+	_cur_id_source = "data_" + _x + "_id";
+	_cur_new_flag = "data_"+ _x + "_new";
+	
+	aSuccessIDs = Array();
+	
+	while (Request.Form.HasProperty(_cur_id_source) || Request.Form.HasProperty(_cur_new_flag))
+	{	
+		docResponse = null;
+		_doc_form = "data_" + _x + "_doc_form";
+		if (Request.Form.HasProperty(_cur_new_flag))
+		{
+			_new = Trim(Request.Form.GetProperty(_cur_new_flag));
+		}
+		else
+		{
+			_new = "0";
+		}
+		_flag_br = false;
+		switch(_new)
+		{
+			case "":
+			case "0":
+				_flag_br = true;
+			case "1":
+				try
+				{
+					docResponse = OpenDoc( UrlFromDocID( Int(Request.Form.GetProperty(_cur_id_source)) ) );
+					_flag_br = true;
+				}
+				catch(_net_){}
+				if (_flag_br) break;
+			case "2":
+				if (Request.Form.HasProperty(_doc_form))
+				{
+					docResponse = tools.new_doc_by_name(Request.Form.GetProperty(_doc_form));
+					docResponse.BindToDb( DefaultDb );
+					Request.Form.SetProperty(_cur_id_source, docResponse.DocID);
+					break;
+				}
+				else
+				{
+					sErrorInform += "Entry("+_x+"): data_" + _x + "_doc_form not defined; ";
+				}
+			default:
+				docResponse=null;
+		}
+		if (docResponse != null)
+		{
+			i_xml_subindex = 0;
+			_xml = "data_" + _x + "_xml_" + i_xml_subindex;
+			while (Request.Form.HasProperty(_xml))
+			{
+				_xml = UrlDecode(Request.Form.GetProperty(_xml));
+				_xml_assign_node = "data_" + _x + "_xml_assign_node_"+i_xml_subindex;
+				if (Request.Form.HasProperty(_xml_assign_node))
+					_xml_assign_node_path = cleanIt(UrlDecode(Request.Form.GetProperty(_xml_assign_node)));
+				else
+					_xml_assign_node_path = "TopElem";
+				_xml_form = "data_" + _x + "_xml_form_"+i_xml_subindex;
+				b_xml_flag_load_data = (Request.Form.HasProperty("data_" + _x + "_xml_flag_load_data_" +i_xml_subindex) && Request.Form.GetProperty("data_" + _x + "_xml_flag_load_data_" +i_xml_subindex)== "1");
+				try
+				{
+					if (b_xml_flag_load_data)
+					{
+						if (Request.Form.HasProperty(_xml_form) && Request.Form.GetProperty(_xml_form)!= "")
+							ghostDoc = OpenDocFromStr(_xml, "form=" + Request.Form.GetProperty(_xml_form));
+						else
+							ghostDoc = OpenDocFromStr(_xml);
+						eval("docResponse."+_xml_assign_node_path + ".LoadData(ghostDoc.TopElem.Xml+'')");
+					}
+					else
+					{
+						if (Request.Form.HasProperty(_xml_form) && Request.Form.GetProperty(_xml_form)!= "")
+							ghostDoc = OpenDocFromStr(_xml, "form=" + Request.Form.GetProperty(_xml_form));
+						else
+							ghostDoc = OpenDocFromStr(_xml);
+						eval("docResponse."+_xml_assign_node_path+".Clear(); docResponse."+_xml_assign_node_path + ".AssignElem(ghostDoc.TopElem);");
+					}
+				}
+				catch(_shit_)
+				{
+					sErrorInform+="Entry("+_x+") Subindex("+i_xml_subindex+"): Assign xml data failed; ";
+				}
+				i_xml_subindex++;
+				_xml = "data_" + _x + "_xml_" + i_xml_subindex;
+			}
+			
+			_source_fields = "data_" + _x + "_source_fields";
+			_destination_fields = "data_" + _x + "_destination_fields";
+
+			if (Request.Form.HasProperty(_source_fields) && Request.Form.HasProperty(_destination_fields))
+			{
+				if (Request.Form.HasProperty("data_" + _x + "_elements"))
+				{
+					_varz = String(Request.Form.GetProperty("data_" + _x + "_elements"));
+					if (StrBegins(StrLowerCase(_varz), "[encoded]"))
+						_varz = UrlDecode(_varz.slice(9));
+					_varz = _varz.split(";");
+					for (_var in _varz)
+					{
+						try
+						{
+							_var_synt_var = _var.slice(0, _var.indexOf("="));
+							_var_synt_expr = cleanIt((_var.slice(_var.indexOf("=") + 1)));
+							eval(_var_synt_var + "= docResponse.TopElem." + Trim(_var_synt_expr));
+						}
+						catch(_lazha_)
+						{
+							sErrorInform+="Entry("+_x+"): Elements. Error description of the variable: " + _var + "("+_var+"); ";
+						}
+					}
+				}
+				_sf = String(Request.Form.GetProperty(_source_fields)).split(";");
+				_df = String(Request.Form.GetProperty(_destination_fields)).split(";");
+				
+				for (_z = 0; _z < ArrayCount(_sf); _z++)
+				{		
+					if (_z >= ArrayCount(_df))
+					{
+						sErrorInform+="Entry("+_x+"): Document save. Not enough data in destination_fields. Element: " + _z + "; ";
+						break;
+					}
+					_fld = Trim(replaceFieldValue(_sf[_z]));
+					if (_fld != "")
+					{
+						iPrefixTameRepeat = 0;
+						while (iPrefixTameRepeat < 3)
+						{
+							if (StrBegins(StrLowerCase(_df[_z]), "[encoded]"))
+							{
+								_dfval = UrlDecode(String(_df[_z]).slice(9));
+								_encoded = true;
+								iPrefixTameRepeat += 2;
+							}
+							else
+							{
+								_dfval = replaceFieldValue(_df[_z]);
+								_encoded = false;
+							}
+							
+							if (StrBegins(_dfval, "[@formula]"))
+							{
+								_dfval = String(_dfval).slice(10);
+								_dfval = OptEval(cleanIt(_dfval), null);
+								iPrefixTameRepeat += 1;
+							}
+							else
+							{
+								iPrefixTameRepeat = 3;
+							}
+						}
+						_fld = (StrBegins( _fld, "@" ) ? _fld.slice( 1 ) : "docResponse.TopElem." + _fld);
+						try
+						{
+							if (_encoded)
+								eval( _fld + " = _dfval");
+							else
+								eval( _fld + " = \'" + StrReplace(_dfval, "'", "\\\'") + "\'");
+						}
+						catch(_fuck_)
+						{
+							sErrorInform+="Entry("+_x+"): Mistaken attribute: " + _fld + "=" + _dfval+"; ";
+							continue;
+						}
+					}
+				}
+			}
+			
+			if (Request.Form.HasProperty("data_" + _x + "_serialized"))
+			{
+				_varz = String(UrlDecode(Request.Form.GetProperty("data_" + _x + "_serialized"))).split("&");
+				for (_var in _varz)
+				{
+					_var_synt_var = cleanIt(_var.slice(0, _var.indexOf("=")));
+					try
+					{
+						_var_synt_expr = _var.slice(_var.indexOf("=") + 1);
+						if (StrBegins(StrLowerCase(_var_synt_expr), "[encoded]"))
+							_var_synt_expr = UrlDecode(String(_var_synt_expr).slice(9));
+						eval("docResponse.TopElem." + Trim(_var_synt_var) + " = _var_synt_expr;");
+					}
+					catch(_lazha_)
+					{
+						sErrorInform+="Entry("+_x+"): Serialized Data. Error description of the variable: " + _var_synt_var + "("+_var+"); ";
+					}
+				}
+			}
+			if (Request.Form.HasProperty("data_" +_x+ "_kill"))
+			{
+				_varz = String(UrlDecode(Request.Form.GetProperty("data_" + _x + "_kill"))).split(";");
+				for (_var in _varz)
+				{
+					_sFieldName = _var;
+					if (StrBegins(StrLowerCase(_sFieldName), "[encoded]"))
+						_sFieldName = UrlDecode(_sFieldName.slice(9));
+					
+					_iStart = _sFieldName.indexOf("{");
+					if (_iStart > 0)
+					{
+						_iEnd = _sFieldName.indexOf("}");
+						_aPrimaryKeys = _sFieldName.slice(_iStart+1, _iEnd).split(",");
+						_sFieldName = _sFieldName.slice(0, _iStart);
+						try
+						{
+							_listFatherElem = eval("docResponse.TopElem." + cleanIt(_sFieldName));
+							if (_listFatherElem != null)
+							for (_sPk in _aPrimaryKeys)
+							{
+								_vPK = OptEval(_sPk);
+								if (_vPK != undefined)
+								{
+									_fldDeadElem = _listFatherElem.GetOptChildByKey(_vPK);
+									if (_fldDeadElem != undefined)
+										_fldDeadElem.Delete();
+								}
+							}
+						}
+						catch(_X_)
+						{
+							sErrorInform+="Entry("+_x+"): field is not multiple " + _var;
+							_fldDeadElem = null;
+						}
+					}
+					else
+					{
+						try
+						{
+							_fldDeadElem = eval("docResponse.TopElem." + cleanIt(_sFieldName));
+							if (_fldDeadElem.IsMultiple)
+								_fldDeadElem.Delete();
+							else
+								_fldDeadElem.Clear();
+						}
+						catch(_X_)
+						{
+							sErrorInform+="Entry("+_x+"): cannot clear field " + _var;
+						}
+					}
+				}
+			}
+			if (Request.Form.GetOptProperty("code_"+_x+"_eval", "") != "")
+			try
+			{
+				if (Request.Form.GetProperty("code_access") == Md5Hex(String((Session.sid|curUserID))))
+					eval(UrlDecode(Request.Form.GetProperty("code_"+_x+"_eval")));
+				else
+					throw "err";
+			}
+			catch(_x_)
+			{
+				sErrorInform+="Entry("+_x+"): code eval failure; ";
+			}
+			docResponse.Save();
+			aSuccessIDs[ArrayCount(aSuccessIDs)] = docResponse.DocID;
+			_xReal++;
+		}
+		else
+		{
+			sErrorInform += "Entry("+_x+"): document open/create failed; ";
+		}
+		_x = _x + 1;
+		_cur_id_source = "data_" + _x + "_id";
+		_cur_new_flag = "data_"+ _x + "_new";
+	}
+	//if (sErrorInform != "") alert("Document_Save_HTML: "+sErrorInform);
+	
+	if (Request.Query.GetOptProperty("feedback_please") == "1")
+	{
+		Session.document_save_feedback = new Object;
+		Session.document_save_feedback.operation_status_result = 1;
+		Session.document_save_feedback.operation_status_result_message = _xReal+ "/" +_x;
+		Session.document_save_feedback.request_count = _x;
+		Session.document_save_feedback.processed_count = _xReal;
+		Session.document_save_feedback.error_messages = sErrorInform;
+		Session.document_save_feedback.ids = aSuccessIDs;
+	}
+	
+	if (Request.Query.GetOptProperty("ajax") == "1")
+	{
+		Response.Write(_xReal);
+	}
+	else if (Request.Query.GetOptProperty("xml") == "1")
+	{
+		Response.Write(EncodeCharset('<?xml version="1.0" encoding="utf-8"?><data><operation_status_result>'+(_xReal == _x ? 1 : 0)+'</operation_status_result> <operation_status_result_message>' +_xReal+ "/" +_x+'</operation_status_result_message><request_count>'+_x +'</request_count><processed_count>'+_xReal+'</processed_count><error_messages>'+HtmlEncode(sErrorInform)+'</error_messages><success_ids>' +ArrayMerge(aSuccessIDs, '"<id>" + This + "</id>"', '')+ '</success_ids></data>',"utf-8"));
+	}
+	else if (Request.Query.GetOptProperty("json") == "1")
+	{
+		Response.Write(EncodeCharset('{"operation_status_result": '+(_xReal == _x ? 1 : 0)+', "operation_status_result_message":"' +_xReal+ "/" +_x+'", "request_count":'+_x +', "processed_count":'+_xReal+', "error_messages": "'+HtmlEncode(sErrorInform)+'", "success_ids": [' +ArrayMerge(aSuccessIDs, CodeLiteral('"') + '+This+' + CodeLiteral('"'), ',')+ ']}',"utf-8"));
+	}
+	else
+	{
+		try
+		{
+			_href = "view_doc.html?mode=" + Request.Form.mode + "&post=1&doc_id=" + Request.Form.doc_id;
+		}
+		catch(_o_)
+		{
+			_href = Request.Query.GetOptProperty("href",null);
+		}
+		if (_href != null)
+		{
+			sQuerParameters = (Request.Form.HasProperty("parameters")? (StrContains(_href, "?")?"&":"?") + Request.Form.parameters:"");
+			Response.Redirect( _href + sQuerParameters);
+		}
+		else
+			Response.Write("");
+	}
+%>

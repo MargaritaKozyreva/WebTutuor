@@ -1,0 +1,221 @@
+
+	<table width="50%" align="center" border="0" cellpadding="10">
+								
+				
+<%
+
+	_custom_comment_opt = undefined;
+	_standart_comment = true;
+	
+	try
+	{
+		_self_pa;
+	}
+	catch(_hren_)
+	{
+		_self_pa = null;
+	}
+
+	try
+	{
+		_manager_pa;
+	}
+	catch(_hren_)
+	{
+		_manager_pa = null;
+	}
+
+	if ((curAssessmentAppraise.is_basic_comment))
+	{
+
+							if (_use_plan)
+							{
+								if (  _self_pa != null && (curPA.status == 'manager' || curPA.status == 'interview') )
+								{							
+%>
+								<tr>
+								<td width="200px">
+									<%=tools.get_web_str("veresb_p_comment")%>:
+								</td>
+								<td>
+									<%=_self_pa.comment%>
+								</td>
+								</tr>
+<%
+								
+								}
+								
+								if ( _manager_pa != null && curPA.status == 'interview')
+								{							
+%>
+								<tr>
+								<td width="200px">
+									<%=tools.get_web_str("vac_boss_comment")%>:
+								</td>
+								<td>
+									<%=_manager_pa.comment%>
+								</td>
+								</tr>
+
+								
+<%
+ 								} 
+								
+								try
+								{
+									_show_additional_columns;
+									_add_pas;
+								}
+								catch(_bababa_)
+								{
+									_show_additional_columns = false;
+								}
+								
+								if (_show_additional_columns)
+								{
+									for (_add_pa in _add_pas)
+									if(_add_pa.status != "self" && _add_pa.status != "manager")
+									{
+%>
+								<tr>
+								<td width="200px">
+									<i><%=tools.get_web_str("c_comment")%> (<%=_add_pa.status.ForeignElem.name%>):</i>
+								</td>
+								<td>
+									<%=_add_pa.comment%>
+								</td>
+								</tr>
+
+								
+<%										
+									}
+								}
+								
+								
+								
+								
+							}
+
+		_custom_comment = curPA.comment;
+		_show_comment = true;
+		
+		if (IS_MODIFY)
+			_edit_comment = true;
+		else
+			_edit_comment = false;
+		_save_comment = true;
+	}
+	else 
+	{
+		_custom_comment = curPA.comment;
+			
+		_show_comment = false;
+		_edit_comment = false;
+		_save_comment = false;
+		
+		_com_val = tools_ass.get_workflow_state_parameter(_curState, "commentator");
+		
+		if (_com_val != undefined)
+		{
+			_show_comment = true;
+			_edit_comment = true;
+			_custom_comment = "";
+			_standart_comment = false;		
+			
+			try
+			{
+				_com_val = eval(_com_val);
+			}
+			catch(_wow_)
+			{
+				_com_val = undefined;
+			}				
+			
+							
+			if (curPersonID != _com_val)
+				_edit_comment = false;
+			
+			_custom_comment_opt = ArrayOptFind( curPA.custom_comments, 'person_id == _com_val && workflow_state == PHASE');
+
+			if (_custom_comment_opt != undefined) 
+				_custom_comment = _custom_comment_opt.comment;
+			else
+				_custom_comment = "";
+			
+		}
+		else
+		{
+			if (IS_MODIFY)
+			{
+				_edit_comment = true;
+				_show_comment = true;
+				_save_comment = true;
+				
+			}
+		}
+		
+	}
+			
+	if (_standart_comment == false && curPA.comment.HasValue)
+	{
+%>	
+	<tr>
+		<td width="200px"><b><%=curPA.person_id.sd.fullname%>:</b></td>
+		<td>
+			<%=curPA.comment%>
+		</td>
+<%	
+	}
+	
+	for(_cc in curPA.custom_comments)
+	{
+		if (  !(_cc === _custom_comment_opt) )
+		{
+%>
+
+			<tr>
+			<td width="200px"><%=('<b>' + _cc.person_id.ForeignElem.fullname + ':</b>')%>
+			</td>
+			<td>
+<%
+				Response.Write(_cc.comment + "<br/><font color='silver'><i>" + _cc.comment_date + "</i></font>");
+%>		
+			
+			</td>
+			</tr>
+
+<%
+		}
+	}
+	
+	
+	
+			if (_edit_comment || _custom_comment != "")
+			{
+%>
+		
+				
+				<tr>
+				<td width="200px"><b><%=tools.get_web_str("c_comment")%>:</b></td>
+				<td>
+				<%
+				if (_edit_comment && _in_time)
+					{
+								
+				%>
+						<input type="hidden" value="<%=(_save_comment ? 1 : 0)%>" name="save_comment"/>
+						<textarea name="comment" cols="40" rows="3" class="commonTextarea"><%=_custom_comment%></textarea>
+				<%
+					}
+					else Response.Write(_custom_comment );
+				%>
+				
+				</td>
+				</tr>		
+
+<%
+			}
+%>
+
+</table>
+

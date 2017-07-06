@@ -1,0 +1,495 @@
+<%
+_cancel = false;
+try
+{
+	curPAID = Int(Request.QueryString.pa_id);
+	curPA = OpenDoc( UrlFromDocID( curPAID ) ).TopElem;
+}
+catch(_vot_zaraza_)
+{
+	Response.Write("<center><b>" + tools.get_web_str('vrb_no_pa_text') + "</b></center>");
+	//Cancel();
+	_cancel = true;
+}
+
+if (!_cancel)
+{
+	if (Request.QueryString.HasProperty("is_post"))
+		is_post = Request.QueryString.is_post;
+	else
+		is_post = '';
+
+	try
+	{
+		if ( is_post != "1" && StrContains(_PRIVATE_PAS , curPAID) == false)
+			throw 'Kuda lezesh, gad!';
+	}
+	catch(_gik_)
+	{
+		Response.Write('<center><b>' + tools.get_web_str("vrb_message1") + '</b></center>');
+		//Cancel();
+		_cancel = true;
+	}
+}
+
+if (!_cancel)
+{
+%>
+		<TABLE width="100%" border="0" cellspacing="0" cellpadding="5">
+		<TR valign="top">
+			<TD>
+
+<%
+	try
+	{	 
+		curAssessmentPlanID = Int(Request.QueryString.pa_id);
+		curAssessmentPlan = OpenDoc( UrlFromDocID( curAssessmentPlanID ) ).TopElem;	
+		_temp_assessment_plan = curAssessmentPlan;
+	}
+	catch(_oblom_)
+	{
+		Response.Write(alert("Assessment plan not found..."));
+		//Cancel();
+		_cancel = true;
+	}
+}
+if (!_cancel)
+{
+	Server.Execute( "view_assessment_access_variables.html" );
+
+	SUPPLEMENTARY_INDEXER = 0;
+%>		
+
+<script language="javascript">
+<!--
+
+function checkkey(srcobj, keycode)
+		{			
+			if ((keycode<48 || keycode>57)& keycode!=46) return false;			
+			if (keycode==46) if(srcobj.value.indexOf('.') >= 0) return false;	
+			return true;
+		}
+		
+-->
+</script>
+
+
+<%
+	Server.Execute('view_assessment_header.html');
+	
+	if (ArrayCount(curAssessmentAppraise.assessments) > 0)
+	{
+	
+%>
+	<table border="0">
+	<tr>
+	    <td><b><%=tools.get_web_str("c_testing")%>:</b></td>
+	    <td><b><%=tools.get_web_str('c_status')%>:</b></td>
+	    <td><b><%=tools.get_web_str('c_score')%>:</b></td>
+    </tr>
+<%
+	
+	
+		_curActiveTestLearningArray = XQuery("for $active_test_learning in active_test_learnings where $active_test_learning/person_id = " + COLLABORATOR_USER_ID + " and $active_test_learning/assessment_appraise_id = " + curAssessmentAppraiseID + " order by $active_test_learning/last_usage_date return $active_test_learning");
+		
+		_curTestLearningArray = XQuery("for $test_learning in test_learnings where $test_learning/person_id = " + COLLABORATOR_USER_ID + " and $test_learning/assessment_appraise_id = " + curAssessmentAppraiseID + " order by $test_learning/last_usage_date return $test_learning");
+		
+		
+		for (_assessment in curAssessmentAppraise.assessments)
+		{
+			_cur_assessment = ArrayOptFind(_curTestLearningArray, "assessment_id == _assessment.PrimaryKey");
+			if (_cur_assessment == undefined)
+			{
+				_cur_assessment = ArrayOptFind(_curActiveTestLearningArray, "assessment_id == _assessment.PrimaryKey");
+				_score = undefined;
+			}
+			else
+			{
+				_score = _cur_assessment.score;
+			}
+			
+						
+			Response.Write("<tr><td>&nbsp;&bull;&nbsp;" + _assessment.assessment_name + "&nbsp;&nbsp;</td>" );
+			
+			if (_cur_assessment == undefined)
+				Response.Write("<td colspan='2'><i>" + tools.get_web_str("vrb_message3") + "</i></td></tr>");
+			else
+			{
+				_state = _cur_assessment.state_id.OptForeignElem;
+				if (_state == undefined) _state = common.learning_states.GetChildByKey(0);
+				
+				if (_score == undefined)
+					Response.Write("<td colspan='2' style='color: rgb(" + _state.text_color + ")'>" + _state.name + "</td></tr>");
+				else
+					Response.Write("<td style='color: rgb(" + _state.text_color + ")'>" + _state.name + "</td><td align='center'>" + _score + "</td></tr>");
+			}
+			
+			
+		}
+		
+%>
+	</table>
+<%
+	}
+
+
+	WF_FORM_TOP = 'top';
+	Server.Execute('view_assessment_workflow_buttons.html');
+
+	if (is_post == '1')  //is_pos  start
+	{
+		if ( Request.QueryString.HasProperty("wfbutt"))
+			_wfbutt = Request.QueryString.GetProperty("wfbutt")
+		else
+			_wfbutt = undefined;
+		
+		try
+		{
+			_save_message = Session.assessment_save_msg;
+			Session.assessment_save_msg = "";
+			if (_save_message == "" || _save_message == null || _save_message == undefined)
+				throw "bez_slov";
+		}
+		catch(_bez_slov_)
+		{
+			_save_message = "";
+		}
+		
+		if (_wfbutt == undefined || _save_message != "")
+		{
+%>
+<p>
+<center><b><%=(_save_message != "" ? HtmlEncode(_save_message) : tools.get_web_str("c_form_save"))%></b></center>
+</p>
+<%
+		}
+
+		_href=null;
+		if (false&& IS_DONE == false)
+			for (_temp_pa in _temp_pas)
+			{			
+				if (!_temp_pa.is_done) 
+					{ 
+					
+					_href = 'view_doc.html?mode=assessment_appraise&doc_id=' + curDocID +'&pa_id='+_temp_pa.id + '&assessment_appraise_id=' + curAssessmentAppraiseID + '&assessment_appraise_type=competence_appraisal';
+					
+					
+					 break;
+					 
+					}
+			}
+			
+			
+		if (_href != null)
+		{
+%>		
+	<center><a class="asLink" href="<%=_href%>"><%=tools.get_web_str("ass_go_to_next_form")%> &raquo;</a></center>
+<%		
+		}
+
+	//Cancel();
+	_cancel = true;
+	}
+}
+
+if (!_cancel) // _cancel start
+{
+
+	_hide_mark = tools_ass.get_workflow_state_parameter(_curState, "hide_mark");
+	if (_hide_mark == "1")
+		_hide_mark = true;
+	else
+		_hide_mark = false;
+		
+		
+	_hide_fields = tools_ass.get_workflow_state_parameter(_curState, "hide_fields");
+	if (_hide_fields == undefined)
+		_hide_fields = Array();
+	else
+		_hide_fields = String(_hide_fields).split(",");
+
+%>
+
+
+<script language="javascript">
+<!--
+function whatToSubmit()
+{
+<%
+	if (curAssessmentAppraise.is_comment_required)
+	{
+%>
+		if (document.all.comment && document.all.comment.tagName.toLowerCase() == "textarea")
+			if (document.all.comment.value == "")
+			{
+				window.alert("<%=HtmlEncode(tools.get_web_str("ass_message_please_fill_in_comment"))%>");
+				return false;
+			}
+<%
+	}
+%>
+
+	is_flawed=document.all["isflawed"];
+	
+<%
+	if (!_hide_mark)
+	{
+%>
+	
+	if (isNaN(parseFloat(document.all['integral_mark'].value)))
+	{
+		is_flawed.value = "1";
+	}
+<%
+	}
+%>
+	
+	n = 0;
+	var stqObj;
+	if (is_flawed.value == "")
+	while (document.all["stq_id_" + n] != undefined)
+	{
+		stqObj = $("#supplementary_table input[name='stq_requered_" + n+"']");
+		if (stqObj.val() == "1")
+		{
+			stqObj = $("#supplementary_table [name='stq_mark_"+n+"']");
+			if (stqObj.length > 0)
+			{
+				if (stqObj.val() == "")
+				{
+					is_flawed.value = "1";
+					break;
+				}
+			}
+			else
+			{
+				stqObj = $("#supplementary_table input[parent_id='stq_mark_" + n+"']");
+				if (stqObj.length > 0)
+				{
+					if (stqObj.filter(":checked").length == 0)
+					{
+						is_flawed.value = "1";
+						break;
+					}
+				}
+			}
+		}
+		n++;
+	}
+
+
+	if (document.all["isflawed"].value!="") window.alert("<%=HtmlEncode(tools.get_web_str('vrb_message2'))%>");
+	return true;
+}
+-->
+</script>
+
+
+					<form action="result_save.html" name="f_switch" id="f_switch" method="POST">		
+					<p>
+
+					<input type="hidden" name="doc_id" value="<%=curDocID%>"/>
+
+					<input type="hidden" name="assessment_appraise_id" value="<%=curAssessmentAppraiseID%>"/>
+					<input type="hidden" name="is_post" value="1"/>
+					<input type="hidden" name="pa_id" value="<%=Request.QueryString.pa_id%>"/>
+					<input type="hidden" name="isflawed" value=""/>
+					<input type="hidden" name="assessment_appraise_type" value="<%=Request.QueryString.assessment_appraise_type%>"/>
+<%
+	if (_cur_assessment_appraise_type != undefined)
+	{
+		_show_recomend = _cur_assessment_appraise_type.flag_01;
+	}
+	else
+	{
+		_show_recomend = false;
+	}
+	
+	if (_show_recomend)
+	{
+%>
+
+					<center><table width="100%" align="center" border="0" cellpadding="1">
+					<tr><td>
+					<b><%=tools.get_web_str("ass_recommendations")%>:</b>
+					</td></tr>
+					<%
+						x = 0;
+						
+							
+							for (_recommend_type in assessment_result_recommends)		
+							{
+								
+								if (curPA.assessment_result_recommends.ChildByKeyExists(Int(_recommend_type.id))) 
+									_checked = ' checked';
+								else
+									_checked = '';
+									
+								if (IS_MODIFY)
+								{		
+						%>		
+						<tr><td>
+							<input type="hidden" name="<%=('rt_name_'+ x)%>" value="<%=_recommend_type.name%>"/>
+							<input type="checkbox" name="<%=('rt_id_'+ x)%>" value="<%=_recommend_type.id%>"<%=_checked%>/><%=_recommend_type.name%><br/>
+						</td></tr>
+							
+						<%	
+								}
+								else
+								{			
+									if (_checked != '')
+									{
+						%>		
+							<tr><td>
+							<%=_recommend_type.name%> 
+							</td></tr>
+						<%
+									}
+								}
+							x++;
+							}
+					%>
+						</table></center>
+						
+						<br/>
+<%
+	}
+	else
+	{
+		x = 0;
+	}
+	
+	_show_overalls = tools_ass.get_workflow_state_parameter(_curState, "show_overalls");
+					
+	if (_show_overalls != undefined)
+	{
+		_overall = 0.0;
+		_show_overalls = String(_show_overalls).split(",");
+		
+		if (Trim(_show_overalls[0]) != "")
+		{
+			_resulted_pas = XQuery( "for $pa in pas where " + (IS_HUMAN ? " $pa/person_id = " + curPA.person_id : " $pa/department_id = " + curPA.department_id) + " and $pa/assessment_appraise_id = " + curAssessmentAppraiseID +  " and $pa/is_final = true() return $pa" );
+			
+%>
+			<table>
+<%			
+			_so_num = 0.0;
+			for (_so in _show_overalls)
+			{
+				_cur_overall = ArrayOptFind(_resulted_pas, "assessment_appraise_type == Trim(_so)");
+				if (_cur_overall != undefined)
+				{
+					_in_search_for_type_r = curAssessmentAppraise.participants.GetOptChildByKey(_cur_overall.status);
+					if (_in_search_for_type_r != undefined)
+					{
+						_in_search_for_type_r = _in_search_for_type_r.assessment_appraise_types.GetOptChildByKey(_so);
+						if (_in_search_for_type_r != undefined)
+							if (_in_search_for_type_r.type_title.HasValue)
+								_in_search_for_type_r = _in_search_for_type_r.type_title;
+							else
+								_in_search_for_type_r = undefined;
+					}
+					
+					if (_in_search_for_type_r == undefined)
+						_in_search_for_type_r = _cur_overall.assessment_appraise_type.ForeignElem.name;
+%>
+					<tr>
+						<td width="150px"><%=_in_search_for_type_r%>:</td>
+						<td><%=_cur_overall.overall%></td>
+					</tr>
+<%
+					if (_cur_overall.overall.HasValue)
+					{
+						_overall = _overall + _cur_overall.overall;
+						_so_num = _so_num + 1.0;
+					}
+				}
+			}
+%>
+			</table>
+<%
+			if (curPA.integral_mark.HasValue == false && _so_num > 0)
+			{
+				curPA.integral_mark = _overall / _so_num;
+			}
+		}
+		
+	}
+	
+	
+	if (!_hide_mark)
+	{
+%>		
+						<table>
+						<tr>
+							<td width="150px"><%=tools.get_web_str('ass_integral_mark')%>:</td>
+							<td>
+							<%
+							if (IS_MODIFY)
+							{
+							%>
+							<input type="text" onKeyPress='return checkkey(this,window.event.keyCode);' name="integral_mark" value="<%=curPA.integral_mark%>" class="inputEdit"/>
+							<%
+							}
+							else
+							{
+								Response.Write(StrReal(curPA.integral_mark, 2));
+							}	
+							%>
+							</td>
+						</tr>
+						</table>
+
+<%
+	}
+	
+	if (_cur_assessment_appraise_type != undefined)
+	{
+		try
+		{
+			Response.Write(tools_web.insert_custom_code(_cur_assessment_appraise_type.custom_web_template_id, null,true,false));
+		}
+		catch(_oi_)
+		{}
+		
+		if(_cur_assessment_appraise_type.custom_post_web_template_id.HasValue)
+		{
+%>
+			<input type="hidden" name="custom_post_web_template_id" value="<%=_cur_assessment_appraise_type.custom_post_web_template_id%>"/>
+<%
+		}
+	}
+
+	Server.Execute('view_supplementary_questions.html');
+%>
+						
+						<hr />
+<%
+	Server.Execute('view_assessment_comment.html');
+%>            
+
+
+<%
+							if (IS_MODIFY)
+							{
+%>
+					<center><input type=submit class="inputButton" onClick='return whatToSubmit();' value="  <%=tools.get_web_str("c_save")%>  " onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/></center>				
+<%
+							}
+%>
+					
+					</p>
+	
+ 				
+					<input type="hidden" name="recommends_count" value="<%=x%>" />
+					
+					
+					</form>
+<%
+		 WF_FORM_TOP = 'bottom';
+		Server.Execute('view_assessment_workflow_buttons.html');
+	} // _cancel end
+%>
+			</td>
+		</tr>
+		</table>

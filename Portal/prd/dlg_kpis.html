@@ -1,0 +1,297 @@
+<%Server.Execute( "include/user_init.html" )%>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1251" />
+<title><%=tools_web.get_web_str("ass_kpi_select_dialog_title")%></title>
+<link href="style.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="scripts/browser.js" language="javascript"></script>
+<script type="text/javascript" src="scripts/jquery.js"></script>
+<script language="javascript">
+document.title='<%=tools_web.get_web_str("ass_kpi_select_dialog_title")%>';
+//----------------------------------------------------------------------------------------------------------------------------------------------------//
+
+function showMeGoods()
+{
+	var tbl=document.getElementById("recycler666");
+
+	if (document.getElementById("recyclepress")) tbl.deleteRow(0);
+
+
+var trow=document.createElement("TR");
+ trow.setAttribute("id","recyclepress");
+ var trow=tbl.insertAdjacentElement('beforeEnd',trow);
+ var tcol1=document.createElement("TD");
+ var tcol1=trow.insertAdjacentElement('beforeEnd',tcol1);
+
+var positions=dialogArguments.xlist.selectNodes(".//"+node_prefix+"[not(@hidden='1') and (@user_is_owner=1)]");
+
+
+
+for (i=0;i<positions.length;i++)
+{
+	var chk=document.createElement("INPUT");
+	chk.setAttribute("id","chk");
+	chk.setAttribute("name","chk");
+	chk.setAttribute("type","checkbox");
+	chk.setAttribute("value",positions[i].getAttribute('id'));
+		chk.setAttribute("text",positions[i].getAttribute('name'));
+	tcol1.insertAdjacentElement('beforeEnd',chk);
+	tcol1.insertAdjacentHTML('beforeEnd',positions[i].getAttribute('name'));
+	switch(positions[i].getAttribute('type'))
+	{
+	<%
+		for (_type in common.kpi_types)
+		{
+	%>
+		case "<%=_type.id%>":
+			tcol1.insertAdjacentHTML('beforeEnd',"(<%=_type.name%>)");
+			break;
+	<%
+		}
+	%>
+	}
+	
+
+	var br=document.createElement("BR");
+	tcol1.insertAdjacentElement('beforeEnd',br);
+}
+}
+
+
+//----------------------------------------------------------------------------------------------------------------------------------------------------//
+
+function addKPIs()
+{
+	$("#recycler666").find('input:checkbox').filter(":checked").each(			
+				  function()
+				  {
+					  	var kpiunid=this.value;
+						var selected = $("#kpistorage").find('option');
+						for (k=0;k<$(selected).length;k++)
+						{
+							if($(selected).get(k).value==kpiunid) 
+								kpiunid="";
+						}
+				
+						if (kpiunid!="")
+						{
+							$("#kpistorage").append('<option value="' + kpiunid + '">' + this.getAttribute("text") + '</option>');
+/*							var iopt=document.createElement("OPTION");
+							iopt.setAttribute("value",kpiunid);
+							iopt.text=kpislst[i].text;
+								 dest.options.add(iopt);*/
+						}
+				  }										   
+			)
+	var kpislst=document.getElementById("chk");
+	var dest=document.getElementById("kpistorage");
+if (kpislst)
+{
+		if (!kpislst.length) 
+		{
+			kpislst[0]=kpislst; kpislst.length=1;
+		}
+		
+	for (i=0; i<kpislst.length;i++)
+	{
+	if(kpislst[i].checked)
+	{
+		var kpiunid=kpislst[i].value;
+		for (k=0;k<dest.length;k++)
+		{
+					if(dest[k].value==kpiunid) 
+						kpiunid="";
+		}
+
+		if (kpiunid!="")
+		{
+			var iopt=document.createElement("OPTION");
+			iopt.setAttribute("value",kpiunid);
+					iopt.text=kpislst[i].text;
+						 dest.options.add(iopt);
+		}
+
+	}
+
+	}
+
+
+
+}
+}
+
+//----------------------------------------------------------------------------------------------------------------------------------------------------//
+
+
+function expelKPIs()
+{
+	$("#kpistorage").find('option').filter(":selected").each(			
+		  function()
+		  {
+//			  $("#kpistorage").remove($(this))
+			  $(this).remove();
+		  }										   
+	)
+	
+}
+
+//----------------------------------------------------------------------------------------------------------------------------------------------------//
+
+function processChecked()
+{
+
+var nodesToDie=dialogArguments.xlist.selectNodes(".//"+node_prefix+"[@selected='1' and not(@hidden='1')]");
+if (nodesToDie)
+{
+for(i=0;i<nodesToDie.length;i++)
+{
+nodesToDie[i].setAttribute("selected",0);
+}
+}
+
+
+	var kpislist=document.getElementById("kpistorage");
+for(i=0;i<kpislist.length;i++)
+{
+var incarnatedNode=dialogArguments.xlist.selectSingleNode(".//"+node_prefix+"[@id='" + kpislist[i].value +"']");
+incarnatedNode.setAttribute("selected",1);
+}
+
+
+dialogArguments.handle=true;
+window.close(); 
+
+
+}
+//----------------------------------------------------------------------------------------------------------------------------------------------------//
+
+function add_new()
+{
+	var parobj=new Object();
+	parobj.is_kpi=dialogArguments.is_kpi;
+	var strAttr="status:no;dialogWidth:780px;dialogHeight:580px;help:no";
+	showModalDialog("dlg_add_new_kpi.html", parobj, strAttr);
+	if(parobj.handle) 
+	{	
+		var xkpis = new ActiveXObject("Msxml.DOMDocument");
+		xkpis.async = false;
+		xkpis.load("kpis_weblist.xml?proc_id="+dialogArguments.assessment_id);
+		xkpis.setProperty("SelectionLanguage","XPath");
+		
+		for (kk=0;kk<2;kk++)
+		{
+			var node_prefix=(kk==0?'kpi':'project');
+			var xselnodes=dialogArguments.xlist.selectNodes(".//"+node_prefix+"[@selected='1']");
+			//alert('xselnodes.length='+xselnodes.length)
+			for(i=0;i<xselnodes.length;i++)
+			{
+				var disclose=xkpis.selectSingleNode(".//"+node_prefix+"[@id='"+xselnodes[i].getAttribute("id")+"']");
+				//alert('xselnodes['+i+'].getAttribute("id")='+xselnodes[i].getAttribute("id")+' xselnodes['+i+'].getAttribute("name")='+xselnodes[i].getAttribute("name"))	
+				//alert(disclose)
+				if (disclose)
+				{
+					disclose.setAttribute("selected","1");
+				}
+			}
+		}
+		dialogArguments.xlist=xkpis;
+		showMeGoods();
+	}
+}
+//----------------------------------------------------------------------------------------------------------------------------------------------------//
+</script>
+</head>
+<body>
+<div style="padding:7px">
+<table width="100%" border="0" cellpadding="2">
+<tr>
+<td valign="top" width="50%">
+
+        <h4 style="text-align:center" id="kpi_select_list_title"><b><%=tools_web.get_web_str("ass_kpi_select_list_title")%></b></h4>        
+        <div id="kpicontainer" style="width:375px; height:455;overflow:scroll; border:1px solid #999;background-color: white;">
+<table width="100%">
+<tbody id="recycler666">
+</tbody>
+</table>
+        </div>
+		<div>
+		<input type="button" name="add_new" id="add_new" value="<%=tools_web.get_web_str("c_create")%>" onClick="add_new();" size="10">
+		</div>
+    
+</td>
+<td width="10" valign="middle">
+	    <input id="addButton" type="button" value=">>" onClick="addKPIs();" size="10" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/><br/><br/>
+  	    <input id="delButton" type="button" value="<<" onClick="expelKPIs();" size="10" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+
+
+
+<script>
+if (!(dialogArguments.allow_delete)) document.getElementById("delButton").style.display="none";
+if (!(dialogArguments.allow_create)) document.getElementById("add_new").style.display="none";
+</script>
+
+</td>
+    <td valign="top" style="height:100%">
+    <h4 style="text-align:center" id="kpi_select_selected_title"><b><%=tools_web.get_web_str("ass_kpi_select_selected_title")%></b></h4>
+        <div style="width:340px; height:455; background-color: #FFFFFF;" id="kpiStorageContainer">
+            <select name="kpistorage" id="kpistorage" multiple="1" style="height:100% !important; background-color:#FFF !important; width:100%;  border:1px solid #999 !important;">
+            </select>
+        </div>
+</td>
+</tr>
+</table>
+
+<table width="100%" border="0" cellpadding="7">
+	<tr>
+		<td align="center">
+            <input type="button" name="ok" value="<%=tools_web.get_web_str("c_save")%>" onClick="processChecked();" size="10" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <input type="button" name="cancel" value="<%=tools_web.get_web_str("c_cancel")%>" onClick="dialogArguments.handle=false; window.parent.close();" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+		</td>
+	</tr>
+</table>
+<script language="JavaScript">
+var node_prefix=dialogArguments.is_kpi?'kpi':'project';
+$(document).ready(function(){
+	if (!(dialogArguments.allow_delete))
+		document.getElementById("delButton").style.display="none";
+	var selones=dialogArguments.xlist.selectNodes(".//"+node_prefix+"[@selected='1' and not(@hidden='1')]");
+if (!dialogArguments.is_kpi)
+{
+	try
+	{
+	
+		document.title="<%=tools_web.get_web_str('ass_project_select_dialog_title')%>";
+		if (document.getElementById("kpi_select_list_title"))
+		{
+			document.getElementById("kpi_select_list_title").innerHTML="<%=tools_web.get_web_str('ass_project_select_list_title')%>"
+		}
+		if (document.getElementById("kpi_select_selected_title"))
+		{
+			document.getElementById("kpi_select_selected_title").innerHTML="<%=tools_web.get_web_str('ass_project_select_selected_title')%>"
+		}
+	}
+	catch(ex)
+	{
+	}
+}
+
+if (selones)
+{
+for(y=0;y<selones.length;y++)
+{
+			//$("#kpistorage").append('<option value="' + selones[y].getAttribute("id") + '">' + selones[y].getAttribute("name") + '</option>');
+			var iopt=document.createElement("option");
+iopt.setAttribute("value",selones[y].getAttribute("id"));
+iopt.text=selones[y].getAttribute("name");
+			document.getElementById("kpistorage").options.add(iopt);
+}
+}
+
+showMeGoods();
+						   
+});
+
+</script>
+</div>
+</body>
+</html>

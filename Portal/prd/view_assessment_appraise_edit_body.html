@@ -1,0 +1,614 @@
+<%
+	try
+	{
+		curAssessmentAppraiseID = Int( Request.QueryString.object_id );
+		curAssessmentAppraise = OpenDoc( UrlFromDocID( curAssessmentAppraiseID ) ).TopElem;
+	}
+	catch(_fuck_)
+	{
+		curAssessmentAppraise = null;
+		curAssessmentAppraiseID = null;
+	}
+	
+	try
+	{
+		Session.RETURN_MSG;
+	}
+	catch(_x_)
+	{
+		Session.RETURN_MSG = "";
+	}
+
+	if (Session.RETURN_MSG != "")
+	{
+		Response.Write("<br/><center><font size='+1' align='center'><i><b>" + HtmlEncode(Session.RETURN_MSG) + "</b></i></font></center>");
+		Session.RETURN_MSG = "";
+	}
+	
+	bIsReal = (curAssessmentAppraiseID != null && curAssessmentAppraise.is_model == false);
+	
+%>
+<script src="/scripts/calendar/calendar.js"></script>
+<script language="javascript">
+<!--
+//------------------------------------------------------------------------------------------
+function buttonMouseOver()
+{
+	window.event.srcElement.className='inputButtonOver';
+}
+function buttonMouseOut()
+{
+	window.event.srcElement.className='inputButton';
+}
+function checkkey(srcobj, e, flag_flat)
+{
+	if (!e) var e = window.event;
+	var keycode = parseInt(e.keyCode ? e.keyCode : e.which);
+	if ((keycode<48 || keycode>57) && keycode!=46) return false;
+	if (keycode==46) 
+	{
+		if( (!flag_flat) || srcobj.value.indexOf('.') >= 0) return false;
+	}
+	return true;
+}
+function toggle_section(_word)
+{	
+	$("form#assessment_appraise_submitter div[id^='cdiv_']").each(function(){ if (this.id == "cdiv_" + _word) $(this).show(); else $(this).hide(); });
+	$("form#assessment_appraise_submitter td[id^='ctd_']").each(function(){if (this.id == "ctd_" + _word)	{$(this).addClass("tab_td_sel"); $(this).removeClass("tab_td");} else {$(this).removeClass("tab_td_sel"); $(this).addClass("tab_td");} });
+	return false;
+}
+//------------------------------------------------------------------------------------------
+function what2submit()
+{
+	if($("form#assessment_appraise_submitter input#name").val() == "")
+	{
+		window.alert(<%=CodeLiteral( tools_web.get_web_str("vaaeb_mess_no_name") )%>);
+		return false;
+	}
+	return true;
+}
+//------------------------------------------------------------------------------------------
+
+function select_auditorys()
+{
+	var oPars=new Object(); oPars.check_access = true;
+	var strAttr='status:no;dialogWidth:780px;dialogHeight:550px;help:no;resizable:1';
+	
+	if (oPars.display_object_ids == '') oPars.display_object_ids = '0';
+	oPars.selected_object_ids = "";
+	$("form#assessment_appraise_submitter tbody#auditorizer > tr").each(function(){oPars.selected_object_ids+=this.getAttribute("key_id") +";";});
+	oPars.can_be_empty = true;
+	xShowModalDialog('dlg_select.html?doc_id=<%=curDocID%>&catalog_name=collaborator&typein=1&multi_select=1&rand='+Math.random(), oPars, strAttr);
+	if (!oPars.handle ) return false;
+	$('form#assessment_appraise_submitter input#butGeneratePlan').attr('disabled','true');
+	
+	$('form#assessment_appraise_submitter tbody#auditorizer').empty();
+	var item_count = 0;
+	temp_selected_object_ids = "";
+	for (var _x = item_count; _x < oPars.elemArray.length; _x++)
+	{
+		add_auditorys(oPars.elemArray[_x], oPars.elemNamesArray[_x]);
+		temp_selected_object_ids += oPars.elemArray[_x]+";"
+	}
+	
+}
+
+function add_auditorys(_id, _name)
+{
+	var item_count = parseInt($("form#assessment_appraise_submitter input#auditory_count").val());
+	var _class = item_count % 2 ? "tableRowEven" : "tableRowOdd";
+	
+	$("form#assessment_appraise_submitter tbody#auditorizer").append('<tr key_id="'+_id+'"><td class="' +_class+ '"><input type="hidden" id="auditory_id_'+item_count+'" name="auditory_id_'+item_count+'" value="'+_id+'"/>' +_name+ '</td></tr>');
+	$("form#assessment_appraise_submitter input#auditory_count").val(item_count+1);
+}
+<%
+	if (bIsReal)
+	{
+%>
+function assessment_appraise_generate()
+{
+	$("form#assessment_appraise_submitter div#control_buttons_set").hide();
+	$("form#assessment_appraise_submitter div#pocessing_do_not_touch_sign").show();
+	$("div#cdiv_assessment_plan > table").hide();
+	
+	$.ajax({url: "content_panel_process.html", data: "mode=assessment_appraise_generate_plan&href=&assessment_appraise_id=<%=curAssessmentAppraiseID%>&rand: Math.random()", dataType: "json", success: generate_rsult, error: function(xht,msg){generate_rsult({operation_status_result_message: msg, operation_status_result: 0});}});
+}
+function generate_rsult(json)
+{
+	$("form#assessment_appraise_submitter div#control_buttons_set").show();
+	$("div#cdiv_assessment_plan > table").show();
+	$("form#assessment_appraise_submitter div#pocessing_do_not_touch_sign").hide();
+	$("<div/>").attr("id","__message_blanket").css({"background-color": "white", "width":"100%", "height": "100%", "position":"absolute", "z-index":100, "opacity":0.5}).appendTo("body");
+	
+	var messageDiv = $("div#__reportDivSplasher");
+	messageDiv.remove();
+	$("body").append(messageDiv);
+	$(messageDiv).find("div#__reportDivSplasherInnerText").html(json.operation_status_result_message);
+	$(messageDiv).find("td#__reportDivSplasherHeaderText").html((json.operation_status_result == 1 ? "<%=tools_web.get_web_str("vaaeb_mess_success")%>" : "<%=tools_web.get_web_str("vaaeb_mess_err")%>"));
+	
+	$(messageDiv).show().css("width", parseInt($(window).width() * 0.7) + "px");
+	$("div#__reportDivSplasher").css({"left": ( $(window).width() - messageDiv.width() ) / 2+$(window).scrollLeft() + "px", "top": ($(window).height() - messageDiv.height())/2+$(window).scrollTop() + "px"});
+}
+
+function print_pa_list(_man_id, _man_name)
+{
+	var tdHost = $("div#cdiv_assessment_plan div#assessment_plan_inner_list");
+	tdHost.empty();
+	tdHost.append("<h3><%=tools_web.get_web_str("ass_estimated_person")%>: "+_man_name+"</h3>");
+	$("div#__plan_add_container input#add_pane_person_id").val(_man_id);
+	$("div#__plan_add_container b#add_pane_user_fullname").html(_man_name);
+	var _sWouldBePATable = $("#_pas_fresh_nest").text();
+	$.ajax({
+		type: "GET",
+		url: "content_panel_process.html?mode=assessment_appraise_get_pas_list&href=",
+		data: "person_id=" + _man_id + "&assessment_appraise_id=<%=curAssessmentAppraiseID%>&r=" + Math.random() * 1000000,
+		dataType: "xml",
+		error: function (response){window.alert("ERROR "+response.status+": \n" + response.statusText);},
+		success: function(oXml){
+			$(oXml).find("pa,development_plan").each(function(){
+				var _pa_id = $(this).find("id").text();
+				var _newPATable = $(_sWouldBePATable.replace(/\$\#\$\#\$/g, _pa_id)).attr("name", "pa_nest_table");
+				_newPATable.find("td#disp_person_id_" + _pa_id).html($(this).find("person_fullname").text());
+				_newPATable.find("input#disp_expert_person_id_" + _pa_id).val($(this).find("expert_person_fullname").text());
+				_newPATable.find("input#expert_person_id_" + _pa_id).val($(this).find("expert_person_id").text());
+				_newPATable.find("span#participants_" + _pa_id + "_" + $(this).find("status").text()).show();
+				_newPATable.find("span#assessment_appraise_types_" + _pa_id + "_" + $(this).find("assessment_appraise_type").text()).show();
+				
+				tdHost.append(_newPATable);
+			});
+		}
+	});
+}
+function pa_beg_save_or_kill_me(_id, _action)
+{
+	if (_action == "kill")
+	if (!confirm(<%=CodeLiteral( tools_web.get_web_str("vaaeb_mess_del_form") )%>))
+		return false;
+	
+	$("table#whole_table_id_" + _id + " input[name^='toolbar_" +_id + "_']").hide().after("<img border='0' src='pics/ajax-loader-tiny.gif'/>");
+	$.ajax({
+		type: "POST",
+		url: "content_panel_process.html?mode=assessment_appraise_pa_killorsave&href=",
+		data: "pa_id=" + _id + "&assessment_appraise_id=<%=curAssessmentAppraiseID%>&action=" +_action+ "&r=" + Math.random() * 1000000 + "&expert_person_id=" + $("input#expert_person_id_" + _id).val(),
+		dataType: "json",
+		error: function (response){window.alert("ERROR "+response.status+": \n" + response.statusText);},
+		success: function(oJson){
+			$("table#whole_table_id_" + _id + " input[name^='toolbar_" +_id + "_']").show().next("img").remove();
+			if (_action == "kill" && oJson.operation_status_result == 1)
+			{
+				$("table#whole_table_id_" + _id).remove();
+			}
+			
+			window.alert(oJson.operation_status_result_message);
+		}
+		});
+		
+}
+
+function generate_pa_by_status(_status)
+{
+	$('div#cdiv_assessment_plan > div#__plan_add_container').hide('fast');
+	_user_id = $('div#cdiv_assessment_plan > div#__plan_add_container > input#add_pane_person_id').val();
+	_user_name = $('div#cdiv_assessment_plan > div#__plan_add_container b#add_pane_user_fullname').html();
+	var _data = "&assessment_appraise_id=<%=curAssessmentAppraiseID%>&r=" + Math.random() * 1000000 + "&person_id=" + _user_id;
+	var selected_guys_ids = "";
+	if (_status != null)
+	{
+		if (_status != 'self')
+		{
+			var oPars=new Object(); oPars.check_access = true;
+			var strAttr='status:no;dialogWidth:780px;dialogHeight:550px;help:no;resizable:1';
+			
+			if (oPars.display_object_ids == '') oPars.display_object_ids = '0';
+			oPars.selected_object_ids = "";
+			oPars.can_be_empty = false;
+			xShowModalDialog('dlg_select.html?doc_id=<%=curDocID%>&catalog_name=collaborator&typein=1&multi_select='+(_status == 'manager' || _status == 'interview' ? "0":"1")+'&rand='+Math.random(), oPars, strAttr);
+			if (!oPars.handle ) return false;
+			
+			selected_guys_ids = oPars.selected_object_ids;
+		}
+		else
+			selected_guys_ids = _user_id;
+		
+		 _data+= "&selected_expert_ids=" + selected_guys_ids + "&status="+_status + "&action=rebuild_by_status";
+	}
+	else
+	{
+		var oPars=new Object(); oPars.check_access = true;
+		var strAttr='status:no;dialogWidth:780px;dialogHeight:550px;help:no;resizable:1';
+		
+		if (oPars.display_object_ids == '') oPars.display_object_ids = '0';
+		oPars.selected_object_ids = "";
+		oPars.can_be_empty = false;
+		xShowModalDialog('dlg_select.html?doc_id=<%=curDocID%>&catalog_name=collaborator&typein=1&multi_select=1&rand='+Math.random(), oPars, strAttr);
+		if (!oPars.handle ) return false;
+		
+		selected_guys_ids = oPars.selected_object_ids;
+		_data+="&selected_expert_ids=" + selected_guys_ids + "&action=regenerate";
+	}
+	$("<div/>").attr("id","__message_blanket").css({"background-color": "white", "width":"100%", "height": "100%", "position":"absolute", "z-index":100, "opacity":0.5}).appendTo("body");
+	$("form#assessment_appraise_submitter div#control_buttons_set").hide();
+	$("form#assessment_appraise_submitter div#pocessing_do_not_touch_sign").show();
+	
+	$.ajax({
+		type: "POST",
+		url: "content_panel_process.html?mode=assessment_appraise_pa_generate&href=",
+		data: _data,
+		dataType: "json",
+		error: function (response)
+		{
+			window.alert("ERROR "+response.status+": \n" + response.statusText);
+			$('body > div#__message_blanket').remove();
+			$("form#assessment_appraise_submitter div#control_buttons_set").show();
+			$("form#assessment_appraise_submitter div#pocessing_do_not_touch_sign").hide();
+		},
+		success: function(oJson)
+			{
+				if (oJson.operation_status_result == 1)
+				{
+					print_pa_list(_user_id, _user_name);
+				}
+				window.alert(oJson.operation_status_result_message);
+				$('body > div#__message_blanket').remove();
+				$("form#assessment_appraise_submitter div#control_buttons_set").show();
+				$("form#assessment_appraise_submitter div#pocessing_do_not_touch_sign").hide();
+			}
+		});
+}
+
+<%
+	}
+%>
+-->
+</script>
+<div id="__reportDivSplasher" style="position: absolute; border: 2px outset;display: none;z-index:101">
+	<div style="height:30px;width:100%;background-color:lightgrey; background-color: lightgrey; border: 1px outset;padding: 5px;">
+		<table border="0" cellpadding="0" cellspacing="0">
+		<tr>
+			<td width="100%" id="__reportDivSplasherHeaderText"><%=tools_web.get_web_str("vaaeb_plan_not_create")%></td>
+			<td>
+				<input type="button" value="X" class="inputButton" onmouseover="$(this).addClass('inputButtonOver');" onmouseout="$(this).removeClass('inputButtonOver');" onclick="$('div#__reportDivSplasher').hide('fast');$('body > div#__message_blanket').remove();" style="width: 20px; align: right"/>
+			</td>
+		</tr>
+		</table>
+	</div>
+	<div style="height:300px;width:100%; background-color: whitesmoke; overflow: auto; border: 1px groove; padding: 5px" id="__reportDivSplasherInnerText">
+		-
+	</div>
+</div>
+<table width="100%"  border="0" cellspacing="0" cellpadding="3" name="top_report_table">
+<tr>
+<td>
+<form name="assessment_appraise_submitter" id="assessment_appraise_submitter" action="content_panel_process.html" method="post">
+<input type="hidden" name="assessment_appraise_id" value="<%=(bIsReal ? curAssessmentAppraiseID : 0)%>"/>
+<input type="hidden" name="mode" value="assessment_appraise"/>
+<input type="hidden" name="doc_id" value="<%=curDocID%>"/>
+<%
+	_href = String(tools_web.get_query_string( true, "object_id"));
+	_href = _href.substr(0, _href.length - 1);
+	if (!bIsReal)
+	{
+%>
+		<input type="hidden" name="standard_appraise_id" value="<%=(curAssessmentAppraiseID)%>"/>
+<%
+	}
+%>
+<input type="hidden" name="href" value="<%=_href + (bIsReal ? "&object_id="+curAssessmentAppraiseID : "")%>"/>
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+	<tr>
+		<td class="tab_td_empty"><img src="pics/1blank.gif" width="10" height="0"/></td>
+		<td class="tab_td" id="ctd_common" onclick="return toggle_section('common');"><img src="pics/1blank.gif" width="140" height="0"/><br/><a style="text-decoration:none" href="#" onclick="return toggle_section('common');"><%=tools_web.get_web_str("c_common_settings")%></a></td>
+		<td class="tab_td_empty" width="10px">&nbsp;</td>
+		<td class="tab_td" id="ctd_auditory" onclick="return toggle_section('auditory');"><img src="pics/1blank.gif" width="140" height="0"/><br/><a style="text-decoration:none" href="#" onclick=" return toggle_section('auditory');"><%=tools_web.get_web_str("c_collaborators")%></a></td>
+		<td class="tab_td_empty" width="10px">&nbsp;</td>
+<%
+	if (bIsReal)
+	{
+%>
+		<td class="tab_td" id="ctd_assessment_plan" onclick="return toggle_section('assessment_plan');"><img src="pics/1blank.gif" width="140" height="0"/><br/><a style="text-decoration:none" href="#" onclick=" return toggle_section('assessment_plan');"><%=tools_web.get_web_str("c_assessment_plan")%></a></td>
+		<td class="tab_td_empty" width="10px">&nbsp;</td>
+<%
+	}
+%>
+		<td class="tab_td_empty" width="100%">&nbsp;</td>
+	</tr>
+</table>
+<br/>
+<div width="100%" id="cdiv_common" style="display: none">
+<table width="100%" cellspacing="0" cellpadding="4" class="tableBorder" border="0">
+	<tr>
+		<td style="font-weight:bolder; font-size:larger;" width="120px"><%=tools_web.get_web_str("c_name")%>:</td>
+		<td style="font-weight:bolder; font-size:larger"><input type="text" id="name" name="name" value="<%=(curAssessmentAppraise != null ? HtmlEncode(curAssessmentAppraise.name) : "") + (curAssessmentAppraise.is_model ? " - " + Date(): "")%>" class="inputEdit" style="width:100%"/></td>
+	</tr>
+	<tr>
+		<td style="font-weight:bolder; font-size:larger;" width="120px"><%=tools_web.get_web_str("c_start_date")%>:</td>
+		<td style="font-weight:bolder; font-size:larger">
+			<table cellspacing="0">
+				<tr>
+					<td><input type="text" id="start_date" name="start_date" style="width: 80px" class="inputEdit" value="<%=(curAssessmentAppraise != null ? curAssessmentAppraise.start_date : "")%>" readonly/></td>
+					<td><a href="#" id="link_start_date" onclick="CreateCalendar(this.getAttribute('id'), 'start_date', 'dd.mm.yyyy'); return false;"><img src="/scripts/calendar/calendar.gif" border="0"/></a></td>
+				</tr>
+			</table>
+		</td>
+	</tr>
+	<tr>
+		<td style="font-weight:bolder; font-size:larger;" width="120px"><%=tools_web.get_web_str("c_finish_date")%>:</td>
+		<td style="font-weight:bolder; font-size:larger">
+			<table cellspacing="0">
+				<tr>
+					<td><input type="text" id="end_date" name="end_date" style="width: 80px" class="inputEdit" value="<%=(curAssessmentAppraise != null ? curAssessmentAppraise.end_date : "")%>" readonly/></td>
+					<td><a href="#" id="link_end_date" onclick="CreateCalendar(this.getAttribute('id'), 'end_date', 'dd.mm.yyyy'); return false;"><img src="/scripts/calendar/calendar.gif" border="0"/></a></td>
+				</tr>
+			</table>
+		</td>
+	</tr>
+	<tr>
+		<td style="font-weight:bolder; font-size:larger;" width="120px"><%=tools_web.get_web_str("c_tutor_main")%>:</td>
+		<td style="font-weight:bolder; font-size:larger">
+<%
+			if (curAssessmentAppraise != null)
+				_catResponsePerson = curAssessmentAppraise.person_id.OptForeignElem;
+			else
+				_catResponsePerson =  undefined;
+%>
+			<table width="100%" cellspacing="0" cellpadding="2" border="0">
+				<tr>
+					<td><input type="text" id="disp_person_id" value="<%=(_catResponsePerson != undefined ? HtmlEncode(_catResponsePerson.fullname) : "")%>" class="inputEdit" style="width:100%" readonly/>
+					<input type="hidden" name="person_id" id="person_id" value="<%=(_catResponsePerson != undefined ? _catResponsePerson.id : "")%>"/>
+					</td>
+					<td width="25px">
+					<input type="button" value="..." class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="
+						var pars=new Object(); pars.check_access = true;
+						var strAttr='status:no;dialogWidth:780px;dialogHeight:550px;help:no;resizable:1';
+						xShowModalDialog('dlg_select.html?doc_id=<%=curDocID%>&catalog_name=collaborator&typein=1&multi_select=0&rand='+Math.random(), pars, strAttr);
+						if (!pars.handle ) return false;
+						$('form#assessment_appraise_submitter input#person_id').val(pars.element_id);
+						$('form#assessment_appraise_submitter input#disp_person_id').val(pars.element_name);
+					" style="width: 25px"/>
+					</td>
+					<td width="25px">
+					<input type="button" value="x" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="
+						$('form#assessment_appraise_submitter input#person_id').val('');
+						$('form#assessment_appraise_submitter input#disp_person_id').val('');
+					" style="width: 25px"/>
+					</td>
+				</tr>
+			</table>
+		</td>
+	</tr>
+	<tr>
+		<td style="font-weight:bolder; font-size:larger;" width="120px"><%=tools_web.get_web_str("vaaeb_view_res")%>:</td>
+		<td style="font-weight:bolder; font-size:larger">
+			<input type="radio" name="web_display" value="1" <%=(curAssessmentAppraise != null && !curAssessmentAppraise.web_display ? "checked":"")%>/><%=tools_web.get_web_str("vaaeb_no_permit")%>&nbsp;<input type="radio" name="web_display" value="1" <%=(curAssessmentAppraise == null || curAssessmentAppraise.web_display ? "checked":"")%>/><%=tools_web.get_web_str("vaaeb_permit")%>
+		</td>
+	</tr>
+</table>
+<br/>
+<table style="font-weight:bolder; font-size:larger;" width="100%">
+	<tr>
+		<td><%=tools_web.get_web_str("c_comment")%></td>
+	</tr><tr>
+		<td><textarea id="comment" name="comment" style="width:100%"><%=(curAssessmentAppraise != null ? HtmlEncode(curAssessmentAppraise.comment) : "")%></textarea></td>
+	</tr>
+</table>
+</div>
+<div width="100%" id="cdiv_auditory" style="display: none">
+	<table width="100%"  border="0" cellspacing="0" cellpadding="3">
+		<tr id="line_head">
+			<td class="tableHeaderWithText"><%=tools_web.get_web_str("vaaeb_appraisement")%></td>
+		</tr>
+		<tr>
+			<td class="tableHeaderNoText" colspan="1"><img src="pics/1blank.gif" width="1" height="1"/></td>
+		</tr>	
+		<tbody id="auditorizer"></tbody>
+		<tr>
+			<td class="tableFooter" colspan="1"><img src="pics/1blank.gif" width="1" height="1"/></td>
+		</tr>
+	</table>
+	<table width="100%" border="0" cellspacing="0" cellpadding="0" class="activator">
+	<TR>
+		<TD ALIGN="CENTER" class="activator">
+			<input type="hidden" name="auditory_count" id="auditory_count" value="0"/>
+			<input type="button" value="<%=tools_web.get_web_str("vaaeb_sel_colls")%>" onClick="select_auditorys();" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+		</TD>
+	</TR>
+	</table>
+</div>
+<%
+	if (bIsReal)
+	{
+%>
+<div width="100%" id="cdiv_assessment_plan">
+	<table width="100%">
+		<tr>
+			<th width="40%"><%=tools_web.get_web_str("c_assessment_plan")%></th><th><%=tools_web.get_web_str("c_pas")%></th>
+		</tr>
+		<tr valign="top">
+			<td>
+				<table width="100%"  border="0" cellspacing="0" cellpadding="3">
+					<tr>
+						<td class="tableHeaderWithTextLeft"><img src="pics/1blank.gif" width="0" height="0" /></td>
+						<td class="tableHeaderNoText" width="100%"><img src="pics/1blank.gif" width="1" height="1"/></td>
+						<td class="tableHeaderWithTextRight"><img src="pics/1blank.gif" width="0" height="0" /></td>
+					</tr>
+					<tbody id="assessment_list_list">
+				<%
+						iCounter = 0;
+						for (catAssPlan in XQuery("for $elem in assessment_plans where $elem/assessment_appraise_id = " + curAssessmentAppraiseID + " return $elem"))
+						{
+							sClass = iCounter++ % 2 ? "tableRowEven" : "tableRowOdd";
+							sClassL = iCounter++ % 2 ? "tableRowEvenLeft" : "tableRowOddLeft";		
+							sClassR = iCounter++ % 2 ? "tableRowEvenRight" : "tableRowOddRight";
+				%>
+						<tr>
+							<td class="<%=sClassL%>"></td>					
+							<td class="<%=sClass%>" colspan="2">
+								<a href="#" onclick="print_pa_list('<%=catAssPlan.person_id%>',this.innerHTML); $('div#cdiv_assessment_plan a#__add_pane_opener').show('fast'); return false;"><%=catAssPlan.person_fullname%></a>
+							</td>
+							<td class="<%=sClassR%>"></td>
+						</tr>
+				<%	
+						}
+				%>
+					</tbody>
+					<tr>
+						<td class="tableFooterLeft"><img src="pics/1blank.gif" width="0" height="0" /></td>
+						<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableFooterRight"><img src="pics/1blank.gif" width="0" height="0" /></td>
+					</tr>
+				</table>
+				<br/>
+				<a style="display: none" href="#" id="__add_pane_opener" onclick="var selectorDiv = $('div#cdiv_assessment_plan > div#__plan_add_container'); selectorDiv.show().css({'left': ( $(window).width() - selectorDiv.width() ) / 2+$(window).scrollLeft() + 'px', 'top': (window.screen.height - selectorDiv.height())/2+$(window).scrollTop() - selectorDiv.parent().position().top + 'px'}); return false;"><%=tools_web.get_web_str("vaaeb_create_pas")%>...</a>
+			</td>
+			<td>
+				<div id="assessment_plan_inner_list">
+					
+				</div>
+			</td>
+		</tr>
+	</table>
+	<div id="__plan_add_container" style="background-color: whitesmoke; position: absolute; border: 2 outset;display: inline;z-index:101; width: 400px; left: 10px; top: 10px; display: none">
+		<input type="hidden" id="add_pane_person_id" value=""/>
+		<table width="100%" height="100%" cellpadding="10" border="0">
+			<tr valign="top"  style="height:30px;width:100%;background-color:lightgrey; background-color: lightgrey; border: 1px outset;padding: 5px;">
+				<td width="100%"><b><%=tools_web.get_web_str("vaaeb_add_phase")%></b><b id="add_pane_user_fullname"></b></td><td width="50px"><input type="button" value="X" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="$('div#cdiv_assessment_plan > div#__plan_add_container').hide('fast');" style="width: 25px; height: 25px" title="<%=tools_web.get_web_str("c_close")%>"/></td>
+			</tr>
+			<tr height="100%">
+				<td valign="top" align="center" colspan="2">
+<%
+			for (fldParticipantElem in curAssessmentAppraise.participants)
+			{
+%>
+				<input type="button" value="<%=fldParticipantElem.PrimaryKey.ForeignElem.name+"..."%>" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="generate_pa_by_status('<%=fldParticipantElem.PrimaryKey%>');"/>
+<%
+			}
+%>
+				</td>
+			</tr>
+		</table>
+	</div>	
+</div>
+<%
+	}
+	_href = tools_web.get_url_protocol( Request.Url ) + Request.UrlHost + UrlPath( Request.Url ) + "?mode=content_panel&doc_id="+curDocID+"&tab=assessment_appraise";
+%>	<br/>
+		<div id="pocessing_do_not_touch_sign" style="display: none">
+			<table align="center"><tr valign="middle"><td><img src="pics/ajax-loader.gif"/></td><td style="color: maroon; font-size: 15;"><%=tools_web.get_web_str("vaaeb_mess_proc")%></td><td><img src="pics/ajax-loader.gif"/></td></tr></table>
+		</div>
+		<div id="control_buttons_set" style="text-align: center; width:100%">
+			<input type="submit" value="<%=tools_web.get_web_str("c_save")%>" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="return what2submit();"/>
+<%
+	if (bIsReal)
+	{
+%>
+		<input type="button" id="butGeneratePlan" value="<%=tools_web.get_web_str("vaaeb_create_plan")%>..." class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="assessment_appraise_generate();"/>
+<%
+	}
+%>
+		</div>
+</form>
+<center>
+	<input type="button" value="<%=tools_web.get_web_str("vaaeb_list_back")%>" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="window.location.href='<%=_href%>'"/>
+</center>
+<br/>
+</td>
+</tr>
+<tr>
+	<td colspan="3" class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+</tr>
+</table>
+<textarea id="_pas_fresh_nest" style="display: none">
+					<table id="whole_table_id_$#$#$" width="100%" cellspacing="2" cellpadding="4" class="tableBorder">
+						<tr>
+							<td width="100">&nbsp;</td>
+							<td style="border: 1px outset black">
+								<input name="toolbar_$#$#$_save" type="button" style="height: 25px; width: 25px; background-image: url('pics/save.png'); background-repeat:no-repeat; background-position: center center;" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="pa_beg_save_or_kill_me('$#$#$', 'save');" title="<%=tools_web.get_web_str("c_save")%>"/>
+								<input name="toolbar_$#$#$_kill" type="button" style="height: 25px; width: 25px; background-image: url('pics/Delete_3.gif'); background-repeat:no-repeat; background-position: center center;" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="pa_beg_save_or_kill_me('$#$#$', 'kill');" title="<%=tools_web.get_web_str("c_delete")%>"/>
+							</td>
+						</tr>
+						<tr>
+							<td width="100" align="left"><%=tools_web.get_web_str("ass_estimated_person")%>:</td>
+							<td style="font-weight:normal" id="disp_person_id_$#$#$"></td>
+						</tr>
+						<tr>
+							<td width="100" align="left"><%=tools_web.get_web_str("ass_estimating_person")%>:</td>
+							<td>
+								<table width="100%" cellspacing="0" cellpadding="2" border="0">
+									<tr>
+										<td><input type="text" id="disp_expert_person_id_$#$#$" value="" class="inputEdit" style="width:100%" readonly/>
+										<input type="hidden" id="expert_person_id_$#$#$" value=""/>
+										</td>
+										<td width="25px">
+										<input type="button" value="..." class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="
+											var pars=new Object(); pars.check_access = true;
+											var strAttr='status:no;dialogWidth:780px;dialogHeight:550px;help:no;resizable:1';
+											xShowModalDialog('dlg_select.html?doc_id=<%=curDocID%>&catalog_name=collaborator&typein=1&multi_select=0&rand='+Math.random(), pars, strAttr);
+											if (!pars.handle ) return false;
+											$('input#expert_person_id_$#$#$').val(pars.element_id);
+											$('input#disp_expert_person_id_$#$#$').val(pars.element_name);
+										" style="width: 25px"/>
+										</td>
+									</tr>
+								</table>
+							</td>
+						</tr>
+						<tr>
+							<td width="100" align="left"><%=tools_web.get_web_str("c_role")%>:</td>
+							<td style="font-weight:normal">
+<%
+								for (commonParticipantElem in ArraySelect(common.assessment_appraise_participants, "usable"))
+									Response.Write("<span id='participants_$#$#$_"+commonParticipantElem.id+"' style='display: none'>"+commonParticipantElem.name+"</span>");
+%>
+							</td>
+						</tr>
+						<tr>
+							<td width="100" align="left"><%=tools_web.get_web_str("ass_type")%>:</td>
+							<td style="font-weight:normal">
+<%
+								for (commonATElem in ArraySelect(common.assessment_appraise_types, "general"))
+									Response.Write("<span id='assessment_appraise_types_$#$#$_"+commonATElem.id+"' style='display:none'>"+commonATElem.name+"</span>");
+%>
+							</td>
+						</tr>
+					</table>
+					<br/>
+</textarea>
+<script language="javascript">
+<!--
+<%
+	if (bIsReal)
+	{
+		try
+		{
+			_teReport = OpenDoc(UrlFromDocID(curAssessmentAppraise.report_id)).TopElem;
+		}
+		catch(_X_)
+		{
+			_teReport = null;
+		}
+		if (_teReport!=null)
+		{
+%>
+			$("div#__reportDivSplasherInnerText").html("<%=HtmlEncode(_teReport.report_text)%>");
+<%
+			if (!_teReport.completed)
+			{
+%>
+			$("form#assessment_appraise_submitter div#control_buttons_set").after($("<span>").css({"width":"100%", "text-align":"center", "font-weight":"bold","color":"red"}).html(<%=CodeLiteral( tools_web.get_web_str("vaaeb_mess_proc2") )%>)).hide();
+			$("div#cdiv_assessment_plan > table").hide();
+<%
+			}
+		}
+		
+		for (_fldAuditoryElem in curAssessmentAppraise.auditorys)
+		{
+%>
+	add_auditorys("<%=_fldAuditoryElem.PrimaryKey%>", "<%=HtmlEncode(_fldAuditoryElem.person_name)%>");
+<%
+		}
+	}
+%>
+	toggle_section("common");
+-->
+</script>

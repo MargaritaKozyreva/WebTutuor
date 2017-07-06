@@ -1,0 +1,990 @@
+<%
+	try
+	{
+		iDocType = Int(Request.QueryString.doc_type_id);
+		teDocType = OpenDoc(UrlFromDocID(iDocType)).TopElem;
+		if (teDocType.is_crave_for_reboot) throw "Document type has changed and is waiting for reboot";
+	}
+	catch(_errDoc_)
+	{
+		Response.Write("Invalid document type ID\nError: " + _errDoc_);
+		Cancel();
+	}
+	
+	try
+	{
+		curDocumentID = Int( Request.QueryString.object_id );
+		curDocument = OpenDoc( UrlFromDocID( curDocumentID ) ).TopElem;
+		//if ( tools.check_access(curDocument, curUserID) == false ) throw "ne lez!";
+	}
+	catch(_fuck_)
+	{
+		curDocument = null;
+		curDocumentID = null;
+	}
+	
+	if (curDocument != null) _is_new = true; else _is_new = false;
+
+	try
+	{
+		Session.RETURN_MSG;
+	}
+	catch(_x_)
+	{
+		Session.RETURN_MSG = "";
+	}
+
+	if (Session.RETURN_MSG != "")
+	{
+		Response.Write("<br/><center><font size='+1' align='center'><i><b>" + HtmlEncode(Session.RETURN_MSG) + "</b></i></font></center>");
+		Session.RETURN_MSG = "";
+	}
+	aSheetsArray = Array();
+	oSheetObj = new Object;
+	oSheetObj.id = "common";
+	oSheetObj.title = tools_web.get_web_str('c_common');
+	aSheetsArray[0] = oSheetObj;
+	aSheetsArray = ArrayUnion(aSheetsArray, teDocType.sheets);
+	
+	Server.Execute( "view_tinymce.html" );
+%>
+<script src="/scripts/calendar/calendar.js"></script>
+<script language="javascript">
+<!--
+	var SCRIPT_TYPE = 'JavaScript';
+	function what2submit()
+	{
+		var BREAK = false;
+		try
+		{
+			<%=teDocType.before_save_action%>
+		}
+		catch(_o_)
+		{
+			window.alert('BEFORE-SAVE-ACTION failed: ' + _o_);
+		}
+		if (BREAK == true) return false;
+		return true;
+	}
+	function toggle_section(_word)
+	{	
+		$("form#doc_submitter div[id^='c0666div_']").each(function(){ if (this.id == "c0666div_" + _word) $(this).show(); else $(this).hide(); });
+		$("form#doc_submitter td[id^='ctd_']").each(function(){if (this.id == "ctd_" + _word)	{$(this).addClass("tab_td_sel"); $(this).removeClass("tab_td");} else {$(this).removeClass("tab_td_sel"); $(this).addClass("tab_td");} });
+		return false;
+	}
+	function checkkey(srcobj, e, flag_flat)
+	{
+		if (!e) var e = window.event;
+		var keycode = parseInt(e.keyCode ? e.keyCode : e.which);
+		if ((keycode<48 || keycode>57) && keycode!=46) return false;
+		if (keycode==46) 
+		{
+			if( (!flag_flat) || srcobj.value.indexOf('.') >= 0) return false;
+		}
+		return true;
+	}
+	function makeMeInput(sFieldName, sFieldValue, sType)
+	{
+		return $("<input/>")
+		.attr("type",(sType != undefined ? sType : "hidden"))
+		.attr("name",sFieldName)
+		.attr("id",sFieldName)
+		.attr("value",(sFieldValue != undefined ? sFieldValue : "")).get(0);
+		/*
+		var inputObj = document.createElement("INPUT");
+		inputObj.setAttribute("type",(sType != undefined ? sType : "hidden"));
+		inputObj.setAttribute("name",sFieldName);
+		inputObj.setAttribute("id",sFieldName);
+		if (sFieldValue != undefined)
+		{
+			inputObj.setAttribute("value",sFieldValue);
+		}
+		return inputObj;
+		*/
+	}
+-->
+</script>
+<form name="doc_submitter" id="doc_submitter" action="content_panel_process.html" method="post">
+<input type="hidden" name="object_id" value="<%=(curDocumentID != null ? curDocumentID : 0)%>"/>
+<input type="hidden" name="doc_type_id" value="<%=iDocType%>"/>
+<input type="hidden" name="doc_id" value="<%=curDocID%>"/>
+<input type="hidden" name="mode" value="doc_type_document"/>
+<input type="hidden" name="href" value="<%=Request.Url%>"/>
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+	<tr>
+		<td class="tab_td_empty"><img src="pics/1blank.gif" width="10" height="0"/></td>
+<%
+	for (fldSheet in aSheetsArray)
+	{
+%>		
+		<td class="tab_td" id="ctd_<%=fldSheet.id%>" onclick="return toggle_section('<%=fldSheet.id%>');"><img src="pics/1blank.gif" width="140" height="0"/><br/><a style="text-decoration:none" href="#" onclick="return toggle_section('<%=fldSheet.id%>');"><%=fldSheet.title%></a></td>
+		<td class="tab_td_empty" width="10px">&nbsp;</td>
+<%		
+	}
+%>
+		<td class="tab_td_empty" width="100%">&nbsp;</td>
+	</tr>
+</table>
+<br/>
+<%
+	for (fldSheet in aSheetsArray)
+	{
+%>
+<div id="c0666div_<%=fldSheet.id%>" style="display: none">
+<table width="100%">
+<%
+		if (fldSheet.id == "common")
+			aFldList = ArraySelect(teDocType.fields, "sheet_id.HasValue == false");
+		else
+			aFldList = ArraySelect(teDocType.fields, "sheet_id == " + CodeLiteral(fldSheet.id));
+		
+		for (fldField in aFldList)
+		{
+%>
+			<tr>
+			<td>
+<%
+			if (fldField.is_multiple)
+			{
+%>
+				<script language="javascript">
+				<!--
+					function btn_<%=fldField.name%>_select()
+					{
+						var oSubFieldsElem = new Object();
+<%
+						if (fldField.type == "foreign_elem")
+						{
+%>
+							oSubFieldsElem.bIsCatalogObject = true;
+							var oPars=new Object();	oPars.check_access = true;
+							oPars.selected_object_ids = "";
+							$("form#doc_submitter tbody#tbody_<%=fldField.name%>_recycler > tr").each(function(){oPars.selected_object_ids+=this.getAttribute("key_id") +";";});
+							var strAttr='status:no;dialogWidth:780px;dialogHeight:550px;help:no;resizable:1';
+							xShowModalDialog('dlg_select.html?doc_id=<%=curDocID%>&catalog_name=<%=fldField.catalog%>&typein=0&multi_select=1&rand='+Math.random(), oPars, strAttr);
+							if (!oPars.handle) return false;
+							var sCatalog = "";
+							$("form#doc_submitter tbody#tbody_<%=fldField.name%>_recycler > tr").each(function()
+							{
+								if (String(oPars.selected_object_ids).indexOf(this.getAttribute("key_id")) < 0)
+									$(this).remove();
+								else
+									sCatalog+= this.getAttribute("key_id")+";"
+							});
+							
+							for (var _x = 0; _x < oPars.elemArray.length; _x++)
+							if (String(sCatalog).indexOf(oPars.elemArray[_x]) < 0)
+							{
+								oSubFieldsElem.<%=fldField.name%>_id = oPars.elemArray[_x];
+								oSubFieldsElem.<%=fldField.name%>_id_disp = oPars.elemNamesArray[_x];
+								sCatalog+= oPars.elemArray[_x]+";"
+								btn_<%=fldField.name%>_add_item(oSubFieldsElem);
+							}
+<%
+						}
+						else
+						{
+%>
+							oSubFieldsElem.bIsCatalogObject = false;
+							btn_<%=fldField.name%>_add_item(oSubFieldsElem);
+<%
+						}
+%>
+					}
+					function btn_<%=fldField.name%>_add_item(ListElem)
+					{
+						if (!ListElem) return;
+						var inputCounter = $("form#doc_submitter input#i_<%=fldField.name%>_count").get(0);
+						var iCount = parseInt($(inputCounter).val());
+						var jTbody = $("form#doc_submitter tbody#tbody_<%=fldField.name%>_recycler");
+						var trRow = document.createElement("TR");
+						trRow.valign="middle";
+						$(jTbody).append(trRow);
+						var tdObj;
+						var inputObj;
+						var sSubName = "";
+<%
+						if (fldField.type == "foreign_elem")
+						{
+%>
+							sSubName = "pse_<%=fldField.name%>_" + iCount;
+							inputObj = makeMeInput(sSubName, ListElem.<%=fldField.name%>_id);
+							tdObj=$("<td/>").css("background-color", "white").html(ListElem.<%=fldField.name%>_id_disp);
+							$(tdObj).append(inputObj);
+							$(trRow).append(tdObj).attr("key_id", ListElem.<%=fldField.name%>_id);
+<%
+						}
+						else
+						{
+%>
+							$(trRow).append(makeMeInput("pse_<%=fldField.name%>_"+iCount, iCount));
+<%
+						}
+						for (fldSubField in fldField.sub_fields)
+						{
+%>
+							tdObj=document.createElement("TD");
+							tdObj.bgColor = "white";
+							sSubName = "se_<%=fldField.name%>_<%=fldSubField.name%>_" + iCount;
+							
+<%
+							switch (fldSubField.type)
+							{
+								case "heading":
+
+									if (StrBegins(fldSubField.title, '='))
+									{
+%>
+										try
+										{
+											$(tdObj).text( eval(String('<%=StrReplace(fldSubField.title, "'","\\'")%>').slice(1)));
+										}
+										catch(_X_)
+										{
+											$(tdObj).text('*error*');
+										}
+<%
+									}
+									else
+									{
+%>
+										$(tdObj).text("<%=HtmlEnode(fldSubField.title)%>");
+<%
+									}
+								break;
+								case "string":
+								case "text":
+								
+%>
+									inputObj = makeMeInput(sSubName, ListElem.<%=fldSubField.name%>, "text");
+									$(inputObj).css("width", "100%").addClass("inputEdit").attr("readonly", <%=fldSubField.is_readonly%>);
+									$(tdObj).append(inputObj).append(makeMeInput("sva_"+sSubName, ListElem.<%=fldSubField.name%>));
+<%
+									if (fldSubField.set_value_action.HasValue)
+									{
+%>
+										$(inputObj).blur(function()
+										{
+											var OldValue = $("form#doc_submitter input#sva_" + this.getAttribute("id")).val();
+											var NewValue = $(this).val();
+											try
+											{
+												<%=fldSubField.set_value_action%>
+											}
+											catch(wtf)
+											{
+												window.alert('Invalid set-value-action: ' + wtf);
+											}
+											
+											$(this).val(NewValue);
+											$("form#doc_submitter input#sva_" + this.getAttribute("id")).val(NewValue);
+										});
+<%
+									}
+								break;
+								case "integer":
+								case "real":
+%>
+									inputObj = makeMeInput(sSubName, ListElem.<%=fldSubField.name%>, "text");
+									$(inputObj).css("width", "100px").addClass("inputEdit").attr("readonly", <%=fldSubField.is_readonly%>).keypress(function()
+									{return checkkey(this, event, <%=(fldSubField.type == "real")%>)});
+									tdObj.align="center";
+									$(tdObj).append(inputObj).append(makeMeInput("sva_"+sSubName, ListElem.<%=fldSubField.name%>));
+<%
+									if (fldSubField.set_value_action.HasValue)
+									{
+%>
+										$(inputObj).blur(function()
+										{
+											var OldValue = $("form#doc_submitter input#sva_" + this.getAttribute("target_control")).val();
+											var NewValue = $(this).val();
+											try
+											{
+												<%=fldSubField.set_value_action%>
+											}
+											catch(wtf)
+											{
+												window.alert('Invalid set-value-action: ' + wtf);
+											}
+											
+											$(this).val(NewValue);
+											$("form#doc_submitter input#sva_" + this.getAttribute("target_control")).val(NewValue);
+										});
+<%
+									}
+								break;
+								case "date":
+%>
+								inputObj = makeMeInput(sSubName, ListElem.<%=fldSubField.name%>, "text");
+								$(inputObj).css("width", "100px").addClass("inputEdit").attr("readonly", true);
+								$(tdObj).append($("<table/>").attr({"width":"100%","cellpadding":0,"cellspacing":0}).append($("<tr/>").attr("valign","middle").append($("<td/>").append(inputObj))
+<%
+									if (!fldSubField.is_readonly)
+									{
+%>
+									.append($("<td/>").append($("<a/>").attr({"href": "#", "id":"link_" + sSubName, "target_control":sSubName}).click(function(){CreateCalendar(this.getAttribute('id'), this.getAttribute('target_control'), 'dd.mm.yyyy'); 
+<%
+									if (fldSubField.set_value_action.HasValue)
+									{
+%>
+											var OldValue = $("form#doc_submitter input#sva_" + this.getAttribute("target_control")).val();
+											var NewValue = $(this).val();
+											try
+											{
+												<%=fldSubField.set_value_action%>
+											}
+											catch(wtf)
+											{
+												window.alert('Invalid set-value-action: ' + wtf);
+											}
+											
+											$(this).val(NewValue);
+											$("form#doc_submitter input#sva_" + this.getAttribute("target_control")).val(NewValue);
+<%
+									}
+%>
+									return false;}).append($("<img/>").attr({"src":"/scripts/calendar/calendar.gif", "border":"0"})))).append($("<td/>").append(    $("<input/>").attr({"type":"button","value":"x","title":"<%=tools.get_web_str("c_clear_field")%>","target_control":sSubName}).css("width", "25px").addClass("inputButton").hover(function() {$(this).addClass("inputButtonOver")}, function() {$(this).removeClass("inputButtonOver")}).click(function(){$('form#doc_submitter input#'+this.getAttribute('target_control')).val('');})   ))
+<%
+									}
+%>
+								)).append(makeMeInput("sva_"+sSubName, ListElem.<%=fldSubField.name%>));
+<%
+								break;
+								case "combo":
+%>
+								inputObj = $("<select/>").attr({"id":sSubName, "name":sSubName}).css("width","100%").attr("disabled", function(){return <%=fldSubField.is_readonly%>;}).append("<option/>")
+<%
+								for (fldSubEntryElem in fldSubField.entries)
+								{
+									Response.Write(".append($('<option/>').attr('value', '"+StrReplace(fldSubEntryElem.value,"'","\\'")+"').text('"+StrReplace(fldSubEntryElem.value,"'","\\'")+"'))");
+								}
+								
+								if (fldSubField.set_value_action.HasValue)
+								{
+%>
+									$(inputObj).change(function()
+									{
+										var OldValue = $("form#doc_submitter input#sva_" + this.getAttribute("id")).val();
+										var NewValue = $(this).val();
+										try
+										{
+											<%=fldSubField.set_value_action%>
+										}
+										catch(wtf)
+										{
+											window.alert('Invalid set-value-action: ' + wtf);
+										}
+										
+										$(this).val(NewValue);
+										$("form#doc_submitter input#sva_" + this.getAttribute("id")).val(NewValue);
+									});
+<%
+								}
+%>
+								;
+								if (ListElem.<%=fldSubField.name%>)
+									$(inputObj.val(ListElem.<%=fldSubField.name%>));
+								$(tdObj).append(inputObj).append(makeMeInput("sva_"+sSubName, ListElem.<%=fldSubField.name%>));
+<%
+								break;
+								case "foreign_elem":
+								case "file":
+%>
+									inputObj = makeMeInput(sSubName, ListElem.<%=fldSubField.name%>);
+									$(tdObj).append($("<table/>").attr({"width":"100%","cellpadding":0,"cellspacing":0}).append($("<tr/>").attr("valign","middle").append($("<td/>").attr("width", "100%").append(inputObj).append($(makeMeInput("disp_" + sSubName, ListElem.disp_<%=(fldSubField.name)%>, "text")).addClass("inputEdit").attr("readonly", true).css("width", "100%")))
+<%
+									if (!fldSubField.is_readonly)
+									{
+%>
+										.append($("<td/>").append($("<input/>").attr({"type":"button","value":"...","title":"<%=tools.get_web_str("c_clear_field")%>","target_control":sSubName}).css("width", "25px").addClass("inputButton").attr("title", function(){return this.value;}).hover(function() {$(this).addClass("inputButtonOver")}, function() {$(this).removeClass("inputButtonOver")}).click(function(){
+										var pars=new Object(); pars.check_access = true;
+										var strAttr='status:no;dialogWidth:780px;dialogHeight:550px;help:no;resizable:1';
+										xShowModalDialog('dlg_select.html?doc_id=<%=curDocID%>&catalog_name=<%=(fldSubField.type == "file" ? "resource": fldSubField.catalog)%>&typein=0&multi_select=0&rand='+Math.random(), pars, strAttr);
+										if (!pars.handle ) return false;
+										var NewValue = pars.element_id;
+<%
+										if (fldSubField.set_value_action.HasValue)
+										{
+%>
+											var OldValue = $("form#doc_submitter input#sva_" + this.getAttribute("target_control")).val();
+											try
+											{
+												<%=fldSubField.set_value_action%>
+											}
+											catch(wtf)
+											{
+												window.alert('Invalid set-value-action: ' + wtf);
+											}
+<%
+										}
+%>
+										$('form#doc_submitter input#' + this.getAttribute("target_control")).val(NewValue);
+										$('form#doc_submitter input#disp_' + this.getAttribute("target_control")).val(pars.element_name).attr("title",pars.element_name);
+									}
+											)))
+										.append($("<td/>").append($("<input/>").attr({"type":"button","value":"x","title":"<%=tools.get_web_str("c_clear_field")%>","target_control":sSubName}).css("width", "25px").addClass("inputButton").hover(function() {$(this).addClass("inputButtonOver")}, function() {$(this).removeClass("inputButtonOver")}).click(function(){$('form#doc_submitter input#'+this.getAttribute('target_control')).val('');})   ))
+<%
+									}
+%>
+									)).append(makeMeInput("sva_"+sSubName, ListElem.<%=fldSubField.name%>));
+<%
+								break;
+								case "bool":
+%>
+									inputObj = makeMeInput(sSubName, 1, "checkbox");
+									$(tdObj).append(inputObj).attr("align", "center");
+									if (ListElem.<%=fldSubField.name%> == true)
+										$(inputObj).attr("checked", true);
+									$(inputObj).attr("disabled", function(){return <%=fldSubField.is_readonly%>;})
+<%
+								break;
+								default:
+%>
+									inputObj = makeMeInput(sSubName, ListElem.<%=fldSubField.name%>);
+									$(tdObj).append(inputObj);
+<%
+							}
+%>
+							
+							$(trRow).append(tdObj);
+<%
+						}
+						if (!fldField.is_readonly)
+						{
+%>
+							tdObj=document.createElement("TD");
+							tdObj.bgColor = "white";
+							$(tdObj).append($("<input/>").attr({"type":"button","value":"x","title":"<%=tools_web.get_web_str('c_delete')%>"}).css("width", "25px").addClass("inputButton").hover(function() {$(this).addClass("inputButtonOver")}, function() {$(this).removeClass("inputButtonOver")}).click(function(){$(this).parent().parent().remove();}));
+							$(trRow).append(tdObj);
+<%
+						}
+%>
+						$(inputCounter).val(iCount+1);
+					}
+				-->
+				</script>
+				<table>
+					<tr>
+						<td><b><%=fldField.title%></b></td>
+<%
+					if (!fldField.is_readonly)
+					{
+%>
+						<td><input type="button" value="<%=tools_web.get_web_str("veb_add")%>..." class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="btn_<%=fldField.name%>_select();"/></td>
+<%
+					}
+%>
+					</tr>
+				</table>
+				<input type="hidden" id="i_<%=fldField.name%>_count" name="i_<%=fldField.name%>_count" value="0"/>
+				<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="gray">
+				<tr><td>
+				<table cellspacing="1" cellpadding="1" border="0" width="100%">
+					<tr>
+<%
+				iSubFieldCount = fldField.sub_fields.ChildNum + (fldField.type == "foreign_elem" ? 1 : 0);
+				iWidth = (iSubFieldCount > 0 ? Int(100.0 / Real(iSubFieldCount)):100);
+				if (fldField.type == "foreign_elem")
+				{
+%>
+					<th width="<%=iWidth%>%" bgcolor="lightgrey"><%=fldField.title%></th>
+<%
+				}
+				
+				for (fldSubField in fldField.sub_fields)
+				{
+					if (fldSubField.type == "heading")
+					{
+						if (StrBegins(fldSubField.title, '='))
+						{
+							try
+							{
+								ListElem = null;
+								_sHeading = "" + eval(String(fldSubField.title).slice(1));
+							}
+							catch(_X_)
+							{_sHeading = "*error*";}
+						}
+						else _sHeading = fldSubField.title
+					}
+					else
+						_sHeading = fldSubField.title;
+%>
+					<th width="<%=iWidth%>%" bgcolor="lightgrey"><%=_sHeading%></th>
+<%
+				}
+				if (!fldField.is_readonly)
+				{
+%>
+						<th width="20px" bgcolor="lightgrey">&nbsp;</th>
+<%
+				}
+%>
+					</tr>
+						<tbody id="tbody_<%=fldField.name%>_recycler">
+						</tbody>
+				</table>
+				</td></tr>
+				</table>
+				<script language="javascript">
+				<!--
+					var oSubFieldsInfo;
+<%
+				if (curDocument != null)
+				{
+					fldCurDocFieldList = curDocument.EvalPath(fldField.name+"s");
+					for (fldSubElem in fldCurDocFieldList)
+					{
+%>
+						oSubFieldsInfo = new Object();
+<%
+						if (fldField.type == "foreign_elem")
+						{
+							catFieldValue = fldSubElem.EvalPath(fldField.name + "_id").OptForeignElem;
+							if (catFieldValue != undefined)
+							{
+								sDispName = curLngCommon.exchange_object_types.GetChildByKey(catFieldValue.Name).disp_name;
+								sDispValue = HtmlEncode(catFieldValue.EvalPath(sDispName));
+							}
+							else
+							{
+								sDispName = ""; sDispValue = "";
+							}
+%>
+							oSubFieldsInfo.bIsCatalogObject = true;
+							oSubFieldsInfo.<%=fldField.name%>_id = "<%=(catFieldValue != undefined ? catFieldValue.PrimaryKey : "")%>";
+							oSubFieldsInfo.<%=fldField.name%>_id_disp = "<%=sDispValue%>";
+<%
+						}
+						else
+						{
+%>
+								oSubFieldsInfo.bIsCatalogObject = false;
+<%
+						}
+						for (fldSubField in fldField.sub_fields)
+						{
+						
+							switch (fldSubField.type)
+							{
+								case "foreign_elem":
+									catFieldValue = fldSubElem.EvalPath(fldSubField.name).OptForeignElem;
+									if (catFieldValue != undefined)
+									{
+										sDispName = curLngCommon.exchange_object_types.GetChildByKey(catFieldValue.Name).disp_name;
+										sDispValue = HtmlEncode(catFieldValue.EvalPath(sDispName));
+										Response.Write("oSubFieldsInfo." + fldSubField.name + " = '" +catFieldValue.PrimaryKey+"';");
+										Response.Write("oSubFieldsInfo.disp_" + fldSubField.name + " = \"" +sDispValue+"\";");
+									}
+									
+								break;
+								case "file":
+									try
+									{
+										catFieldValue = ArrayFirstElem(XQuery("for $elem in resources where $elem/id = " + Int(fldSubElem.EvalPath(fldSubField.name)) + " return $elem"));
+									}
+									catch(_hellya_)
+									{
+										catFieldValue = undefined;
+									}
+									if (catFieldValue != undefined)
+									{
+										sDispValue = HtmlEncode(catFieldValue.name);
+										Response.Write("oSubFieldsInfo." + fldSubField.name + " = '" +catFieldValue.PrimaryKey+"';");
+										Response.Write("oSubFieldsInfo.disp_" + fldSubField.name + " = \"" +sDispValue+"\";");
+									}
+									
+								break;
+								case "bool":
+									Response.Write("oSubFieldsInfo." + fldSubField.name + " = " +(fldSubElem.EvalPath(fldSubField.name).Value == true)+";");
+								break;
+								case "string":
+								case "text":
+								case "combo":
+								case "real":
+								case "integer":
+								case "date":
+									Response.Write("oSubFieldsInfo." + fldSubField.name + " = '" +StrReplace(fldSubElem.EvalPath(fldSubField.name).Value, "'", "\\'")+"';");
+							}
+						}
+%>
+						btn_<%=fldField.name%>_add_item(oSubFieldsInfo);
+<%
+					}
+				}
+%>
+				-->
+				</script>
+<%
+			}
+			else
+			{
+				if(fldField.type != "bool" && fldField.type != "heading")
+				{
+					Response.Write("<b>"+fldField.title+"</b><br/>");
+				}
+				if (fldField.type == "heading")
+				if (StrBegins(fldField.title, "="))
+				{
+					try
+					{
+						Response.Write(eval(String(fldField.title).slice(1)));
+					}
+					catch(_X_)
+					{Response.Write("<b>*ERROR*</b><br/>");}
+				}
+				else return Response.Write("<b>"+fldField.title+"</b><br/>");
+				
+				if (fldField.type == "string" || fldField.type == "integer" || fldField.type == "real")
+				{
+%>
+					<input type="text" id="e_<%=fldField.name%>" name="e_<%=fldField.name%>" value="<%=(curDocument != null ? HtmlEncode(curDocument.EvalPath(fldField.name).Value) : "")%>" <%=(fldField.is_readonly ? "readonly":"")%> <%(fldField.type == "integer" || fldField.type == "real" ? "onkeypress='return checkkey(this,event, "+(fldField.type == "real")+");' style='width: 100px'":"")%> class="inputEdit"/><br/>
+<%
+					if (fldField.set_value_action.HasValue)
+					{
+%>
+						<input type="hidden" id="sva_<%=fldField.name%>" name="sva_<%=fldField.name%>" value="<%=(curDocument != null ? curDocument.EvalPath(fldField.name).Value : "")%>"/>
+						<script language="javascript">
+							$("form#doc_submitter input#e_<%=fldField.name%>").blur(function()
+							{
+								var OldValue = $("form#doc_submitter input#sva_<%=fldField.name%>").val();
+								var NewValue = $(this).val();
+								try
+								{
+									<%=fldField.set_value_action%>
+								}
+								catch(wtf)
+								{
+									window.alert('Invalid set-value-action: ' + wtf);
+								}
+								
+								$(this).val(NewValue);
+								$("form#doc_submitter input#sva_<%=fldField.name%>").val(NewValue);
+							});
+						</script>
+<%
+					}
+				}
+				
+				if (fldField.type == "text")
+				if (fldField.is_readonly)
+				{
+%>
+					<input type="hidden" id="e_<%=fldField.name%>" name="e_<%=fldField.name%>" value="<%=(curDocument != null ? HtmlEncode(curDocument.EvalPath(fldField.name).Value) : "")%>"/><%=(curDocument != null ? HtmlEncode(curDocument.EvalPath(fldField.name).Value) : "")%><br/>
+<%
+				}
+				else
+				{
+%>
+					<textarea id="e_<%=fldField.name%>" name="e_<%=fldField.name%>" style="width: 100%; height: 300px"><%=(curDocument != null ? HtmlEncode(curDocument.EvalPath(fldField.name).Value) : "")%></textarea><br/>
+<%
+				}
+				
+				if (fldField.type == "date")
+				{
+%>
+					<table cellpadding="0" cellpadding="0">
+						<tr>
+							<td>
+								<input type="text" id="e_<%=fldField.name%>" name="e_<%=fldField.name%>" value="<%=(curDocument != null ? HtmlEncode(curDocument.EvalPath(fldField.name).Value) : "")%>" readonly style="width:100px" class="inputEdit"/>								
+							</td>
+<%
+						if (fldField.set_value_action.HasValue)
+						{
+%>
+							<input type="hidden" id="sva_<%=fldField.name%>" name="sva_<%=fldField.name%>" value="<%=(curDocument != null ? curDocument.EvalPath(fldField.name).Value : "")%>"/>
+							<script language="javascript">
+								$("form#doc_submitter input#e_<%=fldField.name%>").change(function()
+								{
+									var OldValue = $("form#doc_submitter input#sva_<%=fldField.name%>").val();
+									var NewValue = $(this).val();
+									try
+									{
+										if (NewValue != "") NewValue = Date(NewValue);
+									}
+									catch(wtf)
+									{
+										window.alert('Invalid date');
+										$(this).val(OldValue);
+										return false;
+									}
+									try
+									{
+										<%=fldField.set_value_action%>
+									}
+									catch(wtf)
+									{
+										window.alert('Invalid set-value-action: ' + wtf);
+									}
+									
+									$(this).val(NewValue);
+									$("form#doc_submitter input#sva_<%=fldField.name%>").val(NewValue);
+									return true;
+								});
+							</script>
+<%
+						}
+						
+						if (!fldField.is_readonly)
+						{
+%>
+							<td>
+								<a href="#" id="link_<%=fldField.name%>" onclick="CreateCalendar(this.getAttribute('id'), 'e_<%=fldField.name%>', 'dd.mm.yyyy'); return false;"><img src="/scripts/calendar/calendar.gif" border="0"/></a>
+							</td>
+							<td valign="middle">
+								<input type="button" value="x" title="<%=tools.get_web_str("c_clear_field")%>" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="$('form#doc_submitter input#e_<%=fldField.name%>').val('');" style="width: 25px"/>
+							</td>
+<%
+						}
+%>
+						</tr>
+					</table><br/>
+<%
+				}
+				if (fldField.type == "bool")
+				{
+%>
+					<input type="checkbox" id="e_<%=fldField.name%>" name="e_<%=fldField.name%>" value="1" <%=(curDocument != null && curDocument.EvalPath(fldField.name).Value ? "checked" : "")%>/>&nbsp;<%=fldField.title%><br/>
+<%
+				}
+				if (fldField.type == "combo")
+				if (fldField.is_readonly)
+				{
+%>
+					<input type="text" id="sva_<%=fldField.name%>" name="sva_<%=fldField.name%>" value="<%=(curDocument != null ? curDocument.EvalPath(fldField.name).Value : "")%>" class="inputEdit" readonly/><br/>
+<%
+				}
+				else
+				{
+					sOptionValue = HtmlEncode(curDocument != null ? curDocument.EvalPath(fldField.name).Value : "");
+%>
+					<select id="e_<%=fldField.name%>" name="e_<%=fldField.name%>">
+<%
+					for (fldEntryElem in fldField.entries)
+					{
+%>
+						<option value='<%=StrReplace(fldEntryElem.value, "'", "\\'")%>'><%=HtmlEncode(fldEntryElem.value)%></option>
+<%
+					}
+%>
+					</select><br/>
+					<input type="hidden" id="sva_<%=fldField.name%>" name="sva_<%=fldField.name%>" value="<%=sOptionValue%>"/>
+					<script language="JavaScript">
+					$("form#doc_submitter input#e_<%=fldField.name%>").val("<%=sOptionValue%>");
+<%
+					if (fldField.set_value_action.HasValue)
+					{
+%>
+					$("form#doc_submitter input#e_<%=fldField.name%>").change(function()
+					{
+						var OldValue = $("form#doc_submitter input#sva_<%=fldField.name%>").val();
+						var NewValue = $(this).val();
+						try
+						{
+							<%=fldField.set_value_action%>
+						}
+						catch(wtf)
+						{
+							window.alert('Invalid set-value-action: ' + wtf);
+						}
+						
+						$(this).val(NewValue);
+						$("form#doc_submitter input#sva_<%=fldField.name%>").val(NewValue);
+						return true;
+					});
+<%
+					}
+%>
+					</script>
+<%
+				}
+				
+				if (fldField.type == "file")
+				{
+					sDispValue = "";
+					if (curDocument != null)
+					{
+						try
+						{
+							catFieldValue = ArrayFirstElem(XQuery("for $elem in resources where $elem/id = " + Int(curDocument.EvalPath(fldField.name)) + " return $elem"));
+						}
+						catch(_hellya_)
+						{
+							catFieldValue = undefined;
+						}
+						if (catFieldValue != undefined)
+							sDispValue = catFieldValue.name;
+					}
+					
+%>
+					<table cellpadding="0" cellpadding="0">
+						<tr>
+							<td>
+								<input type="hidden" id="e_<%=fldField.name%>" name="e_<%=fldField.name%>" value="<%=(curDocument != null ? HtmlEncode(curDocument.EvalPath(fldField.name).Value) : "")%>"/>
+								<input type="text" id="disp_<%=fldField.name%>" name="disp_<%=fldField.name%>" value="<%=sDispValue%>" readonly style="width:500px" class="inputEdit"/>
+							</td>
+<%
+						if (!fldField.is_readonly)
+						{
+%>
+							<td>
+								<input type="button" value="..." class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="btn_<%=fldField.name%>_select();" style="width: 25px"/>
+							</td>
+							<td valign="middle">
+								<input type="button" value="x" title="<%=tools.get_web_str("c_clear_field")%>" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="$('form#doc_submitter input#e_<%=fldField.name%>').val('');" style="width: 25px"/>
+							</td>
+<%
+						}
+%>
+						</tr>
+					</table><br/>
+					<input type="hidden" id="sva_<%=fldField.name%>" name="sva_<%=fldField.name%>" value="<%=(curDocument != null ? curDocument.EvalPath(fldField.name).Value : "")%>"/>
+					<script language="javascript">
+					<!--
+						function btn_<%=fldField.name%>_select()
+						{
+							var pars=new Object(); pars.check_access = true;
+							var strAttr='status:no;dialogWidth:780px;dialogHeight:550px;help:no;resizable:1';
+							xShowModalDialog('dlg_select.html?doc_id=<%=curDocID%>&catalog_name=resource&typein=0&multi_select=0&rand='+Math.random(), pars, strAttr);
+							if (!pars.handle ) return false;
+							var NewValue = pars.element_id;
+<%
+						if (fldField.set_value_action.HasValue)
+						{
+%>
+							var OldValue = $("form#doc_submitter input#sva_<%=fldField.name%>").val();
+							try
+							{
+								<%=fldField.set_value_action%>
+							}
+							catch(wtf)
+							{
+								window.alert('Invalid set-value-action: ' + wtf);
+							}
+<%
+						}
+%>
+							$('form#doc_submitter input#e_<%=fldField.name%>').val(NewValue);
+							$('form#doc_submitter input#disp_<%=fldField.name%>').val(pars.element_name);
+						}
+					-->
+					</script>
+<%
+				}
+				
+				if (fldField.type == "foreign_elem")
+				{
+					sDispValue = "";
+					if (curDocument != null)
+					{
+						catFieldValue = curDocument.EvalPath(fldField.name).OptForeignElem;
+						if (catFieldValue != undefined)
+						{
+							sDispName = curLngCommon.exchange_object_types.GetChildByKey(catFieldValue.Name).disp_name;
+							sDispValue = catFieldValue.EvalPath(sDispName);
+						}
+					}
+%>
+					<table cellpadding="0" cellpadding="0">
+						<tr>
+							<td>
+								<input type="hidden" id="e_<%=fldField.name%>" name="e_<%=fldField.name%>" value="<%=(curDocument != null ? HtmlEncode(curDocument.EvalPath(fldField.name).Value) : "")%>"/>
+								<input type="text" id="disp_<%=fldField.name%>" name="disp_<%=fldField.name%>" value="<%=sDispValue%>" readonly style="width:500px" class="inputEdit"/>
+							</td>
+							
+							<input type="hidden" id="sva_<%=fldField.name%>" name="sva_<%=fldField.name%>" value="<%=(curDocument != null ? curDocument.EvalPath(fldField.name).Value : "")%>"/>
+<%
+						if (!fldField.is_readonly)
+						{
+%>
+							<td>
+								<input type="button" value="..." class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="btn_<%=fldField.name%>_select();" style="width: 25px"/>
+							</td>
+							<td valign="middle">
+								<input type="button" value="x" title="<%=tools.get_web_str("c_clear_field")%>" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="$('form#doc_submitter input#e_<%=fldField.name%>').val('');" style="width: 25px"/>
+							</td>
+<%
+						}
+%>
+						</tr>
+					</table><br/>
+					<script language="javascript">
+					<!--
+						function btn_<%=fldField.name%>_select()
+						{
+							var pars=new Object(); pars.check_access = true;
+							var strAttr='status:no;dialogWidth:780px;dialogHeight:550px;help:no;resizable:1';
+							xShowModalDialog('dlg_select.html?doc_id=<%=curDocID%>&catalog_name=<%=fldField.catalog%>&typein=0&multi_select=0&rand='+Math.random(), pars, strAttr);
+							if (!pars.handle ) return false;
+							var NewValue = pars.element_id;
+<%
+						if (fldField.set_value_action.HasValue)
+						{
+%>
+							var OldValue = $("form#doc_submitter input#sva_<%=fldField.name%>").val();
+							try
+							{
+								<%=fldField.set_value_action%>
+							}
+							catch(wtf)
+							{
+								window.alert('Invalid set-value-action: ' + wtf);
+							}
+<%
+						}
+%>
+							$('form#doc_submitter input#e_<%=fldField.name%>').val(NewValue);
+							$('form#doc_submitter input#disp_<%=fldField.name%>').val(pars.element_name);
+						}
+					-->
+					</script>
+<%
+				}
+				
+				for (fldControlElem in fldField.control_elements)
+				{
+					if (fldControlElem.type == "button")
+					{
+%>
+						<input type="button" value="<%=fldControlElem.title%>" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="btn_<%=fldField.name%>_<%=fldControlElem.ChildIndex%>_click();"/><br/>
+						<script language="javascript">
+						<!--
+							function btn_<%=fldField.name%>_<%=fldControlElem.ChildIndex%>_click()
+							{
+								<%=fldControlElem.action%>
+							}
+						-->
+						</script>
+<%
+					}
+					if (fldControlElem.type == "br") Response.Write("<br/>");
+					if (fldControlElem.type == "delim") Response.Write("<hr/>");
+				}
+			}
+%>
+				</td>
+			</tr>
+<%
+		}
+%>
+</table>
+</div>
+<%
+	}
+	_href = tools_web.get_url_protocol( Request.Url ) + Request.UrlHost + UrlPath( Request.Url ) + "?mode=content_panel&doc_id="+curDocID+"&tab="+teDocType.object_name;
+
+%>
+		<center><input type="submit" value="<%=tools.get_web_str('c_save')%>" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="return what2submit();"/></center>
+<center><input type="button" value="<%=tools_web.get_web_str('vaaeb_list_back')%>" class="inputButton" onmouseover="$(this).addClass('inputButtonOver');" onmouseout="$(this).removeClass('inputButtonOver');" onclick="window.location.href='<%=_href%>'"/></center>
+<br/>
+
+</form>
+<script language="javascript">
+<!--
+toggle_section("common");
+
+//var a = $("<p id='qwerty'/>").appendTo("form#doc_submitter").append("<b/>").append("<i/>");
+
+-->
+</script>

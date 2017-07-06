@@ -1,0 +1,172 @@
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+	<tr> 
+		<td width="100%" valign="top">
+
+		<%Server.Execute( 'view_text_area.html' )%>
+		
+<%
+	if ( curDoc.courses.ChildNum != 0 )
+	{
+%>
+		<table width="100%"  border="0" cellspacing="0" cellpadding="0">
+			<tr>
+				<td class="tableHeaderTextLeft"><img src="pics/1blank.gif" width="0" height="0" /></td>
+				<td class="tableHeaderText"><p class="tableHeaderTextInner"><%=tools.get_web_str('vdb_courses')%></p></td>
+				<td class="tableHeaderTextRight"><img src="pics/1blank.gif" width="0" height="0" /></td>
+			</tr>
+			<tr>
+				<td class="tableHeaderNoTextLeft"><img src="pics/1blank.gif" width="0" height="0" /></td>
+				<td class="tableHeaderNoText" width="100%"><img src="pics/1blank.gif" width="0" height="0" /></td>
+				<td class="tableHeaderNoTextRight"><img src="pics/1blank.gif" width="0" height="0" /></td>
+			</tr>
+<%
+		counter = 0;			
+		for ( _course in curDoc.courses )
+		{	
+			if ( global_settings.settings.check_access_on_lists )
+				try
+				{
+					if ( tools_web.check_access( OpenDoc( UrlFromDocID ( _course.PrimaryKey ), 'form=x-local://wtv/wtv_form_doc_access.xmd;ignore-top-elem-name=1' ).TopElem, curUserID, curUser, Session ) == false )
+						continue;
+				}
+				catch(_opa_)
+				{
+					continue;
+				}
+						
+			_class = counter++ % 2 ? 'tableRowEven' : 'tableRowOdd';
+			_classl = counter++ % 2 ? 'tableRowEvenLeft' : 'tableRowOddLeft';		
+			_classr = counter++ % 2 ? 'tableRowEvenRight' : 'tableRowOddRight';	
+			
+			try
+			{
+				_cur_course = _course.course_id.ForeignElem;
+%>
+			<tr>	
+				<td class="<%=_classl%>"></td>				
+				<td class="<%=_class%>"><img src="pics/vwicn026.gif" width="13" height="11">&nbsp;<a href="view_doc.html?mode=course_info&doc_id=<%=curDocID%>&object_id=<%=_course.course_id%>"><%=_cur_course.code%>&nbsp;<%=tools_web.get_cur_lng_name( _cur_course.name )%></a></td>
+				<td class="<%=_classr%>"></td>
+			</tr>
+<%
+			}
+			catch ( e )
+			{
+			}
+		}
+%>
+			<tr>
+				<td class="tableFooterLeft"><img src="pics/1blank.gif" width="0" height="0" /></td>
+				<td class="tableFooter"><img src="pics/1blank.gif" width="0" height="0" /></td>
+				<td class="tableFooterRight"><img src="pics/1blank.gif" width="0" height="0" /></td>
+			</tr>
+		</table>
+		<br/>
+<%
+	}
+%>
+		
+		
+	<%Server.Execute( "view_files.html" )%>
+	<br/>
+
+
+<%
+	if ( ! curDoc.attributes.no_disp_childs && ! curDoc.attributes.left_disp_childs )
+	{
+		sub_docs = XQuery( 'for $elem in documents where $elem/parent_document_id = ' + curDocID + ' order by $elem/position return $elem' );
+		
+		if ( ArrayOptFirstElem( sub_docs ) != undefined )
+		{
+%>
+		<table width="100%"  border="0" cellspacing="0" cellpadding="0">
+			<tr>
+				<td class="tableHeaderTextLeft"><img src="pics/1blank.gif" width="0" height="0" /></td>
+				<td class="tableHeaderText"><p class="tableHeaderTextInner"><%=tools.get_web_str('vdb_subdocs')%></p></td>
+				<td class="tableHeaderTextRight"><img src="pics/1blank.gif" width="0" height="0" /></td>
+			</tr>
+			<tr>
+				<td class="tableHeaderNoTextLeft"><img src="pics/1blank.gif" width="0" height="0" /></td>
+				<td class="tableHeaderNoText" width="100%"><img src="pics/1blank.gif" width="0" height="0" /></td>
+				<td class="tableHeaderNoTextRight"><img src="pics/1blank.gif" width="0" height="0" /></td>
+			</tr>
+<%
+			counter = 0;
+			for ( _sub_doc in sub_docs )
+			{
+				if ( global_settings.settings.check_access_on_lists )
+					try
+					{
+						if ( tools_web.check_access( _sub_doc, curUserID, curUser, Session ) == false )
+							continue;
+					}
+					catch(_opa_)
+					{
+						continue;
+					}
+				
+				_class = counter++ % 2 ? 'tableRowEven' : 'tableRowOdd';
+				_classl = counter++ % 2 ? 'tableRowEvenLeft' : 'tableRowOddLeft';		
+				_classr = counter++ % 2 ? 'tableRowEvenRight' : 'tableRowOddRight';
+%>
+			<tr>
+				<td class="<%=_classl%>"></td>					
+				<td class="<%=_class%>"> 
+<%
+				if ( _sub_doc.is_link )
+				{
+%>
+				<img src="pics/link.gif" width="12" height="11">
+				<a href="<%=_sub_doc.link_href%>" <%=( _sub_doc.link_target == '' ? '' : 'TARGET="' + _sub_doc.link_target + '"' )%>><%=_sub_doc.name%></a><br /></td> 
+<%
+				}
+				else
+				{
+					if ( ArrayCount( XQuery( 'for $document in documents where $document/parent_document_id = ' +  _sub_doc.id + ' return $document' ) ) > 0 )
+					{
+%>
+				<img src="pics/dir.gif" width="12" height="11"> 
+<%
+					}
+					else
+					{
+%>
+				<img src="pics/doc.gif" width="12" height="11">
+<%
+					}
+%>
+				<a href="<%=tools_web.put_query_string( _sub_doc.id, _sub_doc.template )%>"><%=_sub_doc.name%></a><br /></td>
+<%
+				}
+%>
+				</TD>
+				<td class="<%=_classr%>"></td>
+			</tr>
+<%
+			}
+%>
+			<tr>
+				<td class="tableFooterLeft"><img src="pics/1blank.gif" width="0" height="0" /></td>
+				<td class="tableFooter"><img src="pics/1blank.gif" width="0" height="0" /></td>
+				<td class="tableFooterRight"><img src="pics/1blank.gif" width="0" height="0" /></td>
+			</tr>
+		</table>
+		<br/>
+<%
+		}
+	}
+%>
+		
+<%
+	curCatalogsDoc = curDoc;
+	Server.Execute( "view_catalogs.html" );
+%>
+	<br/>
+
+<%
+	curKnowlegedDoc = curDoc;
+	Server.Execute( "view_knowledge_parts_body.html" );
+%>
+
+		</td>
+	</tr>
+</table>		

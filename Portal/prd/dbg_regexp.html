@@ -1,0 +1,263 @@
+<%
+	if (Request.Query.HasProperty("query_post") && Request.Query.GetProperty("query_post") == "1")
+	{
+		Response.ContentType="text/xml";
+		sRegExp = Request.Query.GetProperty("query_post");
+		sReturnSTR = '<?xml version="1.0" encoding="windows-1251"?><data>';
+		sReturnSTRSub="";
+		try
+		{
+			var objRegExp = new ActiveXObject("VBScript.RegExp");
+			objRegExp.Global = true;
+			objRegExp.IgnoreCase = true;
+			objRegExp.MultiLine = true;
+			objRegExp.Pattern = UrlDecode(Request.Query.GetProperty("query_pattern"));
+			_arrImageTagz = objRegExp.Execute(Trim(UrlDecode(Request.Query.GetProperty("query_data"))));
+			sReturnSTRSub += ("<success>1</success>");
+			sReturnSTRSub += ("<results>");
+			for (_z = 0; _z < _arrImageTagz.Count; _z++)
+			{
+				sReturnSTRSub += "<result><match>" + HtmlEncode(_arrImageTagz.Item(_z)) + "</match>";
+				if((_arrImageTagz.Item(_z).SubMatches.Count) > 0)
+				{
+					sReturnSTRSub += "<submatches>";
+					for (_y=0; _y<_arrImageTagz.Item(_z).SubMatches.Count;_y++)
+						sReturnSTRSub += "<submatch>"+HtmlEncode(_arrImageTagz.Item(_z).SubMatches(_y))+"</submatch>";
+					sReturnSTRSub += "</submatches>";
+				}
+				sReturnSTRSub += "</result>";
+			}
+			sReturnSTRSub += ("</results>");
+			sReturnSTR += sReturnSTRSub;
+		}
+		catch(_x_)
+		{
+			sReturnSTR += ("<success>0</success>");
+			sReturnSTR += ("<reason><![CDATA["+HtmlEncode(_x_)+"]]></reason>");
+		}
+		sReturnSTR += ("</data>");
+		//Response.Write(EncodeCharset(sReturnSTR, "utf-8"));
+		Response.Write(sReturnSTR);
+		Cancel();
+	}
+	else
+	{
+		var _bNaked = (Request.QueryString.GetOptProperty("naked") == "1");
+		if (_bNaked)
+		{
+%>
+<html xmlns="<%=UrlToFilePath("x-local:\\")%>">
+<head>
+<title>WT RegExp tester</title>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1251" />
+<script type="text/javascript" src="scripts/jquery.js" language="javascript"></script>
+<link href="style.css" rel="stylesheet" type="text/css"/>
+</head>
+<body>	
+<%
+		}
+%>
+		<script language="javascript">
+			function _wow(e)
+			{
+				if (!e) var e = window.event;
+				var keycode = parseInt(e.keyCode ? e.keyCode : e.which);
+				if (keycode == 10) getMatches();
+			}
+			var g_InProcess = false;
+			function getMatches()
+			{
+				if (g_InProcess) return;
+				g_InProcess = true;
+				$("#launch_regexp_test_btn").hide();
+				var _pattern = escape($("#txt_query_pattern").val()).replace(new RegExp("\\+","g"), "%2B");
+				var _test_string = escape($("#txt_query_data").val());
+				var containerdiv = $("#demo_carpet");
+				containerdiv.empty();
+				
+				$.ajax({
+					type: "GET",
+					url: "dbg_regexp.html",
+					data: "query_post=1&query_pattern=" +_pattern+ "&query_data=" +_test_string+ "&r=" + Math.random() * 1000000,
+					dataType: "xml",
+					error: function (response, textStatus)
+					{
+						window.alert("ERROR "+textStatus+ " ; " +response.status+": \n" + response.statusText);
+						g_InProcess = false;
+						$("#launch_regexp_test_btn").show();
+					},
+					success: function(oXml){
+						if (parseInt($(oXml).find("data").find("success").text()) == 1)
+						{
+							if ($(oXml).find("data").find("results").find("result").length > 0)
+								$(oXml).find("data").find("results").find("result").each(function(idx)
+								{
+									$("<b/>").text("Match " + (idx + 1)).appendTo(containerdiv);
+									containerdiv.append("<br/>").append("<br/>");
+									$("<span/>").text($(this).find("match").text()).appendTo(containerdiv);
+									//containerdiv.append("<br/>");
+									
+									if ($(this).find("submatches").find("submatch").length > 0)
+									{
+										var subP = $("<p/>");
+										$(this).find("submatches").find("submatch").each(function(subidx)
+										{
+											$("<i/>").text("submatch " + (subidx + 1) + ": ").appendTo(subP);
+											$("<span/>").text($(this).text()).appendTo(subP);
+											subP.append("<br/>");
+										});
+										containerdiv.append(subP);
+									}
+									containerdiv.append("<hr/>");
+									
+								});
+							else
+								$("<b/>").text("No match!").appendTo(containerdiv);
+						}
+						else
+							alert("Error: " + $(oXml).find("data").find("reason").text());
+						
+						g_InProcess = false;
+						$("#launch_regexp_test_btn").show();
+					}
+					})
+			}
+			
+			function toggle_section(idx)
+			{
+				var _aPages = Array("regexp_table","bak_table");
+				for (var _i =0; _i < _aPages.length; _i++)
+					if (_i == idx)
+					{
+						$("#ctd_" + _i).addClass("tab_td_sel");
+						$("#ctd_" + _i).removeClass("tab_td");
+						$("#" + _aPages[_i]).show();
+					}
+					else
+					{
+						$("#ctd_" + _i).removeClass("tab_td_sel");
+						$("#ctd_" + _i).addClass("tab_td");
+						$("#" + _aPages[_i]).hide();
+					}
+			}
+		</script>
+		
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+	<tr>
+		<td class="tab_td_empty"><img src="pics/1blank.gif" width="10" height="0"/></td>
+		<td class="tab_td_sel" id="ctd_0" onclick="return toggle_section('0');"><img src="pics/1blank.gif" width="140" height="0"/><br/><a style="text-decoration:none" href="#" onclick="return toggle_section('0');">RegExp tester</a></td>
+		<td class="tab_td_empty" width="10px">&nbsp;</td>
+		<td class="tab_td" id="ctd_1" onclick="return toggle_section('1');"><img src="pics/1blank.gif" width="140" height="0"/><br/><a style="text-decoration:none" href="#" onclick=" return toggle_section('1');">Backup tool</a></td>
+		<td class="tab_td_empty" width="10px">&nbsp;</td>
+		<td class="tab_td_empty" width="100%">&nbsp;</td>
+	</tr>
+</table>
+		
+	<table width="100%" id="regexp_table">
+		<tr valign="top">
+			<td>
+				<b>RegExp pattern:</b><br/>
+				<textarea id="txt_query_pattern" style="width: 100%" rows="10" onkeypress="_wow(event);"></textarea>
+				<hr/>
+				<b>Testing string:</b><br/>
+				<textarea id="txt_query_data" style="width: 100%" rows="10"></textarea>
+				<br/>
+				<input style="width: 100px" id="launch_regexp_test_btn" type="button" value="Test" class="inputButton" onmouseover="$(this).addClass('inputButtonOver');" onmouseout="$(this).removeClass('inputButtonOver');" onclick="getMatches()"/>
+				<hr/>
+				<div id="demo_carpet" style="width: 100%"/>
+			</td>
+			<td width="200px">
+				<h4>Regex syntax</h4>  
+				<!--
+				   <h5>flags</h5>
+					<ul><li><code>g</code> - global match</li>
+					<li><code>i</code> - ignore case</li>
+					<li><code>m</code> - match over multiple lines</li>
+					</ul>
+				-->
+					<h5>Escaping</h5>
+					<ul><li><code>\</code> - special characters to literal and literal characters to special</li></ul>
+					<h5>Quantifiers</h5>
+					<ul>
+					<li><code>?</code> - matches zero or one times</li>
+					<li><code>*</code> - matches zero or more times</li>
+					<li><code>+</code> - matches one or more times</li>
+					<li><code>{n}</code> - matches <em>n</em> times</li>
+					<li><code>{n, m}</code> - matches at least <em>n</em> times, but not more than <em>m</em> times</li>
+									
+					</ul>
+					<h5>Anchors</h5>
+					<ul>
+					<li><code>^</code> - matches at the start of the line</li>
+					<li><code>$</code> - matches at the end of the line</li>                
+					<li><code>\b</code> - matches at the beginning or the end of a word</li>
+				  
+					</ul>
+					<h5>delimiter</h5>
+					<ul> <li><code>(?:x)</code> - matches x not remember the match</li>
+					<li><code>x(?=y)</code> - matches x only if x is followed by y</li>
+					<li><code >x(?!y)</code> - matches x only if x is not followed by y</li>
+					</ul>
+					<h5>Character Escapes</h5>
+					<ul>
+					<li><code>\s</code> - matches whitespace </li>
+					<li><code>\S</code> - matches anything but a whitespace </li>
+					<li><code>\f</code> - matches a form-feed</li>
+					<li><code>\n</code> - matches a linefeed</li>
+					<li><code>\r</code> - matches a carriage return</li>                    
+					<li><code>\t</code> - matches a horizontal tab</li>
+					<li><code>\v</code> - matches vertical tab</li>
+					<li><code>\d</code> - matches any digit</li>
+					<li><code>\D</code> - matches anything except digit</li>
+					<li><code>\w</code> - matches any alphanumeric character including the underscore. Equivalent to [A-Za-z0-9_] </li>                
+					<li><code>\W</code> - matches any non-word character. Equivalent to [^A-Za-z0-9_] </li>
+					
+					</ul>
+					<h5>Others</h5><ul>
+					<li><code>.</code> - matches any character except a newline</li></ul>
+			</td>
+		</tr>
+	</table>
+	
+	<table id="bak_table" width="100%" style="display: none">
+		<tr>
+			<td width="100%">
+				<b>Backup area 1</b><br/>
+				<textarea id="txt_bak_area_0" style="width: 100%" rows="10"></textarea>
+			</td>
+			<td>
+				<input style="width: 100px" type="button" value="Encode>>" class="inputButton" onmouseover="$(this).addClass('inputButtonOver');" onmouseout="$(this).removeClass('inputButtonOver');" onclick="$('#txt_bak_area_0').val(escape($('#txt_bak_area_0').val()))"/>
+				<input style="width: 100px" type="button" value="Decode<<" class="inputButton" onmouseover="$(this).addClass('inputButtonOver');" onmouseout="$(this).removeClass('inputButtonOver');" onclick="$('#txt_bak_area_0').val(unescape($('#txt_bak_area_0').val()))"/>
+			</td>
+		</tr>
+		<tr>
+			<td width="100%">
+				<b>Backup area 2</b><br/>
+				<textarea id="txt_bak_area_1" style="width: 100%" rows="10"></textarea>
+			</td>
+			<td>
+				<input style="width: 100px" type="button" value="Encode>>" class="inputButton" onmouseover="$(this).addClass('inputButtonOver');" onmouseout="$(this).removeClass('inputButtonOver');" onclick="$('#txt_bak_area_1').val(escape($('#txt_bak_area_1').val()))"/>
+				<input style="width: 100px" type="button" value="Decode<<" class="inputButton" onmouseover="$(this).addClass('inputButtonOver');" onmouseout="$(this).removeClass('inputButtonOver');" onclick="$('#txt_bak_area_1').val(unescape($('#txt_bak_area_1').val()))"/>
+			</td>
+		</tr>
+		<tr>
+			<td width="100%">
+				<b>Backup area 3</b><br/>
+				<textarea id="txt_bak_area_2" style="width: 100%" rows="10"></textarea>
+			</td>
+			<td>
+				<input style="width: 100px" type="button" value="Encode>>" class="inputButton" onmouseover="$(this).addClass('inputButtonOver');" onmouseout="$(this).removeClass('inputButtonOver');" onclick="$('#txt_bak_area_2').val(escape($('#txt_bak_area_2').val()))"/>
+				<input style="width: 100px" type="button" value="Decode<<" class="inputButton" onmouseover="$(this).addClass('inputButtonOver');" onmouseout="$(this).removeClass('inputButtonOver');" onclick="$('#txt_bak_area_2').val(unescape($('#txt_bak_area_2').val()))"/>
+			</td>
+		</tr>
+	</table>
+<%
+		if (_bNaked)
+		{
+%>
+	</body>
+</html>
+<%
+		}
+	}
+%>

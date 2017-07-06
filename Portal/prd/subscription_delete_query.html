@@ -1,0 +1,36 @@
+<%
+Server.Execute( "include/sid_access_init.html" );
+
+fIsAjax = Request.Query.HasProperty( 'ajax' ) && Request.Query.ajax == '1';
+
+curSubscriptionID = null;
+if ( Request.Query.HasProperty( 'subscription_id' ) )
+{
+	curSubscriptionID = Int( Request.Query.subscription_id );
+	curSubscription = OpenDoc( UrlFromDocID( curSubscriptionID ) ).TopElem;
+	if ( curSubscription.person_id != curUserID )
+	{
+		if ( fIsAjax )
+		{
+			throw tools.get_web_str('c_access_error');
+		}
+		else
+		{
+			Server.Execute( "view_access_panel.html" );
+			Cancel();
+		}
+	}
+}
+else
+{
+	catSubscription = ArrayOptFirstElem( XQuery( "for $elem in subscriptions where $elem/person_id = " + curUserID + " and $elem/document_id = " + Request.Query.document_id + " return $elem" ) );
+	if ( catSubscription != undefined )
+		curSubscriptionID = catSubscription.id
+}
+
+if ( curSubscriptionID != null )
+	DeleteDoc( UrlFromDocID( curSubscriptionID ) );
+
+if ( ! fIsAjax )
+	Response.Redirect( "view_doc.html?mode=subscriptions&doc_code=subscriptions" );
+%>

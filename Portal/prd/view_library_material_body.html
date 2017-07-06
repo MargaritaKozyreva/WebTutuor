@@ -1,0 +1,344 @@
+<%
+hasAdminRights = false;
+teSection = undefined;
+try
+{
+    if(curObject.section_id.HasValue)
+    {
+        teSection = OpenDoc(UrlFromDocID(curObject.section_id)).TopElem;
+        hasAdminRights = teSection.administrators.ChildByKeyExists(curUserID);
+    }
+}
+catch(err)
+{
+	alert(tools.get_web_str('vlmb_section_err') + " " + err);
+}
+
+s_main_section_name = ( teSection != undefined ? teSection.name : "&nbsp;" );
+bRequestExists = false;
+bPhysicalTypeExists = false;
+bIsViewing = (ArrayOptFirstElem(XQuery( "for $elem in library_material_viewings where $elem/person_id = " + curUserID + " and $elem/material_id=" + curObjectID + " return $elem" )) != undefined);
+
+	for(fldFormat in curObject.library_material_formats)
+	{
+		if(fldFormat.library_material_format_id.ForeignElem.format_type_id == 'physical')
+		{
+			bPhysicalTypeExists = true;
+			break;
+		}
+	}
+	if ( ArrayOptFirstElem( XQuery( "for $request in requests where $request/status_id = 'active' and $request/person_id = " + curUserID + " and $request/object_id = " + curObjectID + " return $request" ) ) != undefined )
+	{
+		bRequestExists = true;
+%>
+		<table width="100%" border="0" cellspacing="0" cellpadding="5">
+			<tr>	
+				<td bgcolor="#FFFFFF" align=center>
+					<b><i>Вы подали заявку на данный материал</i></b>
+				</td>
+			</tr>
+		</table>
+<%
+	}
+%>
+
+<table width="100%" border="0" cellspacing="0" cellpadding="5">
+	<tr>
+		<td align="CENTER" class="activator">
+<%					
+		if(ArrayOptFirstElem(curObject.unfolded_document.contents) != undefined || ArrayOptFirstElem(curObject.unfolded_document.pages) != undefined && (curObject.allow_self_viewing || bIsViewing))
+		{
+		// прикрепленный файл
+
+%>
+			<input type="button" value="<%=tools.get_web_str('vlmb_view_doc')%>"   onclick="openReader()" class="inputButton" onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';" style="width:150px"/>
+<%
+		}
+		if(curObject.file_name.HasValue && curObject.file_name != "" && curObject.allow_download)
+		{
+%>
+			<input type="button" value="Скачать прикрепленный файл" onclick="document.location.href='download_file.html?file_id=<%=curObject.file_name%>&sid=<%=tools_web.get_sum_sid( curObject.file_name, Session.sid )%>';" class="inputButton" onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';">
+<%
+		}
+		if ( curObject.default_response_type_id.HasValue && !curObject.is_closed)
+		{
+%>
+			<input type="button" value="<%=tools.get_web_str('c_text_create_response')%>" onclick="document.location.href='view_doc.html?mode=response&doc_id=<%=curDocID%>&response_object_id=<%=curObjectID%>&response_type_id=<%=curObject.default_response_type_id%>';return false;" class="inputButton" onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';">
+<%
+		}
+		//if(bPhysicalTypeExists && !bRequestExists)
+		if(!bRequestExists)
+		{
+			_request_type_array = XQuery( "for $elem in request_types where $elem/object_type = 'library_material' return $elem" )
+			for ( _request_type in _request_type_array )
+			{
+%>	
+				<input type="button" value="<%=tools_web.get_cur_lng_name( _request_type.name )%>" onclick="document.location.href='view_doc.html?mode=request_create&doc_id=<%=curDocID%>&type=course&request_object_id=<%=curObjectID%>&request_type_id=<%=_request_type.PrimaryKey%>';return false;" class="inputButton" onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';">	
+<%
+			}
+		}
+		if(!bIsViewing)
+		{
+		
+%>
+			<input type="button" id="a_favourite_link" value="<%=tools.get_web_str('vlmb_add_my_book')%>"  onclick="document.location.href='library_material_change.html?doc_id=<%=curDocID%>&object_id=<%=curObjectID%>&action=add_favourite'" class="inputButton" onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';" style="width:150px"/>
+<%
+		}
+%>			
+		</td>
+	</tr>
+</table>
+<%
+catMatType = curObject.library_material_type_id.OptForeignElem;
+%>
+<script language="javascript">
+<!--
+/*
+	function add2favourites()
+	{
+		var sErrorMessage = <%=CodeLiteral( tools_web.get_web_str("veb_err_post") )%>;
+		if (confirm(<%=CodeLiteral( tools.get_web_str('vlmb_add_mat_my_book') )%>))
+		{
+			var domSrcControl = $("#a_favourite_link");
+			$(domSrcControl).hide().after("<img border='0' src='pics/ajax-loader-tiny.gif'/>");
+			$.ajax({type: 'POST', url: 'document_save.html',async: true, 
+			data: "ajax=1&data_0_id=<%=curObjectID%>&data_0_elements=[encoded]" + escape("_fldColl=subscribed_persons.ObtainChildByKey(<%=curUserID%>)") + "&data_0_source_fields=@_fldColl.person_fullname&data_0_destination_fields=[encoded]" + escape("<%=HtmlEncode(curUser.fullname)%>"),
+			success: function(data){$(domSrcControl).next("img").remove(); if (parseInt(data) != 1) {window.alert(sErrorMessage); $(domSrcControl).show();} else $("#a_killfavourite_link").show(); },
+			error: function(xht, msg){window.alert(sErrorMessage+"\n" + msg); $(domSrcControl).show().next("img").remove();}
+			});
+		}
+	}
+	function removeFromFavourites()
+	{
+		if (confirm(<%=CodeLiteral( tools.get_web_str('vlmb_del_mat_my_book') )%>))
+		{
+			var domSrcControl = $("#a_killfavourite_link");
+			$(domSrcControl).hide().after("<img border='0' src='pics/ajax-loader-tiny.gif'/>");
+			$.ajax({type: 'POST', url: 'document_save.html',async: true, 
+			data: "ajax=1&data_0_id=<%=curObjectID%>&data_0_destination_fields=&data_0_source_fields=&data_0_elements=[encoded]" + escape("_deadSubscriber=subscribed_persons.DeleteChilds('PrimaryKey==<%=curUserID%>')"),
+			success: function(data){$(domSrcControl).next("img").remove(); if (parseInt(data) != 1) {window.alert(sErrorMessage); $(domSrcControl).show();} else $("#a_favourite_link").show(); },
+			error: function(xht, msg){window.alert(sErrorMessage+"\n" + msg); $(domSrcControl).show().next("img").remove();}
+			});
+		}
+	}*/
+	function openReader()
+	{
+		var strAttr="height=" + (screen.height - 70) + ",width=" + (screen.width - 30) + ",top=0,left=0,status=no,toolbar=no,menubar=no,location=no,resizable=yes,scrollbars=no";
+		var win = window.open('http://<%=curHost%>/pf_viewer.html?object_id=<%=curObjectID%>&doc_id=<%=curDocID%>', '_blank', strAttr);
+		win.screenX = 0;
+		win.screenY = 0;
+	}
+-->
+</script>
+<%
+	IS_MODIFY = false;
+%>
+<br/>
+<table cellspacing="0" cellpadding="4" border="0" class="tableBorder" width="100%">
+	<tr>
+		<td>
+<%
+if(curObject.image.HasValue)
+{
+%>
+	<img src="download_file.html?file_id=<%=curObject.image%>&sid=<%=tools_web.get_sum_sid( curObject.image, Session.sid )%>" alt="<%=tools.get_web_str('c_illustration')%>" align="left" vspace="5" hspace="5">
+<%
+}
+%>
+		</td>
+		<td width="100%">
+<table cellspacing="0" cellpadding="4" border="0" class="<%=curObject.image.HasValue ? 'tableBorder' : ''%>" width="100%">
+	<tr>
+		<td style="font-weight: bold;" align="right" width="50%">
+			<%=tools.get_web_str("c_name")%>:
+		</td>
+		<td width="50%">
+			<%=curObject.name%>
+		</td>
+	</tr>
+<%
+	if(curObject.author.HasValue)
+	{
+%>
+	<tr>
+		<td style="font-weight:bold;" align="right">
+			<%=tools.get_web_str("vfb_author")%>:
+		</td>
+		<td class="wtInfoTableFormTDRight wtFullWidth">
+			<%=curObject.author%>
+		</td>
+	</tr>
+<%
+	}
+	if(catMatType != undefined)
+	{
+%>
+	<tr>
+		<td style="font-weight:bold;" align="right">
+			<%=tools.get_web_str("vlmb_book_view")%>:
+		</td>
+		<td class="wtInfoTableFormTDRight wtFullWidth">
+			<%=catMatType.name%>
+		</td>
+	</tr>
+<%
+	}
+	if(curObject.year.HasValue)
+	{
+%>
+	<tr>
+		<td style="font-weight:bold;" align="right">
+			<%=tools.get_web_str("c_imprint_date")%>:
+		</td>
+		<td class="wtInfoTableFormTDRight wtFullWidth">
+			<%=curObject.year%>
+		</td>
+	</tr>
+<%
+	}
+	if(curObject.isbn.HasValue)
+	{
+%>
+	<tr>
+		<td style="font-weight:bold;" align="right">
+			ISSN/ISBN:
+		</td>
+		<td class="wtInfoTableFormTDRight wtFullWidth">
+			<%=curObject.isbn%>
+		</td>
+	</tr>
+<%
+	}
+		_xarrFormats = QueryCatalogByKeys("library_material_formats", "id", ArrayExtract(curObject.library_material_formats, "PrimaryKey"));
+		iMatFormatsCount = ArrayCount(_xarrFormats);
+		if(iMatFormatsCount > 0)
+		{
+%>
+	<tr>
+		<td style="font-weight:bold;" align="right">
+			<%=tools_web.get_web_str('c_format')%>:
+		</td>
+		<td class="wtInfoTableFormTDRight wtFullWidth">
+			<table cellspacing="0" cellpadding="0">
+				<tr>
+<%
+		i = 0;
+		for (_catFormatElem in _xarrFormats)
+		{
+			if (i > 0)
+			{
+%>
+				<tr>
+<%
+		}
+%>
+					<td><img src='pics/ok.gif' border='0'>&nbsp;<%=_catFormatElem.name%></td>
+				</tr>
+<%
+		i++;
+		}
+		if (iMatFormatsCount == 0)
+		{
+%>
+				</tr>
+<%
+		}
+%>
+			</table>
+		</td>
+	</tr>
+<%
+	}
+%>
+</table>
+
+		</td>
+	</tr>
+</table>
+
+<%
+// Аннотация - показывать, только если заполнена
+if(curObject.description.HasValue && curObject.description != "")
+{
+%>
+<table>
+<tr>
+	<td>
+		<b><%=tools.get_web_str('c_annatatsiya')%>:</b>
+	</td>
+</tr>
+<tr>
+	<td>
+	<%=tools_web.get_web_desc( curObject.description, UrlFromDocID( curObjectID ), curObject.Name + ".description" )%>
+	</td>
+</tr>
+</table>
+<%
+}
+
+for(fldFormat in curObject.library_material_formats)
+{
+	if(fldFormat.library_material_format_id.ForeignElem.format_type_id == 'digital' && curObject.file_name.HasValue)
+	{
+		if(curObject.file_name.ForeignElem.type == 'flv' || (curObject.file_name.ForeignElem.type == 'audio' && UrlPathSuffix(curObject.file_name.ForeignElem.file_name)==".mp3") )
+		{
+			if(curObject.file_name.ForeignElem.type == 'flv')
+			{
+				sFileParam = "flv=" + UrlEncode("download_file.html?file_id=" + curObject.file_name + "&sid=" + tools_web.get_sum_sid( curObject.file_name, Session.sid ));
+				iWidth = curObject.unfolded_document.width.HasValue ? curObject.unfolded_document.width : 400;
+				iHeight = curObject.unfolded_document.height.HasValue ? curObject.unfolded_document.height : 327;
+			}
+			else
+			{
+				iWidth = 400;
+				iHeight = 27;				
+				sFileParam = "mp3=" + UrlEncode("download_file.html?file_id=" + curObject.file_name + "&sid=" + tools_web.get_sum_sid( curObject.file_name, Session.sid ));
+			}
+%>
+		<script src="scripts/swfobject_modified.js" type="text/javascript"></script>
+		<script type="text/javascript">
+			var attributes = {};
+			var flashvars = true;
+			var params = {
+			  allowFullScreen: "true",
+			  flashvars: "<%=sFileParam%>&autoplay=false"
+			};
+			swfobject.embedSWF("mpw_player.swf", "flvplayer", "<%=iWidth%>", "<%=iHeight%>", "9.0.0","expressInstall.swf", flashvars, params, attributes);
+
+		</script>
+		<br/>
+		<center>
+			<div id="flvplayer" style="text-aling:center;"></div>
+		</center>
+<%
+		}
+		else if(curObject.file_name.ForeignElem.type=="video" && false)
+		{
+			iWidth = curObject.unfolded_document.width.HasValue ? curObject.unfolded_document.width : 400;
+			iHeight = curObject.unfolded_document.height.HasValue ? curObject.unfolded_document.height : 327;
+			sFileParam = "download_file.html?file_id=" + curObject.file_name + "&sid=" + tools_web.get_sum_sid( curObject.file_name, Session.sid );
+%>
+		<p>
+			<center>
+			
+			  <object id="WMPlay" classid="CLSID:6BF52A52-394A-11d3-B153-00C04F79FAA6" standby="Загрузка..."
+				type="application/x-oleobject" height="<%=iHeight%>" width="<%=iWidth%>">
+				<param name="URL" value="<%=sFileParam%>"/>
+				<param name="AllowChangeDisplaySize" value="False"/>
+				<param name="ShowControls" value="1"/>
+				<param name="ShowDisplay" value="1"/>
+				<param name="ShowStatusBar" value="1"/>
+				<param name="AutoStart" value="0"/>
+				<param name="InvokeURLS" value="False"/>
+				<embed name="WMplay" type="application/x-mplayer2" autostart="False" 
+				height="<%=iHeight%>" width="<%=iWidth%>" src="<%=sFileParam%>"></embed>
+			  </object>
+			</center>
+		</p>
+		
+<%
+		}
+	}
+}
+
+%>

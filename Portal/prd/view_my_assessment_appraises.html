@@ -1,0 +1,89 @@
+<%
+	_cardDoc = tools_web.get_my_person_object_link_card("assessment_appraise",curUserID);
+	
+	if (_cardDoc != undefined)
+	{
+		_item_allowed_pack = ArrayExtract(_cardDoc.objects, "PrimaryKey");
+		if (_cardDoc.all_can_edit)
+			_editable_list = "'*'";
+		else
+			_editable_list = CodeLiteral(ArrayMerge(ArraySelectByKey(_cardDoc.objects, true, "can_edit"), "This.PrimaryKey", ";"));
+			
+		if (_cardDoc.all_can_delete)
+			_deletable_list = "'*'";
+		else
+			_deletable_list = CodeLiteral(ArrayMerge(ArraySelectByKey(_cardDoc.objects, true, "can_delete"), "This.PrimaryKey", ";"));
+	}
+	else
+	{
+		_item_allowed_pack = Array();
+		_editable_list = "''";
+		_deletable_list = "''";
+	}
+	_itemArray = QueryCatalogByKeys("assessment_appraises", "id", _item_allowed_pack);
+	
+	curView = new Object;
+	curView.SetProperty("id", "assessment_appraise_list");
+	curView.SetProperty("catalog_name", "assessment_appraise");
+	curView.SetProperty("disp_link", "true");
+	curView.SetProperty("disp_check_box", "false");
+	curView.SetProperty("title", tools_web.get_web_str("c_ass_appraises"));
+	
+	curView.SetProperty("disp_link", "("+_editable_list+"=='*' || StrContains("+_editable_list+",ListElem.PrimaryKey) ? true: false)");
+	curView.SetProperty("disp_check_box", "true");
+	curView.SetProperty("disp_check_box_visibility", "("+_deletable_list+"=='*' || StrContains("+_deletable_list+",ListElem.PrimaryKey) ? true: false)");
+	
+	curView.SetProperty("array", _itemArray);
+	curView.SetProperty("link_mode", "assessment_appraise_edit");
+	curView.SetProperty("link_field_index",1);
+	Server.Execute( "view_catalog_list.html" );
+	
+	_href = tools_web.get_url_protocol( Request.Url ) + Request.UrlHost + UrlPath( Request.Url ) + "?mode=assessment_appraise_edit&doc_id="+curDocID;
+%>
+<p>
+<%
+	if (_cardDoc != undefined && _cardDoc.all_can_create)
+	{
+%>
+	<input type="button" value="<%=tools_web.get_web_str('vmaa_create_proc')%>" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="
+			var oPars=new Object(); oPars.check_access = true;
+			var strAttr='status:no;dialogWidth:780px;dialogHeight:550px;help:no;resizable:1';
+			
+			oPars.xquery_qual = '$elem/is_model = true()'
+			oPars.can_be_empty = false;
+			xShowModalDialog('dlg_select.html?doc_id=<%=curDocID%>&catalog_name=assessment_appraise&typein=0&multi_select=0&rand='+Math.random(), oPars, strAttr);
+			if (!oPars.handle ) return false;
+			window.location.href='<%=_href%>&object_id=' + oPars.element_id;
+	
+	"/>
+<%
+	}
+	if (_deletable_list != "''")
+	{
+%>
+	<input type="button" value="<%=tools.get_web_str('c_delete')%>" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="
+		var _str = '';
+		var _dead_list = document.getElementsByName('select_check_box_assessment_appraise_list');
+		var x =0;
+		for (var i =0; i<_dead_list.length;i++)
+		if (_dead_list[i].checked)
+		{
+			_str += (_str != '' ? ';': '') + _dead_list[i].id;
+			x++;
+		}
+		document.forms['assessment_appraise_killa'].elements['dead_object_ids'].value = _str;
+		if (_str != '' && confirm( String('<%=tools_web.get_web_str('vmaa_create_proc')%>').replace('{PARAM1}',x) ))
+			document.forms['assessment_appraise_killa'].submit();
+	"/>
+	
+	<form name="assessment_appraise_killa" id="assessment_appraise_killa" action="content_panel_process.html" method="post">
+		<input type="hidden" name="doc_id" value="<%=curDocID%>"/>
+		<input type="hidden" name="href" value="<%=Request.Url%>"/>
+		<input type="hidden" name="mode" value="delete_elements"/>
+		<input type="hidden" name="catalog_name" value="assessment_appraise"/>
+		<input type="hidden" name="dead_object_ids" value=""/>
+	</form>
+<%
+	}
+%>
+</p>

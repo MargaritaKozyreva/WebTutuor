@@ -1,0 +1,43 @@
+<%
+Server.Execute("include/sid_access_init.html");
+sFieldName = Request.Query.HasProperty( 'add_file_field' ) ? Request.Query.add_file_field : 'add_file_url';
+
+if ( Request.Query.HasProperty( sFieldName ) )
+{
+	oFileField = Request.Query.GetProperty( sFieldName );
+	if ( oFileField.FileName != '' )
+	{
+		docResource = OpenNewDoc( 'x-local://wtv/wtv_resource.xmd' );
+
+		if ( Request.Query.HasProperty( 'add_file_status' ) )
+			docResource.TopElem.type = Request.Query.add_file_status;
+
+		if ( Request.Query.HasProperty( 'add_file_desc' ) )
+			docResource.TopElem.comment = UrlDecode( Request.Query.add_file_desc );
+
+		docResource.TopElem.person_id = curUserID;
+		tools.common_filling( 'collaborator', docResource.TopElem, curUserID, curUser );
+		
+		docResource.BindToDb();
+		docResource.TopElem.put_str( oFileField, UrlFileName( oFileField.FileName ) );
+		
+		if (Request.Query.HasProperty("update_repositorium_id") && Request.Query.GetProperty("update_repositorium_id") != "")
+		try
+		{
+			docRepo = OpenDoc(UrlFromDocID(Int(Request.Query.GetProperty("update_repositorium_id"))));
+			docRepo.TopElem.files.ObtainChildByKey(docResource.DocID);
+			docRepo.Save();
+		}
+		catch(_X_)
+		{
+		}
+		
+	}
+}
+
+//Response.Write( "{ error: '', msg: '' }" );
+if ( Request.Query.HasProperty( 'ajax' ) && Request.Query.ajax == '1' )
+	Response.Write( "{}" );
+else
+	Response.Redirect( 'view_doc.html?mode=resources&doc_id=' + curDocID );
+%>

@@ -1,0 +1,561 @@
+<%
+	try
+	{
+		curItemID = Int( Request.QueryString.object_id );
+		curItem = OpenDoc( UrlFromDocID( curItemID ) ).TopElem;
+		//if ( tools.check_access(curItem, curUserID) == false ) throw "ne lez!";
+	}
+	catch(_fuck_)
+	{
+		curItem = null;
+		curItemID = null;
+	}
+
+if (curItem != null) _is_new = true; else _is_new = false;
+
+
+	try
+	{
+		Session.RETURN_MSG;
+	}
+	catch(_x_)
+	{
+		Session.RETURN_MSG = "";
+	}
+
+	if (Session.RETURN_MSG != "")
+	{
+		Response.Write("<br/><center><font size='+1' align='center'><i><b>" + HtmlEncode(Session.RETURN_MSG) + "</b></i></font></center>");
+		Session.RETURN_MSG = "";
+	}
+
+%>
+
+<script language="javascript">
+<!--
+jQuery.fn.moveRow = function(elem, up) {
+	var idx = $(elem).parent().parent().get(0).sectionRowIndex;
+    var trs = this.children("tr");
+	
+	var source = trs.eq(idx);
+	var dest = trs.eq(idx + (up ? -1: 1));
+	
+	if (source.length > 0 && dest.length > 0)
+	{
+		source['insert' + (up ? 'Before': 'After')](dest);
+		idx = $(trs).index(source);
+		$(source).find(">td").each(function(){this.className = idx % 2 ?  'tableRowOdd' : 'tableRowEven';})
+		idx = $(trs).index(dest);
+		$(dest).find(">td").each(function(){this.className = idx % 2 ? 'tableRowOdd' : 'tableRowEven';})
+	}	
+};
+
+function checkkey(srcobj, e, flag_flat)
+{
+	if (!e) var e = window.event;
+	var keycode = parseInt(e.keyCode ? e.keyCode : e.which);
+	if ((keycode<48 || keycode>57) && keycode!=46) return false;
+	if (keycode==46) 
+	{
+		if( (!flag_flat) || srcobj.value.indexOf('.') >= 0) return false;
+	}
+	return true;
+}
+
+function addGapCondition(_cur_id, _sentence_option_id, _value, _case_sensitive)
+{
+	var _counter = $("form#item_submitter input#gap_condition_count_" + _cur_id).get(0);
+	_cur_sub_id = parseInt(_counter.value);
+	var _tb = $("tbody#gap_table_" + _cur_id);
+	//alert("_cur_id="+_cur_id +"\n _grading_option_id="+ _grading_option_id +"\n _sentence_option_id="+ _sentence_option_id+"\n _value="+ _value+"\n _case_sensitive="+ _case_sensitive);
+	var _trow=document.createElement("TR");
+	_trow.valign="middle";
+	$(_tb).append(_trow);
+	
+	var _tcol=document.createElement("TD");
+	$(_trow).append(_tcol);
+	$(_tcol).append("<select id='sentence_option_id_"+_cur_id+"_"+_cur_sub_id+"' name='sentence_option_id_"+_cur_id+"_"+_cur_sub_id+"'><option value='contains'><%=tools_web.get_web_str('vieb_contain')%></option><option value='equal'><%=tools_web.get_web_str('vieb_eq')%></option></select>");
+	if (_sentence_option_id != null)
+		$("form#item_submitter select#sentence_option_id_"+_cur_id+"_"+_cur_sub_id + ">option[value='"+_sentence_option_id+"']").attr("selected","selected");
+	
+	_tcol=document.createElement("TD");
+	_tcol.width="100%";
+	$(_trow).append(_tcol);
+	$(_tcol).append("<input type='text' class='inputEdit' id='gap_value_"+_cur_id+"_"+_cur_sub_id+"' name='gap_value_"+_cur_id+"_"+_cur_sub_id+"' style='width:100%'>");
+	if (_value != null)
+		$("form#item_submitter input#gap_value_"+_cur_id+"_"+_cur_sub_id).val(_value);
+	
+	_tcol=document.createElement("TD");
+	$(_trow).append(_tcol);
+	$(_tcol).append("<input type='checkbox' id='case_sensitive_"+_cur_id+"_"+_cur_sub_id+"' name='case_sensitive_"+_cur_id+"_"+_cur_sub_id+"' "+(_case_sensitive == true ? "checked" : "")+" value='1' title='<%=tools_web.get_web_str('vieb_case_sen')%>'/>");
+	
+	_tcol=document.createElement("TD");
+	$(_trow).append(_tcol);
+	$(_tcol).append("<input type='button' value='X' title='<%=tools.get_web_str('c_delete')%>' onclick='var parent_tr=this.parentNode.parentNode; var _tbodyobj = parent_tr.parentNode; _tbodyobj.deleteRow(parent_tr.sectionRowIndex);' style='width: 20px' class='inputButton' onmouseover='$(this).addClass(\"inputButtonOver\");' onmouseout='$(this).removeClass(\"inputButtonOver\");'>");
+	
+	_counter.value = _cur_sub_id + 1;
+}
+
+function addAnswerValues(_cur_id, _value)
+{
+	var _counter = $("form#item_submitter input#answer_values_count_" + _cur_id).get(0);
+	_cur_sub_id = parseInt(_counter.value);
+	var _tb = $("tbody#answervaluetable_" + _cur_id);
+	var _trow=document.createElement("TR");
+	_trow.valign="middle";
+	$(_tb).append(_trow);
+	
+	var _tcol=document.createElement("TD");
+	_tcol.width="100%";
+	$(_trow).append(_tcol);
+	$(_tcol).append("&bull;&nbsp;<input type='text' class='inputEdit' id='answervalue_"+_cur_id+"_"+_cur_sub_id+"' name='answervalue_"+_cur_id+"_"+_cur_sub_id+"' style='width:100%'>");
+	if (_value != null)
+		$("form#item_submitter input#answervalue_"+_cur_id+"_"+_cur_sub_id).val(_value);
+	
+	
+	_tcol=document.createElement("TD");
+	$(_trow).append(_tcol);
+	$(_tcol).append("<input type='button' value='X' title='<%=tools.get_web_str('c_delete')%>' onclick='var parent_tr=this.parentNode.parentNode; var _tbodyobj = parent_tr.parentNode; _tbodyobj.deleteRow(parent_tr.sectionRowIndex);' style='width: 20px' class='inputButton' onmouseover='$(this).addClass(\"inputButtonOver\");' onmouseout='$(this).removeClass(\"inputButtonOver\");'>");
+	
+	_counter.value = _cur_sub_id + 1;
+}
+
+function addAnswer(cur_id, tb, _answer_text, _is_correct)
+{
+	var trow=document.createElement("TR");
+	trow.setAttribute("id","answer_" + cur_id);
+	trow.setAttribute("value",cur_id);
+	trow.valign="middle";
+	$(tb).append(trow);
+	_class = $(tb).children("tr").index(trow) % 2 ? 'tableRowEven' : 'tableRowOdd';
+	var tcol1=document.createElement("TD");
+	tcol1.className = _class;
+	$(trow).append(tcol1);
+	
+	var tinput_qt=document.createElement('INPUT');
+	tinput_qt.setAttribute("type",'text');
+	tinput_qt.className="inputEdit";
+	tinput_qt.setAttribute("id",'answer_question_text_' + cur_id);
+	tinput_qt.setAttribute("name",'answer_question_text_' + cur_id);
+	if (_answer_text != null)
+		tinput_qt.value = _answer_text;
+	tinput_qt.style.width="100%";
+	
+	$(tcol1).append(tinput_qt);
+	
+	var scaryTestTable = "<div id='answer_gap_div_" +cur_id+ "' style='display:none'><table cellpadding='0' cellspacing='0'><tbody id='gap_table_" +cur_id+ "'></tbody></table><input type='button' value='<%=tools_web.get_web_str('dcs_add_conditions')%>' onclick='addGapCondition(\"" + cur_id + "\", null, null, null)' class='inputButton' onmouseover='$(this).addClass(\"inputButtonOver\");' onmouseout='$(this).removeClass(\"inputButtonOver\");'/><input type='hidden' value='0' name='gap_condition_count_" +cur_id+ "' id='gap_condition_count_" +cur_id+ "'/></div>";
+	scaryTestTable+= "<div id='answer_values_div_" +cur_id+ "' style='display:none'><table cellpadding='0' cellspacing='0'><tbody id='answervaluetable_" +cur_id+ "'></tbody></table><input type='button' value='<%=tools_web.get_web_str('vieb_add_elem')%>' onclick='addAnswerValues(\"" + cur_id + "\", null)' class='inputButton' onmouseover='$(this).addClass(\"inputButtonOver\");' onmouseout='$(this).removeClass(\"inputButtonOver\");'/><input type='hidden' value='0' name='answer_values_count_" +cur_id+ "' id='answer_values_count_" +cur_id+ "'/></div>";
+	$(tcol1).append(scaryTestTable);
+		
+	var tcol2=document.createElement("TD");
+	tcol2.setAttribute("width","200px");
+	tcol2.className = _class;
+	tcol2.vAlign="top";
+	tcol2.setAttribute("align", 'center');
+	$(trow).append(tcol2);
+	
+	var tinput_ica=document.createElement('INPUT');
+	tinput_ica.setAttribute("type",'checkbox');
+	//tinput_ica.className="inputEdit";
+	tinput_ica.setAttribute("id",'answer_is_correct_answer_' + cur_id);
+	tinput_ica.setAttribute("name",'answer_is_correct_answer_' + cur_id);
+	tinput_ica.setAttribute("value","1");
+	$(tcol2).append(tinput_ica);
+	if (_is_correct != null)
+		tinput_ica.checked = (_is_correct == true);
+	
+	var tcol3=document.createElement("TD");
+	tcol3.setAttribute("width","100px");
+	tcol3.className = _class;
+	tcol3.vAlign="top";
+	tcol3.setAttribute("align", 'center');
+	$(trow).append(tcol3);
+	
+	var tinput_delbut=document.createElement('INPUT');
+	tinput_delbut.setAttribute("type",'button');
+	tinput_delbut.className="inputButton";
+	tinput_delbut.setAttribute("id",'answer_del_' + cur_id);
+	tinput_delbut.setAttribute("name",'answer_del_' + cur_id);
+	tinput_delbut.style.width="20px";
+	tinput_delbut.setAttribute("value","X");
+	tinput_delbut.setAttribute("title","<%=tools_web.get_web_str('dcs_del_question')%>");
+	tinput_delbut.setAttribute("code", cur_id);
+	$(tinput_delbut).bind('click', function(e){deleteChild(this);});
+	$(tinput_delbut).hover(function() {$(this).addClass("inputButtonOver")}, function() {$(this).removeClass("inputButtonOver")});
+	$(tcol3).append(tinput_delbut);
+		
+	var tinput_upbut=document.createElement('INPUT');
+	tinput_upbut.setAttribute("type","button"); 
+	tinput_upbut.className="inputButton";
+	tinput_upbut.setAttribute("id",'answer_up_' + cur_id);
+	tinput_upbut.setAttribute("name",'answer_up_' + cur_id);
+	tinput_upbut.style.width="20px";
+	//tinput_upbut.value= String.fromCharCode(0xE9) ;
+	tinput_upbut.setAttribute("value", String.fromCharCode(0x25B2));
+	//tinput_upbut.style.fontFamily = "Wingdings";
+	//$(tinput_upbut).css("font-family","wingdings");
+	tinput_upbut.setAttribute("title","<%=tools_web.get_web_str('c_move_up')%>");
+	tinput_upbut.setAttribute("code", cur_id);
+	$(tinput_upbut).click(function(e) {$("tbody#recycler").moveRow(this, true);});
+	$(tinput_upbut).hover(function() {$(this).addClass("inputButtonOver")}, function() {$(this).removeClass("inputButtonOver")});
+	$(tcol3).append(tinput_upbut);
+		
+	var tinput_downbut=document.createElement('INPUT');
+	tinput_downbut.setAttribute("type",'button');
+	tinput_downbut.className="inputButton";
+	tinput_downbut.setAttribute("id",'answer_down_' + cur_id);
+	tinput_downbut.setAttribute("name",'answer_down_' + cur_id);
+	tinput_downbut.style.width="20px";
+	//tinput_downbut.value= String.fromCharCode(0xEA) ;
+	tinput_downbut.setAttribute("value", String.fromCharCode(0x25BC));
+	//tinput_downbut.style.fontFamily = "Wingdings";
+	tinput_downbut.setAttribute("title","<%=tools_web.get_web_str('c_move_down')%>");
+	tinput_downbut.setAttribute("code", cur_id);
+	//$(tinput_downbut).click(function(e) {moveRowDown(this);});
+	$(tinput_downbut).click(function(e) {$("tbody#recycler").moveRow(this, false);});
+	$(tinput_downbut).hover(function() {$(this).addClass("inputButtonOver");}, function() {$(this).removeClass("inputButtonOver")});
+	$(tcol3).append(tinput_downbut);
+}
+
+function addChild()
+{
+	var tb = document.getElementById("recycler");
+	var counter = document.getElementById("answers_count");
+
+	var _x = parseInt(counter.value) + 1;
+	
+	addAnswer(_x, tb, null, null);
+	
+	counter.value = _x;
+}
+//------------------------------------------------------------------------------------------
+function deleteChild(sourceElem)
+{
+	var parent_tr=sourceElem.parentNode.parentNode;
+	var tobj=$("tbody#recycler").get(0);
+		
+	tobj.deleteRow(parent_tr.sectionRowIndex);
+			
+	return true;
+}
+//------------------------------------------------------------------------------------------
+function buttonMouseOver()
+{
+	window.event.srcElement.className='inputButtonOver';
+}
+function buttonMouseOut()
+{
+	window.event.srcElement.className='inputButton';
+}
+
+//------------------------------------------------------------------------------------------
+function what2submit()
+{
+	if (document.getElementById("title").value=="")
+	{window.alert(<%=CodeLiteral( tools_web.get_web_str('vieb_mess_empty_title') )%>); return false;}
+	if (document.getElementById("question_text").value=="")
+	{window.alert(<%=CodeLiteral( tools_web.get_web_str('vieb_mess_empty_ques') )%>); return false;}
+	if (document.getElementById("question_points").value=="")
+	{window.alert(<%=CodeLiteral( tools_web.get_web_str('vieb_mess_empty_score') )%>); return false;}
+	if (parseInt(document.getElementById("answers_count").value) == 0)
+		{window.alert(<%=CodeLiteral( tools_web.get_web_str('vieb_mess_empty_answers') )%>); return false;}
+	var type_id = $("form#item_submitter select#type_id").val();
+	if (type_id == "")
+		{window.alert(<%=CodeLiteral( tools_web.get_web_str('vieb_mess_empty_type') )%>); return false;}
+	
+	var tobj=document.all.recycler;
+	var _sequence = "";
+	//if ($("div#answer_grid").is(":visible"))
+	if (type_id == "multiple_choice" || type_id == "multiple_response")
+		chk = false;
+	else
+		chk = true;
+		
+	
+	for (var _i =0; _i < tobj.rows.length; _i++)
+	{
+		var cur_id = tobj.rows[_i].getAttribute("value");
+		
+		if ($("input#answer_question_text_" + cur_id).val() == "")
+		{window.alert(<%=CodeLiteral( tools_web.get_web_str('vieb_mess_empty_answer') )%>); return false;}
+		if (type_id == "multiple_choice" || type_id == "multiple_response")
+			if ($("input#answer_is_correct_answer_" + cur_id).is(":checked") == true)
+				chk = true;
+		_sequence+= cur_id + ";";
+	}
+	if (!chk)
+	{window.alert(<%=CodeLiteral( tools_web.get_web_str('vieb_mess_empty_correct') )%>); return false;}
+	
+	$("input#sequence").val(_sequence);
+	return true;
+}
+
+function handleTypeSelect(sTypeID)
+{
+	if (sTypeID == "order")
+	{
+		$("input[name^='answer_is_correct_answer_']").hide("fast");
+		$("div#answer_grid").show("fast");
+		$("div[id^=answer_gap_div_]").hide("fast");
+		$("div[id^=answer_values_div_]").hide("fast");
+	}
+	else
+	if (sTypeID == "multiple_choice" || sTypeID == "multiple_response")	
+	{
+		$("input[name^='answer_is_correct_answer_']").show("fast");
+		$("div#answer_grid").show("fast");
+		$("div[id^=answer_gap_div_]").hide("fast");
+		$("div[id^=answer_values_div_]").hide("fast");
+	}
+	else
+	if (sTypeID == "gap_fill" || sTypeID == "numerical_fill_in_blank")
+	{
+		$("input[name^='answer_is_correct_answer_']").hide("fast");
+		$("div#answer_grid").show("fast");
+		$("div[id^=answer_gap_div_]").show("fast");
+		$("div[id^=answer_values_div_]").hide("fast");
+	}
+	else
+	if (sTypeID == "match_item")
+	{
+		$("input[name^='answer_is_correct_answer_']").hide("fast");
+		$("div#answer_grid").show("fast");
+		$("div[id^=answer_gap_div_]").hide("fast");
+		$("div[id^=answer_values_div_]").show("fast");
+	}	
+	
+}
+
+-->
+</script>
+
+<!--
+<input type="button" onclick="debuggg()" value="DeBuG!" style="font-family:Wingdings" class="inputButton"/>
+-->
+
+
+<table width="100%"  border="0" cellspacing="0" cellpadding="3" name="top_report_table">
+<tr>
+<td>
+
+<form name="item_submitter" id="item_submitter" action="content_panel_process.html" method="post">
+<input type="hidden" name="item_id" value="<%=(curItemID != null ? curItemID : 0)%>"/>
+<input type="hidden" name="mode" value="item"/>
+<input type="hidden" name="doc_id" value="<%=curDocID%>"/>
+<input type="hidden" name="sequence" id="sequence" value=""/>
+<input type="hidden" name="href" value="<%=Request.Url%>"/>
+<table width="100%" cellspacing="0" cellpadding="4" class="tableBorder">
+		<tr>
+			<td style="font-weight:bolder; font-size:larger" width="200px"><%=tools_web.get_web_str('c_title')%>:</td>
+			<td style="font-weight:bolder; font-size:larger"><input type="text" id="title" name="title" value="<%=(curItem != null ? HtmlEncode(curItem.title) : "")%>" class="inputEdit" style="width:90%"/></td>
+		</tr>
+		<tr>
+			<td style="font-weight:bolder; font-size:larger" width="200px"><%=tools_web.get_web_str('vieb_ques_text')%>:</td>
+			<td style="font-weight:bolder; font-size:larger"><input type="text" id="question_text" name="question_text" value="<%=(curItem != null ? HtmlEncode(curItem.question_text) : "")%>" class="inputEdit" style="width:90%"/></td>
+		</tr>
+		<tr>
+			<td style="font-weight:bolder; font-size:larger" width="200px"><%=tools.get_web_str('c_type')%>:</td>
+			<td style="font-weight:bolder; font-size:larger">
+			<select id="type_id" name="type_id" onchange="handleTypeSelect(this.value)">
+				<%
+					for (commonItemType in common.item_types)
+					{
+				%>
+						<option value="<%=commonItemType.id%>" <%=(curItem != null ? (curItem.type_id == commonItemType.id ? "selected" : "") : (commonItemType.id == "multiple_choice" ? "selected" : "") )%>><%=commonItemType.name%></option>
+				<%
+					}
+				%>
+			</select>
+			</td>
+		</tr>
+		<tr>
+			<td style="font-weight:bolder; font-size:larger" width="200px"><%=tools_web.get_web_str('c_score')%>:</td>
+			<td style="font-weight:bolder; font-size:larger"><input type="text" id="question_points" name="question_points" value="<%=(curItem != null ? curItem.question_points : "")%>" class="inputEdit" style="width:50px" onkeypress="return checkkey(this,event, false);"/></td>
+		</tr>
+		<tr>
+			<td style="font-weight:bolder; font-size:larger" width="200px"><%=tools.get_web_str('c_attempt_num')%>:</td>
+			<td style="font-weight:bolder; font-size:larger"><input type="text" id="max_attempts_num" name="max_attempts_num" value="<%=(curItem != null ? curItem.max_attempts_num : "")%>" class="inputEdit" style="width:50px" onkeypress="return checkkey(this,event, false);"/></td>
+		</tr>
+		<tr>
+			<td style="font-weight:bolder; font-size:larger" width="200px"><%=tools_web.get_web_str('c_second_duration')%>:</td>
+			<td style="font-weight:bolder; font-size:larger"><input type="text" id="duration" name="duration" value="<%=(curItem != null ? curItem.duration : "")%>" class="inputEdit" style="width:50px" onkeypress="return checkkey(this,event, false);"/></td>
+		</tr>
+		<tr>
+			<td style="font-weight:bolder; font-size:larger" width="200px"><%=tools_web.get_web_str('vieb_position')%>:</td>
+			<td style="font-weight:bolder; font-size:larger">
+				<select name="order" id="order">
+					<option value="Sequential" <%=(curItem == null || curItem.order == "Sequential" ? "selected" : "")%>><%=tools_web.get_web_str('vieb_series')%></option>
+					<option value="Random" <%=(curItem == null || curItem.order == "Random" ? "selected" : "")%>><%=tools_web.get_web_str('vieb_random')%></option>
+				</select>
+			</td>
+		</tr>
+		<tr>
+			<td style="font-weight:bolder; font-size:larger" width="200px" valign="top"><%=tools_web.get_web_str('c_sections')%>:</td>
+<%
+	if (curItem != null)
+	{
+		_roles = QueryCatalogByKeys("roles", "id", ArrayExtract(curItem.role_id, "Value"));
+	}
+	else if (Request.QueryString.HasProperty("role_id") && Request.QueryString.GetProperty("role_id") != "")
+	{
+		_roles = XQuery("for $role in roles where $role/id = " + Request.QueryString.GetProperty("role_id") + " return $role");
+	}
+	else
+		_roles = Array();
+%>
+			<td style="font-weight:bolder; font-size:larger">
+				<table width="100%"  border="0" cellspacing="0" cellpadding="3">
+					<tr>
+						<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1"/></td>
+					</tr>	
+					<tbody id="roler"></tbody>
+					<tr>
+						<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1"/></td>
+					</tr>
+				</table>
+				<table width="100%" border="0" cellspacing="0" cellpadding="0" class="activator">
+				<TR>
+					<TD ALIGN="CENTER" class="activator">
+						<input type="hidden" name="roles_count" id="roles_count" value="0"/>
+						<input type="button" value="<%=tools.get_web_str('c_choose')%>" onClick="change_roles();" class="inputButton" onMouseOver="$(this).addClass('inputButtonOver');" onMouseOut="$(this).removeClass('inputButtonOver');"/>
+					</TD>
+				</TR>
+				</table>
+			
+			<script language="javascript">
+			<!--
+				function change_roles()
+				{
+					var pars=new Object(); pars.check_access = true;
+					var strAttr='status:no;dialogWidth:780px;dialogHeight:550px;help:no;resizable:1';
+<%
+		_roleCardDoc = tools_web.get_my_person_object_link_card("role",curUserID);
+		
+		if (_roleCardDoc != undefined)
+			_role_allowed_pack = ArrayMerge(_roleCardDoc.objects, "This.PrimaryKey",";");
+		else
+			_role_allowed_pack = Array();
+%>
+					pars.display_object_ids = '<%=_role_allowed_pack%>';
+					if (pars.display_object_ids == '') pars.display_object_ids = '0';
+					
+					pars.selected_object_ids = "<%=ArrayMerge(_roles, "This.id", ";")%>";
+					pars.can_be_empty = true;
+					xShowModalDialog('dlg_select.html?doc_id=<%=curDocID%>&catalog_name=role&typein=0&multi_select=1&rand='+Math.random(), pars, strAttr);
+					if (!pars.handle ) return false;
+					
+					$('tbody#roler').empty();
+					$("#roles_count").val("0");
+	
+					for (var _x = 0; _x < pars.elemArray.length; _x++)
+						add_role(pars.elemArray[_x], pars.elemNamesArray[_x]);
+				}
+				
+				function add_role(_id, _name)
+				{
+					var item_count = parseInt($("#roles_count").val());
+					var _class = item_count % 2 ? 'tableRowEven' : 'tableRowOdd';
+					$('tbody#roler').append('<tr><td class="' +_class+ '"><input type="hidden" id="role_id_'+item_count+'" name="role_id_'+item_count+'" value="'+_id+'"/>' +_name+ '</td></tr>');
+					$("#roles_count").val(item_count+1);
+				}
+				
+<%
+				for (catRoleElem in _roles)
+				{
+					Response.Write("add_role(\"" + catRoleElem.id + "\", \"" + HtmlEncode(catRoleElem.name) +"\");");
+				}
+%>				
+			-->
+			</script>
+			</td>
+		</tr>
+	</table>
+	<br/>
+	<table>
+		<tr>
+		<td>
+			<input type="checkbox" name="display_correct_answer" id="display_correct_answer" <%=(curItem != null && curItem.display_correct_answer ? "checked": "")%> value="1"/><%=tools_web.get_web_str('vieb_show_correct')%><br/>
+			<input type="checkbox" name="not_disp_last_attempt" id="not_disp_last_attempt" <%=(curItem != null && curItem.not_disp_last_attempt ? "checked": "")%> value="1"/><%=tools_web.get_web_str('vieb_not_show_attem')%><br/>
+		</td>
+		</tr>
+	</table>
+	<br/>
+	<table width="100%" cellspacing="0" cellpadding="4" class="tableBorder" border="0">
+	<tr>
+		<td style="font-weight:bolder; font-size:larger;" width="350px"><%=tools_web.get_web_str('vieb_feedback_wrong')%></td>
+		<td style="font-weight:bolder; font-size:larger"><textarea id="feedback_wrong" name="feedback_wrong" style="width:90%"><%=(curItem != null ? curItem.feedback_wrong : "")%></textarea></td>
+	</tr>
+	<tr>
+		<td style="font-weight:bolder; font-size:larger;"><%=tools_web.get_web_str('vieb_feedback_correct')%></td>
+		<td style="font-weight:bolder; font-size:larger"><textarea id="feedback_correct" name="feedback_correct" style="width:90%"><%=(curItem != null ? curItem.feedback_correct : "")%></textarea></td>
+	</tr>
+	</table>
+	
+	<div id="answer_grid" style="display:none">
+	<p>
+		<input type="button" value="<%=tools_web.get_web_str('vieb_add_answer')%>" class="inputButton" onmouseover="$(this).addClass('inputButtonOver');" onmouseout="$(this).removeClass('inputButtonOver');" onclick="addChild(false);handleTypeSelect($('form#item_submitter select#type_id').val());"/>
+	</p>
+	
+	<table width="100%"  border="0" cellspacing="0" cellpadding="3">
+		<tr id="line_head">
+			<td class="tableHeaderWithText"><%=tools_web.get_web_str('vieb_ques_text')%></td>
+			<td class="tableHeaderWithText" width="200px"><%=tools_web.get_web_str('vieb_correct')%></td>
+			<td class="tableHeaderWithText" width="100px">#</td>
+		</tr>
+		<tr>
+			<td class="tableHeaderNoText" colspan="3"><img src="pics/1blank.gif" width="1" height="1"/></td>
+		</tr>
+		<tbody id="recycler">
+		</tbody>
+		<tr>
+			<td colspan="3" class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+		</tr>
+	</table>
+	<input type="hidden" id="answers_count" value="0"/>
+	</div>
+	<br/>
+	<center><input type="submit" value="<%=tools.get_web_str('c_save')%>" class="inputButton" onmouseover="$(this).addClass('inputButtonOver');" onmouseout="$(this).removeClass('inputButtonOver');" onclick="return what2submit();"/></center>
+</form>
+<%
+	_role = ArrayOptFirstElem(_roles);
+	_href = tools_web.get_url_protocol( Request.Url ) + Request.UrlHost + UrlPath( Request.Url ) + "?mode=content_panel&doc_id="+curDocID+"&item_id=" + curItemID +"&tab=item" + (_role != undefined ? "&role_id=" + _role.id : "");
+%>
+<center><input type="button" value="<%=tools_web.get_web_str('vaaeb_list_back')%>" class="inputButton" onmouseover="$(this).addClass('inputButtonOver');" onmouseout="$(this).removeClass('inputButtonOver');" onclick="window.location.href='<%=_href%>'"/></center>
+<br/>
+<%
+	Server.Execute("view_knowledge_parts_base.html");
+%>
+</td>
+</tr>
+<tr>
+	<td colspan="3" class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+</tr>
+</table>
+<br/>
+<script language="javascript">
+<!--
+	var tobj1 = $("tbody#recycler").get(0);
+<%
+	_x = 0;
+	if (curItem != null)
+	{
+		for (_answer in curItem.answers)
+		{
+			Response.Write('addAnswer("' + _answer.PrimaryKey + '", tobj1, "'+ HtmlEncode(_answer.text)+'", '+_answer.is_correct_answer+');');
+			
+			for (_condition in _answer.conditions)
+				Response.Write('addGapCondition("'+_answer.PrimaryKey+'", "'+_condition.sentence_option_id+'", "'+_condition.value+'", ' + _condition.case_sensitive + ');');
+			
+			for (_ansValue in _answer.values)
+			{
+				Response.Write('addAnswerValues("'+_answer.PrimaryKey+'", "' + HtmlEncode(_ansValue.text)+ '");');
+			}
+			
+			_x++;
+		}
+	}
+%>
+	$("form#item_submitter input#answers_count").val(<%=_x%>);
+	handleTypeSelect($("form#item_submitter select#type_id").val());
+-->
+</script>

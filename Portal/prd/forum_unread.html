@@ -1,0 +1,27 @@
+<%
+Server.Execute('include/user_init.html');
+if (Request.QueryString.HasProperty('unread_forum_id')) 
+{
+	// пометить все темы форума как прочитанные
+	forumID = Int( Request.QueryString.unread_forum_id );
+	themeArray = XQuery( 'for $entry in forum_entrys where $entry/forum_id = '+ forumID +' and $entry/parent_forum_entry_id = null() return $entry' );
+	for (theme in themeArray) 
+	{
+		mainForumEntryID = theme.id;
+		userReadArray = XQuery('for $read in forum_theme_read_by_collaborators where $read/person_id=' + curUserID + ' and $read/forum_id = ' + forumID + ' and $read/forum_theme_id = ' + mainForumEntryID + ' return $read');
+		isThisUserRead = ArrayOptFirstElem( userReadArray ) != undefined;
+		if (!isThisUserRead) 
+		{
+			readDoc = OpenNewDoc( 'x-local://wtv/wtv_forum_theme_read_by_collaborator.xmd' );
+			readDoc.BindToDb( DefaultDb );
+			readTop = readDoc.TopElem;
+			readTop.forum_id = forumID;
+			readTop.forum_theme_id = mainForumEntryID;
+			readTop.person_id = curUserID;
+			readDoc.Save();
+		}
+	}
+}
+objectIdRequest = Request.QueryString.HasProperty('object_id') ? '&mode=forums&object_id=' + Request.QueryString.object_id : '';
+Response.Redirect( 'view_doc.html?doc_id=' + Request.QueryString.doc_id + objectIdRequest );
+%>

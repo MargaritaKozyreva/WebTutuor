@@ -1,0 +1,75 @@
+<%
+
+	Server.Execute( "include/user_init.html" );
+
+	function print_inner_nodes(SUBDIVISION_ID)
+	{
+		_result_str = "\n";
+		_arr = XQuery ("for $position in positions where $position/parent_object_id = " + SUBDIVISION_ID + " return $position");
+		for (_el in _arr)
+		{
+			_collab = _el.basic_collaborator_id.OptForeignElem;
+			if (_collab != undefined)
+			{
+				_result_str = _result_str + '<collaborator id="' + _el.basic_collaborator_id + '" position_id="' + _el.id + '" name="' + _el.basic_collaborator_fullname + '" position_name="' + _el.name + '" parent_object_id="' + _el.parent_object_id + '" email="' + _collab.email + '"/>\n';
+			}
+			
+		}
+		
+		
+		_arr = XQuery ("for $subdivision in subdivisions where $subdivision/parent_object_id = " + SUBDIVISION_ID + " return $subdivision");
+		
+		for (_el in _arr)
+		{
+			_result_str = _result_str + '<subdivision name="' + _el.name +'" id="'+_el.id+'" parent_object_id="'+SUBDIVISION_ID+'" isBranch="true">' + print_inner_nodes(_el.id)  + '</subdivision>\n';
+			
+		}
+		
+		
+		
+		return _result_str;
+	}
+
+
+//-----   sub_hierarchy.xml?object_id=(ID)&encoding=xxx  -----
+
+if (Request.QueryString.HasProperty("object_id"))
+{
+	_object_id = Int(Response.Request.object_id);
+	_curElem = OpenDoc( UrlFromDocID (_object_id)).TopElem;
+}
+else
+{
+	_object_id = curUserID;
+	_curElem = curUser;
+}
+
+switch (_curElem.Name)
+{
+	case "collaborator":
+		_curElem = _curElem.position_id.OptForeignElem;
+		if (_curElem == undefined) Cancel();
+	case "position":
+		_curElem = _curElem.parent_object_id.OptForeignElem;
+		if (_curElem == undefined) Cancel();
+	case "subdivision":
+		if (_curElem.ChildExists("id"))
+			_top_id = _curElem.id;
+		else
+			_top_id = Int(Response.Request.object_id);
+		break;
+	default:
+		Cancel();
+}
+
+Request.QueryString.HasProperty("encoding") ? _encoding = Request.QueryString.encoding : _encoding = "windows-1251";
+
+_MEGA_STR = '<?xml version="1.0" encoding="'+_encoding+'"?><subdivision name="' + _curElem.name +'" id="'+_top_id+'" parent_object_id="'+_curElem.parent_object_id+'" isBranch="true">';
+
+
+_MEGA_STR = _MEGA_STR + print_inner_nodes(_top_id) + "</subdivision>";
+
+Response.Write(EncodeCharset((_MEGA_STR), _encoding));
+
+Cancel();
+%>

@@ -1,0 +1,63 @@
+<%
+Server.Execute( "include/user_init.html" );
+
+try
+{
+	curSid = Request.Query.sid;
+	
+	if ( ! tools.check_sum_sid( Request.Query.poll_id, curSid ) )
+		throw '_crack_fuck_';
+}
+catch ( ehuu )
+{
+	Server.Execute( "view_access_panel.html" );
+	Cancel();
+}
+
+curPollID = Int( Request.Query.poll_id );
+curPoll = OpenDoc( UrlFromDocID( curPollID ) ).TopElem;
+
+if ( curPoll.questions.ChildNum != 0 && ( ! curPoll.start_date.HasValue || CurDate >= curPoll.start_date ) && ( ! curPoll.end_date.HasValue || CurDate <= curPoll.end_date ) )
+	if ( ! curPoll.is_one_time || ArrayOptFirstElem( XQuery( "for $elem in poll_results where $elem/person_id = " + curUserID + " and $elem/poll_id = " + curPollID + " return $elem" ) ) == undefined )
+	{
+		_str = '';
+		if ( curPoll.is_multiple_select )
+		{
+			for ( _entry in ArrayFirstElem( curPoll.questions ).entries )
+				try
+				{
+					eval( 'Request.Form.answer' + _entry.id );				
+					_str = _str + _entry.id + ';';
+				}
+				catch ( e )
+				{
+				}
+		}
+		else
+		{
+			try
+			{	
+				_str = Int( Request.Query.answer );
+			}
+			catch ( e )
+			{
+			}
+		}
+		
+		if ( _str != '' )
+		{
+			
+			docResult = OpenNewDoc( 'x-local://wtv/wtv_poll_result.xmd' );
+			docResult.TopElem.poll_id = curPollID;
+			docResult.TopElem.person_id = curUserID;
+			docResult.TopElem.create_date = Date();
+			tools.common_filling( 'collaborator', docResult.TopElem, curUserID, curUser );
+			docResult.TopElem.questions.ObtainChildByKey( ArrayFirstElem( curPoll.questions ).id ).value = _str;
+			docResult.BindToDb( DefaultDb );		
+			docResult.Save();
+		}
+	}	
+
+Response.Redirect( 'view_doc.html?mode=poll_list&object_id=' + Request.Query.poll_id );
+Cancel();
+%>

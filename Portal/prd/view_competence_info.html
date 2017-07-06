@@ -1,0 +1,85 @@
+<%
+	if ( ArrayOptFirstElem( ArraySelect(curObject.scales, "percent.HasValue") ) != undefined  )
+		show_percent = true;
+	else
+		show_percent = false;
+
+%>
+		<center><font size="+1"><%=tools.get_web_str("ass_competence")%>: &nbsp;<b><%=tools_web.get_cur_lng_name(curObject.name, curLng.short_id)%></b></font></center>
+		<hr/>
+		<b><%=tools_web.get_web_str("vci_scale")%></b>
+		<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="gray"><tr><td>
+		<table width="100%" cellpadding="1" cellspacing="1">
+		<tr bgcolor="silver">
+			<td width="30px" align="center">#</td>
+			<td width="100px" align="center"><%=tools_web.get_web_str("c_value")%></td>
+<% 
+	if (show_percent)
+	{
+%>
+			<td width="40px" align="center"><%=tools_web.get_web_str("vcp_percent_correspond")%></td>
+<% 
+	}
+%>
+			<td><%=tools_web.get_web_str("c_desc")%></td>
+		</tr>
+		<%
+		for (_scale in curObject.scales)
+		{		
+		%>
+				
+		<tr bgcolor="white">
+			<td width="30px" align="center">
+			<%=(_scale.ChildIndex + 1)%>
+			</td>
+			<td width="200px">
+			<%=tools_web.get_cur_lng_name(_scale.name, curLng.short_id)%>
+			</td>
+<% 
+	if (show_percent)
+	{
+%>
+			<td width="40px">
+			<%=_scale.percent%>
+			</td>
+<% 
+	}
+%>
+			<td>
+			<%=tools_web.get_cur_lng_name(_scale.desc, curLng.short_id)%>
+			</td>
+		</tr>
+		<%
+		}
+		%>
+		</table>
+		</td></tr></table>
+		<br/>
+		<hr/>
+		<br/>
+		
+		<b><%=tools_web.get_web_str("vcp_child_indicators")%></b>
+		<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="gray"><tr><td>
+		<table width="100%" cellpadding="1" cellspacing="1">
+<%
+		_temp_indicators = XQuery( "for $indicator in indicators where $indicator/competence_id = " + Request.QueryString.doc_id +" return $indicator" );
+		
+		for (_indicator in _temp_indicators)
+		{
+%>
+		<tr bgcolor="white">			
+			<td>
+			<%=tools_web.get_cur_lng_name(_indicator.name, curLng.short_id)%>
+			</td>			
+		</tr>
+<%
+		}
+%>
+		</table>
+		</td></tr></table>
+<%		
+	
+	if (curObject.comment.HasValue)
+		Response.Write("<p>"+tools_web.get_cur_lng_name(curObject.comment, curLng.short_id)+"</p>")
+%>
+			

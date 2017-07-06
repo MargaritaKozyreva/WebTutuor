@@ -1,0 +1,29 @@
+<%
+//alert(1111111)
+if ( ! global_settings.disp_pwt )
+{
+	throw 'pwt disabled';
+	Cancel();
+}
+
+//Server.Execute( "../include/user_init.html" );
+
+courseArray = XQuery( "for $elem in courses where $elem/pwt_disp = true() return $elem" );
+resXmlDoc = OpenDocFromStr( '<Library><Company code="websoft" name="WebSoft"/></Library>' ).TopElem;
+
+for ( _course in courseArray )
+	try
+	{
+		courseDoc = OpenDoc( UrlFromDocID( _course.PrimaryKey ) ).TopElem;
+		courseDoc.get_pwt_info( resXmlDoc );
+	}
+	catch ( err )
+	{
+		LogEvent( 'pwt', 'ERROR Course list download. ' + err );
+		Cancel();
+	}
+
+Response.Write( '<?xml version="1.0" encoding="windows-1251" ?>' + resXmlDoc.Xml );
+
+LogEvent( 'pwt', 'COMPLETE Course list download.' );
+%>

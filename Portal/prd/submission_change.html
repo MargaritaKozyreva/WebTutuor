@@ -1,0 +1,108 @@
+<%
+	Server.Execute( "include/sid_access_init.html" );
+
+	curAction = ( Request.Query.HasProperty( 'action' ) ? Request.Query.action : 'active' );
+	isSender = ( curObject.person_id == curUserID );
+	
+	curSubmissionTypeID = curObject.submission_type_id;
+	curSubmissionType = OpenDoc( UrlFromDocID( curSubmissionTypeID ) ).TopElem;
+	isRecipient = curSubmissionType.recipients.ChildByKeyExists( curUserID );
+	
+	if ( isSender )
+	{
+		switch ( curAction )
+		{
+			case 'approve':
+			case 'active':
+				if ( curSubmissionType.use_form && Request.Query.form_data_xml != '' )
+				{
+					formDoc = OpenDocFromStr( Request.Query.form_data_xml, 'form=x-local://wtv/wtv_form_submission_form_data.xmd' ).TopElem;
+		
+					if ( curSubmissionType.eval_post_form.HasValue )
+						eval( curSubmissionType.eval_post_form );
+				}
+				else
+				{
+					try
+					{
+						tools_web.web_custom_elems_filling( 'submission', curObjectID, curObject, Request.Form );               
+					}
+					catch ( e )
+					{
+						alert( e );
+					}
+				}
+				curObject.status_id = curAction;
+				curObjectDoc.Save();
+				break;
+		}
+	}
+	
+	if ( isRecipient )
+	{
+		switch ( curAction )
+		{
+			case 'declined':
+			case 'confirmed':
+				curObject.status_id = curAction;
+				curObject.decline_desc = Request.Form.GetProperty( "decline_desc" );
+				curObjectDoc.Save();
+				break;
+		}
+	}
+	
+/*  
+
+   
+   if ( Request.Form.HasProperty( "action2" ) )
+   {
+   		curObject.status_id = 'close';
+        curObjectDoc.Save();
+        try
+        {
+        	typeObject = OpenDoc( UrlFromDocID( curObject.type_id ) ).TopElem;
+           	for ( _recipient in typeObject.recipients )
+           {
+            tools.create_notification( 'submission_1' , _recipient.PrimaryKey, curObject.name, curObjectID );
+           }
+        }
+        catch(err)
+        {
+           alert(err);
+        }
+   }
+   if ( Request.Form.HasProperty( "receive_status" ) && Request.Form.GetProperty( "receive_status" ) == 'confirmed' )
+   {
+   		curObject.receive_status_id = 'confirmed';
+        curObject.decline_desc =  Request.Form.GetProperty( "desc" ); 
+   		curObject.status_id = 'close';
+        curObjectDoc.Save();
+        try
+        {
+            tools.create_notification( 'submission_2' , curObject.person_id, curObject.name, curObjectID );
+        }
+        catch(err)
+        {
+           alert(err);
+        }
+   }
+   if ( Request.Form.HasProperty( "receive_status" ) && Request.Form.GetProperty( "receive_status" ) == 'declined' )
+   {
+   		curObject.receive_status_id = 'declined';
+        curObject.decline_desc =  Request.Form.GetProperty( "desc" ); 
+   		curObject.status_id = 'active';
+        curObject.web_saved = false;
+        curObjectDoc.Save();
+        try
+        {
+            tools.create_notification( 'submission_3' , curObject.person_id, curObject.name, curObjectID );
+        }
+        catch(err)
+        {
+           alert(err);
+        }
+   }
+*/
+
+	Response.Redirect( "view_doc.html?mode=submission&object_id=" + curObjectID + "&doc_id=" + curDocID );
+%>

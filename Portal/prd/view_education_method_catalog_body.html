@@ -1,0 +1,372 @@
+<%
+curQueryString = tools_web.get_query_string( true, "education_program_id;education_type");
+try
+{
+	education_programID = Int( Request.QueryString.education_program_id );
+}
+catch(err)
+{
+	education_programID = null;
+}
+try
+{
+	education_method_type = Request.QueryString.education_type;
+}
+catch(err)
+{
+	education_method_type = null;
+}
+%>
+
+<%
+	educ_programArray = ArraySort( XQuery("education_programs"), "name", "+" );
+	for ( _educ_program in educ_programArray )
+	{
+		_education_methods_in_program = XQuery("for $elem in education_program_education_methods where $elem/education_program_id=" + _educ_program.PrimaryKey + " return $elem");
+		// ќпределение существуют ли в наборе хоть одна открыта€ программа
+		_open_program_count = 0;
+		for ( _educ_method in _education_methods_in_program )
+		{
+			try
+			{
+				educ_methodDoc = OpenDoc( UrlFromDocID( _educ_method.education_method_id ) ).TopElem;
+			}
+			catch(err)
+			{
+				continue;
+			}
+			try
+			{
+				if ( educ_methodDoc.Name != "education_method" )
+					continue;
+				if ( educ_methodDoc.is_open )
+					_open_program_count++;
+			}
+			catch(err)
+			{
+			}
+		}
+		//«атрем поле code и запишем туда количество открытых учебных программ дл€ данного набора
+		_educ_program.code = _open_program_count;
+	}
+%>
+
+<%Server.Execute( 'view_text_area.html' )%>
+
+<script type="text/javascript">
+function update_ecc()
+{
+	var education_programID = document.getElementById("education_program").value;
+	var education_typeID = document.getElementById("education_type").value;
+	
+	document.location.href = "<%=curQueryString%>education_program_id=" + education_programID + "&education_type=" + education_typeID;
+}
+</script>
+
+<table border="0" cellspacing="0" cellpadding="3" width="100%"  class="activator">
+	<tr height="50">
+		<td width="100"><%=tools.get_web_str('c_edu_prog')%>:&nbsp; </td>
+		<td>		
+			<select name="education_program" id="education_program">
+				<option value=""><%=tools_web.get_web_str("c_all")%></option>
+<%
+				for (_educ_program in educ_programArray)
+				{
+					if ( _educ_program.code != "0" )
+					{
+%>
+					<option value="<%=_educ_program.id%>"><%=_educ_program.name%></option>
+<%
+					}
+				}
+%>
+			</select>
+<SCRIPT language="JavaScript">
+selcur=document.getElementById("education_program");
+selcur.selectedIndex=-1;
+for (i=0;i<selcur.options.length;i++)
+    if (selcur.options[i].value=='<%=education_programID%>') {
+        selcur.selectedIndex=i;
+		break;
+    }
+</SCRIPT>			
+		</td>
+		<td width="100"><%=tools.get_web_str('c_edu_type')%>: &nbsp; </td>
+		<td>		
+			<select name="education_type" id="education_type">
+				<option value=""><%=tools_web.get_web_str("c_all")%></option>
+<%
+				for (_educ_type in common.education_method_types)
+				{
+%>
+					<option value="<%=_educ_type.PrimaryKey%>"><%=_educ_type.name%></option>
+<%
+				}
+%>
+			</select>
+<SCRIPT language="JavaScript">
+selcur=document.getElementById("education_type");
+selcur.selectedIndex==-1;
+for (i=0;i<selcur.options.length;i++)
+    if (selcur.options[i].value=="<%=education_method_type%>") {
+        selcur.selectedIndex=i;
+		break;
+    }
+</SCRIPT>			
+		</td>
+		<td>
+			<input type="button" value="<%=tools.get_web_str('c_refresh')%>" onClick="update_ecc();" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';">
+		</td>
+	</tr>
+</table>
+<br>
+<br>
+<table border="0" cellspacing="0" cellpadding="3" width="100%">
+	<tr>
+		<td class="tableHeaderWithText" width="10">&nbsp;</td>
+		<td class="tableHeaderWithText" width="10">&nbsp;</td>
+		<td class="tableHeaderWithText"><%=tools.get_web_str("c_name")%></td>
+		<td class="tableHeaderWithText"><%=tools.get_web_str("c_cost_wihtout_vat")%></td>
+		<td class="tableHeaderWithText"><%=tools.get_web_str("c_day_duration")%></td>
+		<td class="tableHeaderWithText"><%=tools.get_web_str("c_person_num")%></td>
+		<td class="tableHeaderWithText" align="center"><%=tools.get_web_str("c_edu_type")%></td>
+		<td class="tableHeaderWithText">&nbsp;</td>
+	</tr>
+	<tr>
+		<td colspan="8" class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1"/></td>
+	</tr>
+<%
+	for ( _educ_program in educ_programArray )
+	{
+		if ( ( education_programID == null || education_programID == "" ) || ( _educ_program.id == education_programID ) )
+		{
+		_request_type_array = XQuery( "for $elem in request_types where $elem/object_type = 'education_method' return $elem" );
+		_education_methods_in_program = XQuery("for $elem in education_program_education_methods where $elem/education_program_id=" + _educ_program.PrimaryKey + " return $elem");
+
+//ƒл€ всех учебных  программ заполним название модульной программы ( если содержитс€ в нескольких модул€х, то беретс€ первый )
+		for( educ_method in _education_methods_in_program )
+		{
+			educ_method_comp_programArray = XQuery("for $elem in compound_program_education_methods where $elem/education_method_id=" + educ_method.education_method_id + " order by $elem/name return $elem");
+			//«атираем поле name, теперь там будет название модульной программы или пуста€ строка, если ”ѕ не содержитс€ ни в одной модульной программе
+			if ( ArrayCount( educ_method_comp_programArray ) > 0 )
+				educ_method.name = ArrayFirstElem(educ_method_comp_programArray).name; 
+			else
+				educ_method.name = "";
+		}
+
+
+//¬ поле code записали количество открытых учебных программ дл€ данного набора
+		if ( _educ_program.code != "0" )
+		{
+%>
+		<tr>
+			<td colspan="8" class="tableRowEven"><b><%=_educ_program.name%></b></td>
+		</tr>
+<%
+		}
+		else
+			continue;
+		
+
+		compound_program_nameArray = ArraySelectDistinct( ArrayExtract( ArraySort(_education_methods_in_program, "name", "+"), "name") );
+		previous_compound_name = "dfsdf sdf jsjijoisdfsdfu soiuoifuodif";
+		for ( i=0; i<ArrayCount(compound_program_nameArray); i++ )
+		{
+
+			compound_name = compound_program_nameArray[i];
+			_education_methods_in_programSorted = ArraySort( ArraySelect(_education_methods_in_program, "name==compound_name"), "education_method_name", "+");
+			counter = 0;			
+			
+			for ( _educ_method in _education_methods_in_programSorted )
+			{
+				try
+				{
+					educ_methodDoc = OpenDoc( UrlFromDocID( _educ_method.education_method_id ) ).TopElem;
+				}
+				catch(err)
+				{
+					continue;
+				}
+				
+				if ( educ_methodDoc.Name != "education_method" )
+					continue;
+				
+					if ( educ_methodDoc.is_open )
+					{
+						if ( compound_name != previous_compound_name && compound_name!= "" )
+						{
+%>
+						<tr>
+							<td class="tableRowOdd" width="10">&nbsp;</td>
+							<td colspan="7" class="tableRowEven"><b><%=compound_name%></b></td>
+						</tr>
+<%
+						}
+						
+						if ( education_method_type == null || education_method_type == "" || education_method_type == educ_methodDoc.type )
+						{
+%>					
+						<tr>
+							<td class="tableRowOdd" width="10">&nbsp;</td>
+<%
+						if (  compound_name =="")
+						{
+%>					
+							<td colspan="2" class="tableRowOdd">
+<%
+							if ( tools_web.check_access( educ_methodDoc, curUserID, curUser, Session ) )
+							{
+%>						
+								<a href="view_doc.html?mode=education_method&object_id=<%=_educ_method.education_method_id%>&doc_id=<%=curDocID%>"><%=educ_methodDoc.name%></a>
+<%
+							}
+							else
+							{
+%>						
+								<%=educ_methodDoc.name%>
+<%
+							}
+%>
+							</td>
+<%
+						}
+						else
+						{
+%>						
+							<td class="tableRowOdd" width="10">&nbsp;</td>
+							<td class="tableRowOdd">
+<%
+							if ( tools_web.check_access( educ_methodDoc, curUserID, curUser, Session ) )
+							{
+%>						
+								<a href="view_doc.html?mode=education_method&object_id=<%=_educ_method.education_method_id%>&doc_id=<%=curDocID%>"><%=educ_methodDoc.name%></a>
+<%
+							}
+							else
+							{
+%>						
+								<%=educ_methodDoc.name%>
+<%
+							}
+%>						</td>
+<%
+						}
+%>
+							<td class="tableRowOdd" align="center">&nbsp;<%=educ_methodDoc.cost%>
+<%
+						try 
+						{
+							%>  <%=educ_methodDoc.currency.ForeignElem.short_name%>  <%
+						}
+						catch(err)
+						{
+						}
+%>					
+<%
+						try 
+						{
+							%>  <%=educ_methodDoc.cost_type.ForeignElem.short_name%>  <%
+						}
+						catch(err)
+						{
+						}
+%>					
+							</td>
+							
+							<td class="tableRowOdd" align="center"><%=educ_methodDoc.duration_days%></td>
+							<td class="tableRowOdd" align="center"><%=educ_methodDoc.person_num%></td>
+							<td class="tableRowOdd" align="center">&nbsp;
+<%
+							try
+							{
+								%> <%=educ_methodDoc.type.ForeignElem.name%> <%
+							}
+							catch(err)
+							{
+							}
+%>
+							</td>
+								<td class="tableRowOdd" align="center">
+<%
+							
+							if ( tools_web.check_access( educ_methodDoc, curUserID, curUser, Session ) )
+							{
+                            
+								if ( ArrayCount(_request_type_array) != 0 )
+								{
+%>
+								<table border="0" cellpadding="3" cellspacing="0">
+    	                            <tr>
+                                
+<%
+								for ( _request_type in _request_type_array )
+								{
+%>					
+									<td class="tableRowOdd" align="center"><a href="view_doc.html?mode=request_create&doc_id=<%=curDocID%>&type=education_method&request_object_id=<%=_educ_method.education_method_id%>&request_type_id=<%=_request_type.PrimaryKey%>"><%=HtmlEncode( tools_web.get_cur_lng_name( _request_type.name ) )%></a></td>
+<%
+								}
+                                
+%>							
+									</tr>
+                                </table>
+<%
+								}
+                                else
+								{
+%>							
+									&nbsp;
+<%
+								}
+							}
+							else
+							{
+%><a href="view_doc.html?mode=education_method_desc&doc_id=<%=curDocID%>&educ_method_id=<%=_educ_method.education_method_id%>"><%=tools.get_web_str("c_desc")%></a>
+<%
+							}
+%>
+							</td>
+						</tr>
+<%
+						}
+				}
+				previous_compound_name = compound_name;	
+			}
+			
+		}	
+%>
+			<tr>
+				<td colspan="8">&nbsp;</td>
+			</tr>
+<%		
+		}
+	}
+%>
+	<tr>
+		<td colspan="8" class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+	</tr>
+</table>
+<br>
+<%
+// ќтображение текста внизу из документа портала с кодом "educ_catalog_down_text"
+	documentArray = XQuery("for $elem in documents where $elem/code='educ_catalog_down_text' return $elem");
+	if ( ArrayCount( documentArray ) != 0 )
+	{
+		document = ArrayFirstElem( documentArray );
+		try
+		{
+			documentDoc = OpenDoc( UrlFromDocID( document.PrimaryKey ) ).TopElem;
+%>
+			<TABLE width="100%" border="0" cellspacing="1" cellpadding="3">
+				<TR>
+					<TD>
+					<%=tools_web.get_web_desc( documentDoc.text_area, UrlFromDocID( curOperationalID ), 'document.text_area' )%>
+					</TD>
+				</TR>
+			</TABLE>
+<%			
+		}
+		catch(err)
+		{
+		}
+	}
+%>

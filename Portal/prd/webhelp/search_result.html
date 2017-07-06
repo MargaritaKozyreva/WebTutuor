@@ -1,0 +1,285 @@
+<%
+SHOW_COUNT = false;
+try
+{
+	curDocID = Int(Request.Query.doc_id);
+}
+catch(_X_)
+{
+	curDocID = null;
+}
+function prnUTF(s)
+{
+	res = "";
+	var str = String(s);
+	var code;
+	for (j = 0; j < StrLen(str); j++ )
+	{
+		code = str.charCodeAt(j);
+		if (code<192)
+			res += '&#'+(code)+';';
+		else
+			res += '&#'+(code+848)+';';
+	}
+    return res;
+}
+
+function NoDoubleQuotesSearch(oid)
+{
+	bCaseSensitive = false;
+	try
+    {
+		objDoc = OpenDoc(UrlFromDocID(oid)).TopElem;
+	}
+    catch(err)
+    {
+    	return;
+    }
+
+	text = objDoc.desc.Value;
+    title = objDoc.name;
+	keywords = "";
+	for (tag in QueryCatalogByKeys("tags", "id",ArrayExtract(objDoc.tags, "PrimaryKey")))
+		keywords += ( keywords != "" ? "," : "" ) + tag.name;
+    s = title + "^" + text + "^" + keywords;
+    
+    pa = 0;
+    nh = 0;
+    for (var i = 0; i < arMinus.length; i++)
+    {
+        var bHit = StrContains(s, Keywords[i], !bCaseSensitive);
+		
+        if (arMinus[i] == 0)
+		{
+			nh++;
+        	if (bHit)
+				pa++;
+			else
+				pa = 0;
+		}
+		else if (arMinus[i] == 1)
+		{
+			if (bHit)
+				pa = 0;
+		}
+    }
+
+    if (pa == nh)
+    {
+    	tcount = ArrayCount(arIncludedTerms);
+        var iTermsFound = 0;
+        var iTitlePercentage = 15;
+        var iKeywordsPercentage = 25;
+        var iHelpTextPercentage = 60;
+        for (i = 0; i < tcount; i++)
+        {
+            if ( StrContains(title, arIncludedTerms[i], !bCaseSensitive) )
+	            iTermsFound++;
+        }
+        if (iTermsFound < tcount)
+	        iTitlePercentage = Math.round(iTitlePercentage * (iTermsFound/tcount));
+        if (iTitlePercentage < 0)
+    	    iTitlePercentage = 0;
+            
+		iTermsFound = 0;
+        for (i = 0; i < tcount; i++)
+        {
+            if ( StrContains(keywords, arIncludedTerms[i], !bCaseSensitive) )
+	            iTermsFound++;
+        }
+        if (iTermsFound < tcount)
+	        iKeywordsPercentage = Math.round(iKeywordsPercentage * (iTermsFound/tcount));
+        if (iKeywordsPercentage <= 0)
+    	    iKeywordsPercentage = 1;
+        
+        iTermsFound = 0;
+        for (i = 0; i < tcount; i++)
+        {
+            if ( StrContains(text, arIncludedTerms[i], !bCaseSensitive) )
+    		    iTermsFound++;
+        }
+        if (iTermsFound < arIncludedTerms.length)
+	        iHelpTextPercentage = Math.round(iHelpTextPercentage * (iTermsFound/tcount));
+        if (iHelpTextPercentage < 0)
+        	iHelpTextPercentage = 0;
+            
+        _obj = new Object();
+        _obj.name = title;
+        _obj.target = oid;
+        _obj.rank = iTitlePercentage + iKeywordsPercentage + iHelpTextPercentage;
+        Results[ArrayCount(Results)] = _obj;
+    }
+}
+
+function DoubleQuotesSearch(oid)
+{
+	bCaseSensitive = false;
+	try
+    {
+		objDoc = OpenDoc(UrlFromDocID(oid)).TopElem;
+	}
+    catch(err)
+    {
+    	return;
+    }
+
+	text = objDoc.desc.Value;
+    title = objDoc.name;
+	keywords = "";
+	for (tag in QueryCatalogByKeys("tags", "id",ArrayExtract(objDoc.tags, "PrimaryKey")))
+		keywords += ( keywords != "" ? "," : "" ) + tag.name;
+    s = title + "^" + text + "^" + keywords;
+
+    if ( StrContains(s, Keyword, !bCaseSensitive) )
+    {
+    	tcount = ArrayCount(arIncludedTerms);
+        var iTermsFound = 0;
+        var iTitlePercentage = 15;
+        var iKeywordsPercentage = 25;
+        var iHelpTextPercentage = 60;
+        for (i = 0; i < tcount; i++)
+        {
+            if ( StrContains(title, arIncludedTerms[i], !bCaseSensitive) )
+	            iTermsFound++;
+        }
+        if (iTermsFound < tcount)
+	        iTitlePercentage = Math.round(iTitlePercentage * (iTermsFound/tcount));
+        if (iTitlePercentage < 0)
+    	    iTitlePercentage = 0;
+            
+		iTermsFound = 0;
+        for (i = 0; i < tcount; i++)
+        {
+            if ( StrContains(keywords, arIncludedTerms[i], !bCaseSensitive) )
+	            iTermsFound++;
+        }
+        if (iTermsFound < tcount)
+	        iKeywordsPercentage = Math.round(iKeywordsPercentage * (iTermsFound/tcount));
+        if (iKeywordsPercentage <= 0)
+    	    iKeywordsPercentage = 1;
+        
+        iTermsFound = 0;
+        for (i = 0; i < tcount; i++)
+        {
+            if ( StrContains(text, arIncludedTerms[i], !bCaseSensitive) )
+    		    iTermsFound++;
+        }
+        if (iTermsFound < arIncludedTerms.length)
+	        iHelpTextPercentage = Math.round(iHelpTextPercentage * (iTermsFound/tcount));
+        if (iHelpTextPercentage < 0)
+        	iHelpTextPercentage = 0;
+            
+        _obj = new Object();
+        _obj.name = title;
+        _obj.target = oid;
+        _obj.rank = iTitlePercentage + iKeywordsPercentage + iHelpTextPercentage;
+        Results[ArrayCount(Results)] = _obj;
+	}
+}
+
+function GetChildArticles(bid, aid)
+{
+	Articles = XQuery("for $obj in articles where $obj/book_id = " + bid + 
+    					" and $obj/parent_object_id = " + ( aid != 0 ? aid : "null()" ) + " return $obj");
+	for (_article in Articles)
+    {
+        if ( iUsingDoubleQuotes == 0)
+            NoDoubleQuotesSearch(_article.id);
+        else if ( iUsingDoubleQuotes == 1)
+            DoubleQuotesSearch(_article.id);
+
+    	GetChildArticles(bid, _article.id);
+    }
+}
+
+RootBookID = 0;
+if ( Request.QueryString.HasProperty("book_id") )
+{
+	try
+    {
+		RootBookID = Int(Request.QueryString.GetProperty("book_id"));
+	}
+    catch(err)
+    {
+		alert(tools.get_web_str('wh_err_no_res'));
+    }
+}
+
+Keyword = "";
+if ( Request.QueryString.HasProperty("keyword") )
+	Keyword = UrlDecode(Trim(Request.QueryString.GetProperty("keyword")));
+
+var Results = new Array();
+if (Keyword != "")
+{
+    var iUsingDoubleQuotes = 0;
+    if (Keyword.charAt(0) == '"' && Keyword.charAt(Keyword.length - 1) == '"')
+    {
+        Keyword = StrReplace(Keyword, '"', "");
+        iUsingDoubleQuotes = 1;
+    }
+    
+    var arMinus = new Array();
+    var arIncludedTerms = new Array();
+    var Keywords = Keyword.split(" ");
+    for (i = 0; i < ArrayCount(Keywords); i++)
+    {
+        arMinus[i] = 0;
+        if (Keywords[i].charAt(0) == '-')
+            arMinus[i] = 1;
+        else
+            arIncludedTerms[ArrayCount(arIncludedTerms)] = Keywords[i];
+    }
+    
+    RootBooks = XQuery("for $obj in books" + ( RootBookID != 0 ? " where $obj/id = " + RootBookID : "") + " order by $obj/name return $obj");
+    for (_book in RootBooks)
+    {
+        if ( iUsingDoubleQuotes == 0)
+            NoDoubleQuotesSearch(_book.id);
+        else if ( iUsingDoubleQuotes == 1)
+            DoubleQuotesSearch(_book.id);
+        
+        GetChildArticles(_book.id, 0);
+    }
+}
+Results = ArraySort(Results, "rank", "-");
+FoundCount = ArrayCount(Results);
+%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1251" />
+<title>SEARCH RESULTS</title>
+<link href="../style.css" rel="stylesheet" type="text/css"/>
+</head>
+<body bgcolor="#E6F3FF">
+<p/>
+<%
+if (FoundCount == 0)
+{
+	Response.Write(tools.get_web_str('wh_err_not_found'));
+}
+else
+{
+%>
+<%=StrReplace( tools.get_web_str('wh_found_num'), '{PARAM1}', FoundCount )%>
+<hr>
+<p/>
+<%
+	i = 1;
+    for (_res in Results)
+    {
+	    stRank = ' (' + _res.rank + ')';
+
+    	_str = "<p>";
+    	if (SHOW_COUNT)
+        	_str += "" + i + ". ";
+		_str += "<a href=\"JavaScript:parent.do_display('" + _res.target + "', '" + prnUTF(Keyword) + "', '"+curDocID+"')\">" + prnUTF(_res.name) + "</a>" + 
+        			stRank + "<br></p>";
+        Response.Write(_str);
+    	i++;
+    }
+}
+%>
+</body>
+</html>

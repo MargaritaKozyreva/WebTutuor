@@ -1,0 +1,56 @@
+<%
+Server.Execute( "include/sid_access_init.html" );
+
+eventDoc = OpenNewDoc( 'x-local://wtv/wtv_event.xmd' );
+eventDoc.TopElem.start_date = CurDate;
+eventDoc.TopElem.name = tools.get_web_str('c_not_name');
+eventDoc.TopElem.status_id = 'project';
+eventDoc.TopElem.doc_info.creation.user_login = curUser.login;
+eventDoc.TopElem.doc_info.creation.date = CurDate;
+
+_access = admin_access_catalogs.GetOptChildByKey( 'event' );
+if ( _access != undefined )
+{	
+	if ( _access.auto_group_filling && ! eventDoc.TopElem.user_group_id.HasValue )
+		eventDoc.TopElem.user_group_id = curUser.access.user_group_id;
+		
+	if ( _access.auto_role_filling && ! eventDoc.TopElem.user_access_role.HasValue )
+		eventDoc.TopElem.user_access_role = curUser.access.access_role;
+}
+				
+eventDoc.BindToDb( DefaultDb );
+
+if ( Request.Query.HasProperty( 'group_id' ) && Request.Query.group_id != '' )
+{
+	curGroupID = Int( Request.Query.group_id );
+	curGroup = OpenDoc( UrlFromDocID( curGroupID ) ).TopElem;
+
+	for ( _collaborator in curGroup.collaborators )
+		tools.add_person_to_event( _collaborator.PrimaryKey, eventDoc.DocID, null, eventDoc );
+	
+	for ( _manager in curGroup.func_managers )
+	{  
+		_child = eventDoc.TopElem.tutors.ObtainChildByKey( _manager.PrimaryKey );
+		_child.AssignElem( _manager );
+	}
+	
+	eventDoc.TopElem.groups.ObtainChildByKey( curGroupID );
+}
+
+if ( Request.Query.HasProperty( 'selected_object_ids' ) )
+	for ( _pers in Trim( Request.Query.selected_object_ids ).split( ';' ) )
+		if ( _pers != '' )
+			tools.add_person_to_event( Int( _pers ), eventDoc.DocID, null, eventDoc );
+
+if ( Request.Query.HasProperty( 'mode' ) && (Request.Query.mode == 'manager_persons' || Request.Query.mode == 'boss_panel' || Request.Query.mode == 'collaborator' ) )
+{
+	_child = eventDoc.TopElem.tutors.ObtainChildByKey( curUserID );
+	tools.common_filling( 'collaborator', _child, curUserID, curUser );
+}
+
+eventDoc.Save();
+
+//tools.create_notification( '1', requestDoc.DocID );
+
+Response.Redirect( "view_doc.html?mode=event&object_id=" + eventDoc.DocID + "&doc_id=" + Request.Query.doc_id );
+%>

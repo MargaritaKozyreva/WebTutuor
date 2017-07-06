@@ -1,0 +1,66 @@
+<div id="tree_widow_part" style="height: 500px">
+
+<style>
+   /* styles for the tree */
+   SPAN.TreeviewSpanArea A {
+      	font-size: 8pt; 
+        font-family: verdana,helvetica; 
+        text-decoration: none;
+        color: black
+   }
+   SPAN.TreeviewSpanArea A:hover {
+        color: '#820082';
+   }
+   /* rest of the document */
+   BODY {background-color: white}
+   TD {
+        font-size: 10pt; 
+        font-family: verdana,helvetica; 
+   }
+</style>
+
+<script src="scripts/tree/ua000000.js"></script>
+<script src="scripts/tree/ftiens40.js"></script>
+<script>
+
+USETEXTLINKS = 1;
+STARTALLOPEN = 0;
+USEFRAMES = 0;
+USEICONS = 0;
+WRAPTEXT = 1;
+PRESERVESTATE = 1;
+ICONPATH = "scripts/tree/";
+
+
+foldersTree = gFld("<b><%=HtmlEncode(curAssessmentAppraise.name)%></b>", "javascript:undefined");
+
+<%
+	
+		for (_pa in XQuery('for $pa in (position_assessment_forms) where $pa/assessment_appraise_id='+curAssessmentAppraiseID+' and $pa/person_id='+curUserID+'  order by $pa/position_common_id return $pa') )
+		{
+			if (!_pa.is_done)
+			{
+				hlink=tools_web.get_url_protocol( Request.Url ) + Request.UrlHost + UrlPath( Request.Url ) + '?mode=position_assessment_appraise&doc_id='+curDocID+'&assessment_appraise_id='+curAssessmentAppraiseID+'&pa_id='+_pa.id+'&position_common_id='+_pa.position_common_id+'&is_done=0';
+				%>
+				insDoc(foldersTree , gLnk("S", "<%=HtmlEncode(_pa.position_common_id.ForeignElem.name)%>", "<%=hlink%>")); 
+				<%
+			}
+			else
+			{
+				hlink=tools_web.get_url_protocol( Request.Url ) + Request.UrlHost + UrlPath( Request.Url ) + '?mode=position_assessment_appraise&doc_id='+curDocID+'&assessment_appraise_id='+curAssessmentAppraiseID+'&pa_id='+_pa.id+'&position_common_id='+_pa.position_common_id+'&is_done=1';
+				%>
+				insFld(foldersTree, gFld("<img src=\'pics/ok.gif\' border=\'0\'> <%=HtmlEncode(_pa.position_common_id.ForeignElem.name)%>", "<%=hlink%>"));
+				<%
+			}
+		}
+	
+%>
+
+
+</script>
+
+
+<span class="TreeviewSpanArea">
+<script>initializeDocument();</script>
+</span>
+</div>

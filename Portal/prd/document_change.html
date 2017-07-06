@@ -1,0 +1,206 @@
+<%
+Server.Execute( "include/sid_access_init.html" );
+
+curAction = Request.Query.HasProperty( 'action' ) ? Request.Query.action : 'save';
+mainObjectID = null;
+mainObject = null;
+
+if ( curAction == 'create' )
+{
+	curObjectID = Int( Request.Query.parent_document_id );
+	curObject = OpenDoc( UrlFromDocID( curObjectID ) ).TopElem;
+}
+
+_write = false;
+curDocPerson = curObject.document_persons.GetOptChildByKey( curUserID );
+if ( curDocPerson != undefined )
+{
+	mainObjectID = curObjectID;
+	mainObject = curObject;
+	_write = true;
+}
+else
+{
+	mainDocArray = XQuery( "for $elem in document_collaborators where $elem/person_id = " + curUserID + " return $elem" );
+	for ( _main_doc in mainDocArray )
+	{
+		if ( curObjectID == _main_doc.document_id )
+		{
+			mainObjectID = _main_doc.document_id;
+			_write = true;
+			break;
+		}
+		
+		if ( _main_doc.document_id.HasValue )
+		{
+			docArray = XQuery( "CatalogHierSubset('documents'," + _main_doc.document_id + ")" );
+			for ( _doc in docArray )
+				if ( curObjectID == _doc.PrimaryKey )
+				{
+					mainObjectID = _main_doc.document_id;
+					_write = true;
+					break;
+				}
+		}
+			
+		if ( _write )
+		{
+			mainObject = OpenDoc( UrlFromDocID( mainObjectID ) ).TopElem;
+			curDocPerson = mainObject.document_persons.GetChildByKey( curUserID );
+			break;
+		}
+	}
+}
+
+if ( _write )	
+{
+	if ( curAction == 'delete' && curDocPerson.can_delete )
+	{
+		if ( Request.Query.HasProperty( 'hier_up' ) && Request.Query.hier_up == '1' )
+			_parent_document_id = curObject.parent_document_id;
+		else if ( mainObjectID == curObjectID )
+			_parent_document_id = null;
+		else
+			_parent_document_id = mainObjectID;
+		
+		childDocArray = XQuery( "for $elem in documents where $elem/parent_document_id = " + curObjectID + " return $elem" );
+		for ( _document in childDocArray )
+			try
+			{
+				docDocument = OpenDoc( UrlFromDocID( _document.PrimaryKey ) );
+				docDocument.TopElem.parent_document_id = _parent_document_id;
+				docDocument.Save();
+			}
+			catch ( err )
+			{
+				alert( err );
+			}
+	
+		DeleteDoc( UrlFromDocID( curObjectID ) );
+	}
+	
+	if ( curAction == 'create' && curDocPerson.can_create )
+	{
+		curObjectDoc = OpenNewDoc( 'x-local://wtv/wtv_document.xmd' );
+		curObjectDoc.BindToDb( DefaultDb );
+		curObject = curObjectDoc.TopElem;
+		curObjectID = curObjectDoc.DocID;
+		
+		parentObjectID = Int( Request.Query.parent_document_id );
+		parentObject = OpenDoc( UrlFromDocID( parentObjectID ) ).TopElem;
+		if ( parentObject.Name == 'document' )
+		{
+			curObject.parent_document_id = parentObjectID;
+		}
+		else
+		{
+			curObject.parent_object_id = parentObjectID;
+			curObject.parent_object_type = parentObject.Name;
+			
+			_child = curObject.document_persons.AddChild();
+			_child.AssignElem( curDocPerson );
+		}
+	}
+	
+	if ( ( curAction == 'save' && curDocPerson.can_edit ) || ( curAction == 'create' && curDocPerson.can_create ) || ( curAction == 'add_catalog' && curDocPerson.can_edit ) )
+	{
+		fieldArray = Array( 'name','code','create_date','comment','web_template_type','attributes.template','attributes.is_menu','attributes.is_main_item','attributes.position',
+							'attributes.is_news','attributes.is_link', 'attributes.link_href','attributes.link_target','attributes.left_disp_childs','attributes.no_disp_childs',
+							'attributes.permit_subscription','access.access_level' );
+		
+		for ( _field in fieldArray )
+		try
+		{
+			_obj_field = curObject.EvalPath( _field );
+			switch ( _obj_field.Type )
+			{
+				case 'bool':
+					_obj_field.Value = ( Request.Form.HasProperty( _field ) );
+					break;
+					
+				case 'integer':
+					if ( Request.Form.HasProperty( _field ) )
+					{
+						if ( Request.Form.GetProperty( _field ) != '' )
+							_obj_field.Value = Int( Request.Form.GetProperty( _field ) );
+						else
+							_obj_field.Clear();
+					}
+					break;
+					
+				case 'date':
+					if ( Request.Form.HasProperty( _field ) )
+					{
+						if ( Request.Form.GetProperty( _field ) != '' )
+							_obj_field.Value = Date( Request.Form.GetProperty( _field ) );
+						else
+							_obj_field.Clear();
+					}
+					break;
+					
+				default:
+					if ( Request.Form.HasProperty( _field ) )
+					{
+						_obj_field.Value = Request.Form.GetProperty( _field );
+					}
+					break;
+			}
+		}
+		catch ( e )
+		{
+			alert( 'document_change: filling field &quot;' + _field + '&quot; error. ' + e );
+		}
+		
+		if ( Request.Form.HasProperty( 'text_area' ) )
+			curObject.text_area = tools_web.convert_xhttp_res( Request.Form.text_area, curObject.text_area );
+		
+		try
+		{
+			tools_web.web_custom_elems_filling( 'document', curObjectID, curObject, Request.Form );
+		}
+		catch ( e )
+		{
+			alert( e );
+		}
+		try
+		{
+			tools_web.web_files_process( Request.Form.HasProperty( 'add_file_status' ) && Request.Form.add_file_status == 'img' ? null : curObject );
+		}
+		catch ( e )
+		{
+			alert( e );
+		}
+		
+		if ( curAction == 'add_catalog' && Request.Form.add_catalog != '' )
+		{
+			fldCatalogChild = curObject.catalogs.ObtainChildByKey( Request.Form.add_catalog );
+			fldCatalogChild.all = Request.Form.HasProperty( 'add_catalog_all' );
+			if ( Request.Form.add_catalog_title != '' )
+				fldCatalogChild.title = Request.Form.add_catalog_title;
+
+			fldCatalogChild.objects.Clear();
+			if ( ! fldCatalogChild.all )
+				for ( sIdElem in String( Request.Form.selected_object_ids ).split( ';' ) )
+					if ( Trim( sIdElem ) != '' )
+						fldCatalogChild.objects.ObtainChildByKey( Int( sIdElem ) );
+		}
+		
+		curObjectDoc.Save();
+		
+		if ( Request.Query.HasProperty( 'process_subscription' ) && Request.Query.process_subscription == '1' )  
+			tools.submit_subscriptions( curObjectID );
+	}
+}
+
+switch ( curAction )
+{
+	case 'view':
+		Response.Redirect( 'view_doc.html?mode=documents&doc_id=' + curDocID + '&object_id=' + curObjectID );
+		break;
+	
+	default:
+		Response.Redirect( 'view_doc.html?mode=documents&doc_id=' + curDocID + '&object_id=' + mainObjectID );
+		break;
+}
+Cancel();
+%>

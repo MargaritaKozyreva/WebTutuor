@@ -1,0 +1,127 @@
+<%
+//	Server.Execute( "include/head.html" )
+
+%>
+
+
+<HTML> 
+<HEAD>
+<title><%=tools.get_web_str('vdsp_title')%></title>
+<link href="style.css" rel="stylesheet" type="text/css"/>
+<script language="javascript">
+<!--
+function setItNew(obj)
+{
+	dialogArguments.user_id=obj.value;
+	dialogArguments.user_name=obj.value2;
+	document.getElementById("ok").disabled=false;
+}
+
+//---------------------------------------
+function processChecked(flag)
+{
+
+dialogArguments.handle=flag;
+window.parent.close(); 
+
+}
+//---------------------------------------
+
+function showMeGoods()
+{
+var ti=document.getElementById("typein");
+var tbl=document.getElementById("recycler666");
+
+document.getElementById("ok").disabled=true;
+
+if (document.getElementById("recyclepress")) tbl.deleteRow(0);
+
+var trow=document.createElement("TR");
+ trow.setAttribute("id","recyclepress");
+ var trow=tbl.insertAdjacentElement('beforeEnd',trow);
+ var tcol1=document.createElement("TD");
+ tcol1.className="registerTD";
+ tcol1.id="recycler666";
+ tcol1.bgcolor="white";
+ var tcol1=trow.insertAdjacentElement('beforeEnd',tcol1);
+
+
+try
+{
+xhierarchy = new ActiveXObject("Msxml.DOMDocument");
+xhierarchy.async = false;
+xhierarchy.load("user_select.xml?qid="+ti.value);
+xhierarchy.setProperty("SelectionLanguage","XPath");
+
+var positions=xhierarchy.selectNodes('.//collaborator');
+
+for (i=0;i<positions.length;i++)
+{
+	var br=document.createElement("BR");
+	var newRadioButton = document.createElement("<INPUT TYPE='RADIO' NAME='VictimPack1' VALUE='"+positions[i].getAttribute('id')+"' value2='"+positions[i].getAttribute("fullname")+"' onClick='setItNew(this);'>");
+	tcol1.insertBefore(newRadioButton );
+	tcol1.insertAdjacentHTML('beforeEnd',positions[i].getAttribute('fullname'));
+	tcol1.insertAdjacentElement('beforeEnd',br);
+}
+
+delete xhierarchy;
+
+
+}
+catch(x)
+{
+alert(x.description);
+}
+}
+-->
+</script>
+
+</HEAD>
+<BODY>
+
+<table id="loginBodyTable" class="loginBodyTable" cellpadding="0" cellspacing="0" border="0" align="center">
+<tr>
+	<td>
+		<table width="100%"  border="0" cellspacing="0" cellpadding="0">
+			<tr>
+				<td class="mainMenuTop"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			</tr>
+			<tr>
+				<td class="mainMenuCenter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			</tr>
+			<tr>
+				<td class="mainMenuBottom"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			</tr>
+		</table>
+
+		<table width="100%"  border="0" cellspacing="0" cellpadding="0" align="center" class="loginMainTable">
+		<tr>
+				<td class="registerTD" height="20px">
+					<h3 align="center"><%=tools.get_web_str('vkpb_search')%>: </h3>
+					<input type="text" id="typein" name="typein" class="inputEdit"  onKeyPress="if(event.keyCode==13) showMeGoods();"/>
+					<input type="button" id="btnsrch" value="<%=tools.get_web_str('c_search')%>" onClick="showMeGoods();" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';">
+					<input type="button" id="ok" value="<%=tools.get_web_str('c_choose')%>" onClick="processChecked(true);" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" disabled="disabled">
+					<input type="button" id="cancel" value="<%=tools.get_web_str('c_cancel')%>" onClick="processChecked(false);" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';">
+				</td>
+				<tr>
+					<td class="mainMenuCenter"><img src="pics/1blank.gif" width="1" height="2" /></td>
+				</tr>
+				<tbody id="recycler666">
+				</tbody>				
+				<tr>
+					<td class="mainMenuBottom"><img src="pics/1blank.gif" width="1" height="10" /></td>
+				</tr>
+		</tr>
+		</table>
+						
+	</td>
+</tr>
+
+</table>
+
+
+
+</BODY>
+
+
+</HTML>

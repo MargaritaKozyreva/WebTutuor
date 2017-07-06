@@ -1,0 +1,43 @@
+<%
+Server.Execute( "include/sid_access_init.html" );
+
+docParticipant = OpenNewDoc( 'x-local://wtv/wtv_participant.xmd' );
+docParticipant.BindToDb( DefaultDb );
+teParticipant = docParticipant.TopElem;
+
+teParticipant.person_id = curUserID;
+tools.common_filling( 'collaborator', teParticipant, curUserID, curUser );
+teParticipant.contest_id = curObjectID;
+teParticipant.contest_name = curObject.name;
+teParticipant.status_id = Request.Form.GetProperty( "status" );
+if ( Request.Form.HasProperty( "desc" ) )
+	teParticipant.desc = Request.Form.GetProperty( "desc" );
+
+for ( i = 1; i <= curObject.file_num; i++ )
+	if ( Request.Form.HasProperty( "file" + i ) )
+	{
+		try
+		{
+			_ref = Request.Form.GetProperty( "file" + i );
+			_refstr = Request.Form.GetProperty( "comment" + i );
+		
+			if ( ! _ref.FileName.HasValue )
+				continue;
+				
+			docResource = OpenNewDoc( 'x-local://wtv/wtv_resource.xmd' );
+			docResource.BindToDb( DefaultDb );
+			docResource.TopElem.comment = _refstr;
+			docResource.TopElem.put_str( _ref, _ref.FileName, teParticipant );
+
+			_file = teParticipant.files.AddChild();
+			_file.file_id = docResource.DocID;
+		}
+		catch( err )
+		{
+		}
+	}
+
+docParticipant.Save();
+
+Response.Redirect( "view_doc.html?mode=contest&object_id=" + teParticipant.contest_id + "&doc_id=" + curDocID );
+%>

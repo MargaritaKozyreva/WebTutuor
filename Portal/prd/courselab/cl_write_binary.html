@@ -1,0 +1,14 @@
+<%
+	if (Request.Query.HasProperty("contenttype"))
+	try
+	{
+		Response.ContentType = UrlDecode(Request.Query.GetProperty("contenttype"));
+	}
+	catch(_O_)
+	{
+	}
+	
+	docWithBinary = OpenDoc(UrlFromDocID(Int(Request.Query.GetProperty("object_id"))));
+	sBinaryPath = String(UrlDecode(Request.Query.GetProperty("path")));
+	Response.WriteBinary(docWithBinary.TopElem.EvalPath(sBinaryPath));
+%>

@@ -1,0 +1,27 @@
+<%
+curView = new Object;
+curView.SetProperty( 'id', '1' );
+curView.SetProperty( 'catalog_name', 'event_assessment_plan' );
+curView.SetProperty( 'disp_link', 'true' );
+curView.SetProperty( 'link_field_index', 2 );
+curView.SetProperty( 'sort_index', 0 );
+curView.SetProperty( 'sort_direct', '-' );
+curView.SetProperty( 'link_mode', 'event_pa' );
+
+curArray = Array();
+if ( curUser.access.access_role == 'admin' )	
+{
+	curArray = ArraySelectDistinct( XQuery( "for $elem in event_assessment_plans where $elem/event_id = " + curObjectID + " return $elem" ) , 'id' );
+}
+else
+{
+	_currentDate = DateNewTime( Date() );
+	curArray = XQuery( "for $elem in event_assessment_plans where $elem/event_id = " + curObjectID + " and $elem/expert_person_id = " + curUserID + " and $elem/date_start<=date('" + _currentDate + "') return $elem" );
+	if ( curObject.disp_all_assessment_plan )
+		curArray = ArraySelectDistinct( ArrayUnion( curArray, XQuery( "for $elem in event_assessment_plans where $elem/event_id = " + curObjectID + " and $elem/person_id = " + curUserID  + " and $elem/date_start<=date('" + _currentDate + "')  return $elem" ) ), 'id' );
+}
+
+curView.SetProperty( 'array', curArray );
+Server.Execute( 'view_catalog_list.html' );
+%>
+<br/>

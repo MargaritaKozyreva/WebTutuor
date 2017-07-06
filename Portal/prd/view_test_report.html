@@ -1,0 +1,189 @@
+<%
+Server.Execute( "include/access_init.html" );
+
+if ( ! curObject.lesson_report.HasValue && ( curObject.ChildExists( 'core_lesson' ) && ! curObject.core_lesson.HasValue ) )
+{
+	Response.Write( tools.get_web_str('vtr_empty') );
+}
+else if ( curObject.person_id == curUserID || ArrayOptFind( tools.get_all_sub_persons_by_func_manager_id( curUserID ), 'id==' + curObject.person_id ) != undefined )
+{
+	curAssessment = OpenDoc( UrlFromDocID( curObject.assessment_id ) ).TopElem;
+	if (curAssessment.display_result_report.Value == true)
+	{
+	_objects = ArrayOptFirstElem( OpenDocFromStr( tools.report_decrypt( curObject ), 'form=x-local://wtv/wtv_form_annals_text.xmd' ).TopElem.au.history.objects );
+	sections = _objects == undefined ? Array() : _objects.section;
+	
+	var teItem = null;
+	var iItemID = null;
+	function writeAnswers( arrAnswersParam )
+	{
+		var iCounter = 0;
+		for ( fldAnswerElem in arrAnswersParam )
+		{
+			arrKey = String( fldAnswerElem.PrimaryKey ).split( '_' );
+			sKey = arrKey[ ArrayCount( arrKey ) - 1 ];
+			if ( iCounter != 0 )
+				Response.Write( '; ' );
+			if ( teItem != null )
+			{
+				fldAnswerChild = teItem.answers.GetOptChildByKey( sKey );
+				if ( fldAnswerChild != undefined && fldAnswerChild.image.name.HasValue )
+					Response.Write( '<a href="view_item_image.html?object_id=' + iItemID + '&answer_id=' + sKey + '" target="_blank"><img src="pics/img.png" alt="' + fldAnswerChild.image.name + '" border="0"/></a>&nbsp;' );
+			}
+			Response.Write( fldAnswerElem.text + ( fldAnswerElem.varscore.HasValue ? ' (' + fldAnswerElem.varscore + ')' : '' ) );
+			iCounter++;
+		}
+	}
+	
+	
+%>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1251"/>
+<style type="text/css">
+   .borderst {
+		border: 1px solid black;
+   }
+</style>
+<table border="0">
+	<tr style="background-color: rgb(200,200,200)">
+		<td class="borderst">#</td>
+		<td class="borderst"><%=tools.get_web_str('c_question')%></td>
+		<td class="borderst"><%=tools.get_web_str('vtpb_correct')%></td>
+		<td class="borderst"><%=tools.get_web_str('c_score')%></td>
+		<td class="borderst"><%=tools.get_web_str('c_answer')%></td>
+<%
+	if ( curAssessment.display_correct_answer_in_report )
+	{
+%>
+		<td class="borderst"><%=tools.get_web_str('vieb_correct')%></td>
+<%
+	}
+%>
+		<td class="borderst">Затраченное время (секунд)</td>
+<%
+	if ( curAssessment.display_answers_in_report )
+	{
+%>
+		<td class="borderst">Варианты ответов</td>
+<%
+	}
+%>
+		<td class="borderst"><%=tools.get_web_str('c_type')%></td>
+	</tr>
+<%
+	for ( _section in sections )
+	{
+		iQuestionCounter = 1;
+%>
+	<tr>
+		<td colspan="9" class="borderst"><b><%= _section.title %></b></td>
+	</tr>
+<%
+		for ( _question in _section.question )
+		{
+			_is_weight = ArrayOptFind( _question.variant, 'varscore.HasValue' ) != undefined;
+			
+			iItemID = _question.PrimaryKey;
+			try
+			{
+				teItem = OpenDoc( UrlFromDocID( Int( iItemID ) ) ).TopElem;
+			}
+			catch ( err )
+			{
+				teItem = null;
+			}
+%>
+	<tr>
+		<td class="borderst"><%=iQuestionCounter%></td>
+		<td class="borderst">
+<%
+			if ( teItem != null && teItem.image.name.HasValue )
+			{
+%>
+			<a href="view_item_image.html?object_id=<%=_question.PrimaryKey%>" target="_blank"><img src="pics/img.png" alt="<%=teItem.image.name%>" border="0"/></a>&nbsp;
+<%
+			}
+%>
+			<%=_question.text%>
+		</td>
+		<td class="borderst" style="text-align: center; background-color: rgb(<%=( _question.state == 'passed' ? '190,240,200' : '250,210,180' )%>)"><%=( _question.state == 'passed' ? '+' : '-' )%></td>
+		<td class="borderst"><nobr><%=( _question.points + ( ! _is_weight && _question.points.HasValue && _question.maxweight.HasValue && Real( _question.maxweight ) != 0.0 ? ' (' + StrReal( ( Real( _question.points ) / Real( _question.maxweight ) ) * 100.0, 1 ) + '%)' : '' ) )%></nobr></td>
+		<td class="borderst"><%
+			switch ( _question.qtype )
+			{
+				case 'choice':
+				case 'select':
+					//Response.Write( ArrayMerge( ArraySelect( _question.variant, 'Trim( This )==\'1\'' ), 'text', '; ' ) );
+					writeAnswers( ArraySelect( _question.variant, 'Trim( This )==\'1\'' ) );
+					break;
+				case 'range':	
+				default:
+					Response.Write( ArrayMerge( _question.variant, 'value', '; ' ) );
+					break;
+			}
+		%></td>
+<%
+	if ( curAssessment.display_correct_answer_in_report )
+	{
+%>
+		<td class="borderst"><%
+			switch ( _question.qtype )
+			{
+				case 'choice':
+				case 'select':
+					writeAnswers( ArraySelect( _question.variant, 'correct==\'1\'' ) );
+					break;
+
+				case 'range':
+					_str = '';
+					_counter = 0;
+					for ( _answer in _question.variant )
+						_str += ( _str == '' ? '' : '; ' ) + _counter++;
+					Response.Write( _str );
+					break;
+
+				case 'numeric':	
+					Response.Write( ArrayMerge( _question.variant, 'ArrayMerge(cond,\'operator.ForeignElem.name+Trim(Value)\',\', \')', '; ' ) );
+					break;
+
+				case 'text':
+					Response.Write( ArrayMerge( _question.variant, 'ArrayMerge(cond,\'operator==\\\'cn\\\'?\\\'...\\\'+Trim(Value)+\\\'...\\\':Trim(Value)\',\', \')', '; ' ) );
+					break;
+
+				default:
+					Response.Write( ArrayMerge( _question.variant, 'cor_value', '; ' ) );
+					break;
+			}
+		%></td>
+<%
+	}
+%>
+		<td class="borderst"><%=_question.elapsed%></td>
+<%
+	if ( curAssessment.display_answers_in_report )
+	{
+%>
+		<td class="borderst"><%
+			writeAnswers( _question.variant );
+		%></td>
+<%
+	}
+%>
+		<td class="borderst"><%=( _question.qtype.ForeignElem.name + ( _is_weight ? ' ' + ms_tools.get_const('ruqnhtrz42') : '' ) )%></td>
+	</tr>
+<%
+			iQuestionCounter++;
+		}
+	}
+%>
+</table>
+<br/>
+<%
+	}
+	else
+		Server.Execute( "view_access_panel.html" );
+}
+else
+{
+	Server.Execute( "view_access_panel.html" );
+}
+%>

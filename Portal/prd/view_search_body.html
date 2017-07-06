@@ -1,0 +1,317 @@
+<%
+Server.Execute( "include/search_form.html" );
+
+if ( Request.Form.HasProperty( "word" ) )
+{
+	sSearchCatalogs = Request.Query.GetOptProperty( 'search_catalogs', 'courses,documents,books,articles,forum_entrys' );
+
+	sSearchWord = UnifySpaces(Request.Form.word);
+	bSuccessfullSearch = false;
+	
+	if ( StrContains( sSearchCatalogs, 'courses' ) )
+	{
+		xarrCourse = XQuery( "for $elem in courses where doc-contains( $elem/id, '" + DefaultDb + "', " + XQueryLiteral( sSearchWord ) + " ) order by $elem/name return $elem" );
+		if ( ArrayOptFirstElem( xarrCourse ) != undefined )
+		{
+			bSuccessfullSearch = true;
+%>
+
+<br/>
+<p class="headerText" style="margin-top:10px; margin-bottom: 10px;"><%=tools.get_web_str("vsb_courses")%> ( <%=ArrayCount( xarrCourse )%> )</p>
+<%
+			iRowCounter = 0;
+			for ( _course in xarrCourse )
+			{
+%>
+<table width=100% border=0 cellpadding=3 cellspacing=0>
+<tr> 
+	<td class="<%=( iRowCounter++ % 2 ? "tableRowOdd" : "tableRowEven" )%>"><a href="view_doc.html?mode=course_info&object_id=<%=_course.id%>"><%=_course.code%>&nbsp;<%=tools_web.get_cur_lng_name( _course.name , curLng.short_id )%></a></td>
+</tr>
+</table>
+<%
+			}
+		}
+	}
+	
+	if ( StrContains( sSearchCatalogs, 'documents' ) )
+	{
+	
+	xarrDocument = XQuery( "for $elem in documents where doc-contains( $elem/id, '" + DefaultDb + "', " + XQueryLiteral( sSearchWord ) + " ) order by $elem/parent_document_id return $elem" );
+	if ( ArrayOptFirstElem( xarrDocument ) != undefined )
+	{
+		bSuccessfullSearch = true;
+		arrDocumentMain = ArraySelect( xarrDocument, "!parent_document_id.HasValue" );
+		arrDocumentNonMain = ArraySelect( xarrDocument, "parent_document_id.HasValue" );
+%>
+
+<br/>
+<p class="headerText" style="margin-top:10px; margin-bottom: 10px;"><%=tools.get_web_str('c_documents')%> ( <%=ArrayCount( xarrDocument )%> )</p>
+<%
+		if ( ArrayCount( arrDocumentMain ) != 0 )
+		{
+%>
+<table width="100%" border="0" cellpadding="3" cellspacing="0">
+<%
+			iRowCounter = 0;
+			for ( catDocumentElem in arrDocumentMain )
+			{
+%>
+	<tr>
+		<td width=100% class="<%=( iRowCounter++ % 2 ? "tableRowOdd" : "tableRowEven" )%>">
+			<a href="<%=tools_web.put_query_string( catDocumentElem.id, catDocumentElem.template )%>"><%=catDocumentElem.name%></a>
+		</td>
+	</tr>
+<%	
+			}
+%>
+</table>
+<br/>	
+<%
+		}
+		
+		iLastDocumentID = null;
+		iRowCounter = 0;
+		for ( catDocumentElem in arrDocumentNonMain )
+		{
+			if ( iLastDocumentID != catDocumentElem.parent_document_id )
+			{
+				if ( iRowCounter != 0 )
+				{
+%>
+</table>
+<br/>
+<%
+				}
+
+				iWidth = 0;
+				sOut = '';
+				catDocumentLast = catDocumentElem;
+				iDepthCounter = 0;
+				do
+				{	
+					catDocumentLast = catDocumentLast.parent_document_id.OptForeignElem;
+					if ( catDocumentLast == undefined )
+						break;
+
+					sOut = '<b>' + catDocumentLast.name + '</b><br><img src="pics/1blank.gif" align="left" width="<%=( iWidth += 10 )%\>" height="1"/>' + sOut;
+					iDepthCounter++;
+				}
+				while ( catDocumentLast.parent_document_id.HasValue && iDepthCounter < 50 )
+				Response.Write( EvalCodePage( sOut ) );
+%>
+<table width="100%" border="0" cellpadding="3" cellspacing="0">
+<%
+			}
+%>
+	<tr>
+		<td width=100% class="<%=( iRowCounter++ % 2 ? "tableRowOdd" : "tableRowEven" )%>"><a href="<%=tools_web.put_query_string( catDocumentElem.id, catDocumentElem.template )%>"><%=catDocumentElem.name%></a></td>
+	</tr>			
+<%
+			iLastDocumentID = catDocumentElem.parent_document_id.Value;
+		}
+		if ( iRowCounter != 0 )
+		{
+%>
+</table>
+<br/>
+<%
+		}
+	}
+
+	xarrResource = Array();
+	if ( tools.sys_db_type != "xml" )
+	{
+		sSearch = XQueryLiteral( sSearchWord );
+		sSearch = '"' + StrReplace( StrRangePos( sSearch, 1, StrLen( sSearch ) - 1 ), ' ', '*" and "' ) + '*"';
+		sSql = "sql: 
+select r.id, r.data.value('resource/name','varchar(512)') as name, r.data.value('resource/file_url','varchar(512)') as file_url, x.value('object_id','bigint') as object_id, x.value('object_name','varchar(512)') as object_name
+from resource r 
+cross apply r.data.nodes('resource/links/link') as l(x)
+inner join [(spxml_blobs)] sb
+on r.data.value('resource/file_url','varchar(512)')=sb.url
+where contains(sb.data,'" + sSearch + "')
+order by x.value('object_id','bigint')
+";
+//alert( sSql );
+		xarrResource = XQuery( sSql );
+		if ( ArrayOptFirstElem( xarrResource ) != undefined )
+		{
+			bSuccessfullSearch = true;
+			xarrResource = ArraySelectAll( XQuery( sSql ) );
+			iObjectID = null;
+			iRowCounter = 0;
+%>
+<br/>
+<p class="headerText" style="margin-top:10px; margin-bottom: 10px;"><%=tools.get_web_str('vsb_doc_files')%> ( <%=ArrayCount( xarrResource )%> )</p>
+<%
+			for ( catResourceElem in xarrResource )
+			{
+				if ( iObjectID != catResourceElem.object_id )
+				{
+					if ( iRowCounter != 0 )
+					{
+%>
+</table>
+<br/>
+<%
+					}
+%>
+<b><%=tools_web.get_cur_lng_name( catResourceElem.object_name , curLng.short_id )%></b><br/>
+<img src="pics/1blank.gif" align="left" width="10" height="1"/><table width="100%" border="0" cellpadding="3" cellspacing="0">
+<%
+				}
+%>
+	<tr>
+		<td width=100% CLASS="<%=( iRowCounter++ % 2 ? "tableRowOdd" : "tableRowEven" )%>"><a href="download_file.html?file_id=<%=catResourceElem.id%>&sid=<%=tools_web.get_sum_sid( catResourceElem.id, Session.sid )%>"><%=catResourceElem.name%></a></td>
+	</tr>			
+<%
+			iObjectID = String( catResourceElem.object_id );
+			}
+			if ( iRowCounter != 0 )
+			{
+%>
+</table>
+<br/>
+<%
+			}
+		}
+	}
+	
+	}
+	
+	if ( StrContains( sSearchCatalogs, 'books' ) || StrContains( sSearchCatalogs, 'articles' ) )
+	{
+	
+	xarrBooks = XQuery("for $elem in books where doc-contains($elem/id, '" + DefaultDb + "', " + XQueryLiteral(sSearchWord) + ") order by $elem/name return $elem");
+	xarrArticles = XQuery("for $elem in articles where doc-contains($elem/id, '" + DefaultDb + "', " + XQueryLiteral(sSearchWord) + ") order by $elem/name return $elem");
+	if ( ArrayOptFirstElem(xarrBooks) != undefined || ArrayOptFirstElem(xarrArticles) != undefined)
+	{
+		bSuccessfullSearch = true;
+%>
+
+<br/>
+<p class="headerText" style="margin-top:10px; margin-bottom: 10px;"><%=tools.get_web_str('c_books')%> ( <%=(ArrayCount(xarrBooks) + ArrayCount(xarrArticles))%> )</p>
+<table width="100%" border="0" cellpadding="3" cellspacing="0">
+<%
+			iRowCounter = 0;
+			for (catBookElem in xarrBooks)
+			{
+%>
+	<tr>
+		<td width=100% class="<%=(iRowCounter++ % 2 ? "tableRowOdd": "tableRowEven")%>">
+			<a href="webhelp/webhelp.html?object_id=<%=catBookElem.PrimaryKey%>"><%=catBookElem.name%></a>
+<%
+				arrCurrentArticles = ArraySelect(xarrArticles, "book_id == " + catBookElem.PrimaryKey);
+				if (ArrayOptFirstElem(arrCurrentArticles) != undefined)
+				{
+					for (catAtricleElem in arrCurrentArticles)
+					{
+%>
+			<br/>&nbsp;&nbsp;<a href="webhelp/webhelp.html?object_id=<%=catAtricleElem.PrimaryKey%>"><i><%=catAtricleElem.name%></i></a>
+<%
+					}
+					xarrArticles = ArraySelect(xarrArticles, "book_id != " + catBookElem.PrimaryKey);
+				}
+%>
+		</td>
+	</tr>
+<%	
+			}
+			
+			xarrBooks = QueryCatalogByKeys("books", "id",ArrayExtract(ArraySelectDistinct(xarrArticles, "book_id"),"book_id"));
+			for (catBookElem in xarrBooks)
+			{
+%>
+	<tr>
+		<td width=100% class="<%=(iRowCounter++ % 2 ? "tableRowOdd": "tableRowEven")%>">
+			<%=catBookElem.name%>
+<%
+				arrCurrentArticles = ArraySelect(xarrArticles, "book_id == " + catBookElem.PrimaryKey);
+				
+				for (catAtricleElem in arrCurrentArticles)
+				{
+%>
+			<br/>&nbsp;&nbsp;<a href="webhelp/webhelp.html?object_id=<%=catAtricleElem.PrimaryKey%>"><i><%=catAtricleElem.name%></i></a>
+<%
+				}
+%>
+		</td>
+	</tr>
+<%	
+			}
+%>
+</table>
+<br/>
+<%
+	}
+	
+	}
+	
+	if ( StrContains( sSearchCatalogs, 'forum_entrys' ) )
+	{
+		xarrForumEntry = XQuery( "for $elem in forum_entrys where doc-contains( $elem/id, '" + DefaultDb + "', " + XQueryLiteral( sSearchWord ) + " ) order by $elem/forum_id return $elem" );
+		if ( ArrayOptFirstElem( xarrForumEntry ) != undefined )
+		{
+			bSuccessfullSearch = true;
+%>
+
+<br/>
+<p class="headerText" style="margin-top:10px; margin-bottom: 10px;"><%=tools.get_web_str("vsb_forums")%> ( <%=ArrayCount( xarrForumEntry )%> )</p>
+<%
+			iLastForumID = null;
+			iRowCounter = 0;
+			for ( catForumEntryElem in xarrForumEntry )
+			{
+				if ( iLastForumID != catForumEntryElem.forum_id )
+				{
+					if ( iRowCounter != 0 )
+					{
+%>
+</table>
+<br/>
+<%
+					}
+
+					catForum = catForumEntryElem.forum_id.OptForeignElem;
+					if ( catForum == undefined )
+					{
+%>
+<b><font color="#FF0033"><%=tools.get_web_str("c_deleted")%></font></b><br/>
+<%
+					}
+					else
+					{
+%>
+<b><%=tools_web.get_cur_lng_name( catForum.name , curLng.short_id )%></b><br/>
+<%
+					}
+%>
+<img src="pics/1blank.gif" align="left" width="10" height="1"/><table width="100%" border="0" cellpadding="3" cellspacing="0">
+<%
+				}
+%>
+	<tr>
+		<td width=100% CLASS="<%=( iRowCounter++ % 2 ? "tableRowOdd" : "tableRowEven" )%>"><a href="view_doc.html?mode=forum_entry&object_id=<%=catForumEntryElem.id%>"><%=catForumEntryElem.name%></a></td>
+	</tr>			
+<%
+				iLastForumID = catForumEntryElem.forum_id.Value;
+			}
+			if ( iRowCounter != 0 )
+			{
+%>
+</table>
+<br/>
+<%
+			}
+		}
+	}
+	
+	if (!bSuccessfullSearch)
+	{
+	%>
+		<p class="headerText" style="margin-top:10px; margin-bottom: 10px;"><%=tools.get_web_str("vsb_error1")%></p>
+	<%
+	}
+	
+}
+%>

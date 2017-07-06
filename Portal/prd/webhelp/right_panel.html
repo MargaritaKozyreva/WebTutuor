@@ -1,0 +1,132 @@
+<%
+Server.Execute( "../include/user_init.html" );
+BASE_URL = "JavaScript:parent.do_display";
+
+curObjectID = 0;
+curObjectContent = "";
+curObjectTopic = "";
+nextObjectUrl = "";
+prevObjectUrl = "";
+try
+{
+	curDocID = Int(Request.Query.doc_id);
+}
+catch(_X_)
+{
+	curDocID = null;
+}
+if ( Request.QueryString.HasProperty("oid") )
+{
+	try
+    {
+		curObjectID = Int(Request.QueryString.GetProperty("oid"));
+		curObject = OpenDoc(UrlFromDocID(curObjectID)).TopElem;
+		
+		if (!tools_web.check_access(curObject, curUserID, curUser, Session)) throw "CODE RED ALERT!";
+		
+		curObjectContent = curObject.desc.Value;
+		curObjectTopic = curObject.name;
+        
+        if ( Request.QueryString.HasProperty("next") && Trim(Request.QueryString.GetProperty("next")) != '' )
+        	nextObjectUrl = BASE_URL + "('" + Trim(Request.QueryString.GetProperty("next")) + "', null, '"+curDocID+"')";
+        if ( Request.QueryString.HasProperty("prev") && Trim(Request.QueryString.GetProperty("prev")) != '' )
+        	prevObjectUrl = BASE_URL + "('" + Trim(Request.QueryString.GetProperty("prev")) + "', null, '"+curDocID+"')";
+	}
+    catch(err)
+    {
+		alert(err);
+		curObjectContent = "<center><p><font size=+1 color=red>" + tools_web.get_web_str("rp_err_not_resourse") + "</font></p></center>";
+    }
+}
+
+Keyword = "";
+if ( Request.QueryString.HasProperty("keyword") )
+{
+	Keyword = UrlDecode(Trim(Request.QueryString.GetProperty("keyword")));
+    if (Keyword != "" && curObjectContent != "")
+    	curObjectContent = StrReplace(curObjectContent, Keyword, "<font style='background-color:#2A5FFF'>" + Keyword + "</font>");
+}
+%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<TITLE><%=tools.get_web_str('c_content')%>: <%=curObjectTopic%></TITLE>
+<meta http-equiv="Content-Style-Type" content="text/css">
+<script type="text/javascript" language="JavaScript" src="nonscroll.js"></script>
+<link href="../style.css" rel="stylesheet" type="text/css"/>
+</head>
+<body bgcolor="#FFFFFF" scroll="no">
+<div id="NonScrollSection">
+<table width="100%" border="0" cellspacing="0" cellpadding="2">
+ <tr>
+  <td width="100%" align="left"><span class="LibraryHeader"><%=curObjectTopic%></span><br/><%=DateNewTime(curObject.doc_info.modification.date)%>
+  </td>
+  <td width="120" align="right" nowrap>
+<%
+if (prevObjectUrl != "")
+{
+%>
+    <a href="<%=prevObjectUrl%>"><img src="img/prev.png" border="0" alt=tools.get_web_str('rp_back')></a>&nbsp;&nbsp;
+<%
+}
+else
+{
+%>
+    <img src="img/prev_disabled.png" border="0" alt="<%=tools.get_web_str('rp_back')%>">&nbsp;&nbsp;
+<%
+}
+if (nextObjectUrl != "")
+{
+%>
+    <a href="<%=nextObjectUrl%>"><img src="img/next.png" border="0" alt=tools.get_web_str('rp_forward')></a>&nbsp;&nbsp;
+<%
+}
+else
+{
+%>
+   <img src="img/next_disabled.png" border="0" alt="<%=tools.get_web_str('rp_forward')%>">&nbsp;&nbsp;
+<%
+}
+%>
+  </td>
+ </tr>
+</table>
+<%
+	aExpertPack = Array();
+	for (sExpertPack in ArrayExtract(QueryCatalogByKeys("knowledge_parts","id",ArrayExtract(curObject.knowledge_parts, "PrimaryKey")), "experts"))
+	if (sExpertPack != "")
+	{
+		for (sExpertID in String(sExpertPack).split(";"))
+		try
+		{
+			aExpertPack[ArrayCount(aExpertPack)] = Int(sExpertID);
+		}
+		catch(_O_)
+		{}
+	}
+	
+	aExpertPack = QueryCatalogByKeys("experts","id",ArraySelectDistinct(aExpertPack, "This"));
+	if (ArrayOptFirstElem(aExpertPack) != undefined)
+	{
+%>
+<div>
+	<h3><%=tools_web.get_web_str("vkpb_experts")%></h3>
+<%
+	for (catExpertElem in aExpertPack)
+	{
+%>
+	<a href="../view_doc.html?mode=expert&object_id=<%=catExpertElem.PrimaryKey%>&doc_id=<%=curDocID%>" target="_blank"><%=catExpertElem.person_fullname%></a><br/>
+<%
+	}
+%>
+</div>
+<%
+	}
+%>
+</div>
+<div id="ScrollSection">
+ <%=tools_web.get_web_desc( curObjectContent, UrlFromDocID( curObjectID ),curObject.Name + ".desc")%>
+ <p class=class1><span class=span1></span></p>
+</div>
+</body>
+</html>

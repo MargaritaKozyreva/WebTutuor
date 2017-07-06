@@ -1,0 +1,33 @@
+<%
+	Server.Execute('include/user_init.html');
+	// убедимся что эту страничку пользователь может просматривать
+	if (curUser.access.access_role != 'admin') 
+	{
+		Server.Execute( "view_access_panel.html" );
+		Cancel();
+	}
+
+	if ( Request.QueryString.HasProperty( 'close_forum_id' ) )
+	{ // пришел запрос на закрытие форума
+		forumID = Int( Request.QueryString.close_forum_id );
+		// выбираем все Темы и Топики которые ссылаються на закрываемый форум
+		// затем по очереди их удаляем, последним удаляеться сам форум. 
+		forum_entry_array = XQuery( 'for $elem in forum_entrys where $elem/forum_id = ' + forumID + ' return $elem' );
+		try
+		{
+			for (entry in forum_entry_array) {
+				entryDoc = OpenDoc( UrlFromDocID( entry.id ) );
+				entryDoc.TopElem.closed = true;
+				entryDoc.Save();
+			}
+			forumDoc = OpenDoc( UrlFromDocID( forumID ) );
+			forumDoc.TopElem.closed = true;
+			forumDoc.Save();
+		}
+		catch ( err )
+		{
+			alert( err );
+		}		
+
+	}
+%>

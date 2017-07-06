@@ -1,0 +1,27 @@
+<%
+try
+{
+	if ( curErrorText == '' || curErrorText == null || curErrorText == undefined )
+		throw '_no_text_';
+}
+catch ( err )
+{
+	curErrorText = tools.get_web_str('vap_message');
+}
+%>
+<center>	
+<TABLE width="300" HEIGHT="100" border="0" cellspacing="0" cellpadding="5">
+	<TR>		  
+		<TD width="100%" BGCOLOR="#CC3300">
+		 
+		<TABLE WIDTH="100%" HEIGHT="100%" BORDER="0" CELLSPACING="0" CELLPADDING="5">
+			<TR BGCOLOR="#FFFFFF"> 
+				<td><IMG SRC="pics/atten.jpg"></td>
+				<td><b><FONT SIZE="2"><%=curErrorText%></FONT></b></td>
+			</TR>
+		</TABLE>
+		
+		</TD>
+	</TR>
+</TABLE>
+</center>

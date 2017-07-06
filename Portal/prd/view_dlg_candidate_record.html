@@ -1,0 +1,74 @@
+<%
+	Server.Execute( "include/user_init.html" );
+	
+	if ( Request.QueryString.HasProperty( 'close' ) )
+	{
+%>
+<SCRIPT LANGUAGE="javascript">
+	window.close();
+</SCRIPT>
+<%
+		Cancel();
+	}
+%>
+
+<HTML>
+<HEAD>
+<TITLE></TITLE>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=windows-1251" />
+<LINK HREF="style.css" REL="stylesheet" TYPE="text/css"/>
+</HEAD>
+
+
+<SCRIPT LANGUAGE="javascript">
+	function doSubmit8(status)
+	{
+		document.candidate_record_form.completion_id.value = status;
+		document.candidate_record_form.submit();
+	}
+</SCRIPT>
+
+
+<BODY>
+
+<FORM ACTION="candidate_record_processing.html" NAME="candidate_record_form" METHOD="POST">	
+<INPUT TYPE="HIDDEN" NAME="doc_id" VALUE="<%=Request.QueryString.doc_id%>">
+<INPUT TYPE="HIDDEN" NAME="sid" VALUE="<%=tools.get_sum_sid( Request.QueryString.doc_id )%>">
+<INPUT TYPE="HIDDEN" NAME="candidate_eid" VALUE="<%=Request.QueryString.candidate_eid%>">
+<INPUT TYPE="HIDDEN" NAME="record_eid" VALUE="<%=Request.QueryString.record_eid%>">
+<INPUT TYPE="HIDDEN" NAME="completion_id" VALUE="">
+
+<TABLE WIDTH="100%" CELLSPACING="5" CELLPADDING="0">
+	<TR>
+		<TD>
+
+		<TABLE WIDTH="100%" CELLSPACING="0" CELLPADDING="0" CLASS="tableBorder">
+			<TR>
+				<TD WIDTH="140" ALIGN="RIGHT"><B><%=tools.get_web_str('c_comment')%>:</B>&nbsp;</TD>
+				<TD STYLE=" font-weight:normal">
+					<TEXTAREA ROWS="2" COLS="50" NAME="comment" CLASS="inputTextarea" STYLE="width: 500px; height: 50px;"><%=Request.QueryString.comment%></TEXTAREA>
+				</TD>
+			</TR>
+		</TABLE>
+
+		</TD>
+	</TR>
+	<TR>
+		<TD>
+
+		<TABLE WIDTH="100%" CELLSPACING="0" CELLPADDING="5" CLASS="activator">
+			<TR VALIGN="MIDDLE">
+				<TD ALIGN="CENTER"> 
+					<INPUT TYPE="button" VALUE="<%=tools.get_web_str('c_approve')%>" onClick="doSubmit8('1');" CLASS="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';">
+					<INPUT TYPE="button" VALUE="<%=tools.get_web_str('c_reject')%>" onClick="doSubmit8('0');" CLASS="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';">
+					<INPUT TYPE="button" VALUE="<%=tools.get_web_str('c_clear')%>" onClick="doSubmit8('');" CLASS="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';">
+				</TD>
+			</TR>
+		</TABLE>
+
+		</TD>
+	</TR>
+</TABLE>
+</FORM>
+</BODY>
+</HTML>

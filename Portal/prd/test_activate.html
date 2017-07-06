@@ -1,0 +1,43 @@
+<%
+curDocID = null;
+if ( Request.Query.HasProperty( 'doc_id' ) && Request.Query.doc_id != '' )
+{
+	curDocID = Int( Request.Query.doc_id );
+	Server.Execute( "include/access_init.html" );
+}
+else
+{
+	curAccess = true;
+	Server.Execute( "include/user_init.html" );
+}
+
+curAssessmentID = Int( Request.Query.assessment_id );
+curAssessment = OpenDoc( UrlFromDocID( curAssessmentID ) ).TopElem;
+
+try
+{
+	curSid = Request.Query.sid;
+
+	if ( ! curAccess || ! tools.check_sum_sid( curAssessmentID, curSid ) )
+		throw '_crack_fuck_';
+		
+	if ( ! tools_web.check_access( curAssessment, curUserID, curUser, Session ) )
+		throw '_access_fuck_';
+}
+catch ( ehuu )
+{
+	Server.Execute( "view_access_panel.html" );
+	Cancel();
+}
+
+curObjectID = tools.activate_test_to_person( curUserID, curAssessmentID, null, curUser, curAssessment );
+try
+{
+	curObjectID = curObjectID.DocID;
+}
+catch( err )
+{
+}
+
+Response.Redirect( "view_doc.html?doc_id=" + curDocID + "&assessment_id=" + curAssessmentID + "&object_id=" + curObjectID+ "&mode=test_learning_proc" );
+%>

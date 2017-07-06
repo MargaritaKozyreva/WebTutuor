@@ -1,0 +1,96 @@
+<%
+	if ( curObject.rubric.candidate != '' )
+	{
+%>	
+	<div id="courseDescription">
+	<table width="100%"  border="0" cellspacing="4" cellpadding="10">
+		<tr class="description">
+			<td width="100%" valign="top"><%=curObject.rubric.candidate%></td>
+		</tr>
+	</table>
+	</div>
+<%
+	}
+%>	
+	
+
+<TABLE width="100%" cellspacing="4" cellpadding="0">
+	<TR>
+		<TD>
+		
+		<TABLE width="100%" cellspacing="0" cellpadding="4" CLASS="tableBorder">			
+			<TR>
+				<TD WIDTH="140" ALIGN="RIGHT"><b><%=tools.get_web_str('c_code')%>:</b>&nbsp;</TD>
+				<TD STYLE="font-weight:normal"><%=curObject.code%></TD>
+			</TR>
+				<TD WIDTH="140" ALIGN="RIGHT"><b><%=tools.get_web_str('c_name')%>:</b>&nbsp;</TD>
+				<TD STYLE="font-weight:normal"><%=tools_web.get_cur_lng_name( curObject.title )%></TD>
+			</TR>
+			<TR>
+			<TD WIDTH="140" ALIGN="RIGHT"><b><%=tools.get_web_str('c_pass_score')%>:</b>&nbsp;</TD>
+				<TD STYLE="font-weight:normal"><%=curObject.passing_score%></TD>
+			</TR>
+			<TR>
+				<TD WIDTH="140" ALIGN="RIGHT"><b><%=tools.get_web_str('vab_duration')%></b>&nbsp;</TD>
+				<TD STYLE="font-weight:normal"><%=curObject.duration%></TD>
+			</TR>
+		</TABLE>
+	
+		</TD>	
+	</TR>
+	<TR>
+		 <TD>
+	
+		<table width="100%" border="0" cellspacing="0" cellpadding="5" class="activator">
+			<tr>
+				<td align="center">
+<%
+	_learning_array = XQuery( 'for $learning in active_test_learnings where $learning/person_id = ' + curUserID + ' and $learning/assessment_id = ' + curObjectID + ' return $learning' );
+	learningFirstElem = ArrayOptFirstElem( _learning_array );
+	if ( learningFirstElem != undefined )
+	{	
+%>
+				<input name="button" type="button" class="inputButton" onclick="document.location.href='view_doc.html?mode=test_learning_proc&doc_id=<%=curDocID%>&object_id=<%=learningFirstElem.id%>&assessment_id=<%=learningFirstElem.assessment_id%>&start=1';return false" onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';" value="<%=HtmlEncode( tools.get_web_str('vtlpb_next') )%>" />
+<%
+	}
+	else if ( ! curObject.is_open && ArrayOptFirstElem( XQuery( "for $elem in requests where $elem/status_id = 'active' and $elem/person_id = " + curUserID + " and $elem/object_id = " + curObjectID + " return $elem" ) ) != undefined )
+	{
+%>
+				<b><i><%=tools.get_web_str('vcorb_message2')%></i></b>
+<%
+	}
+	else if ( curObject.is_open )
+	{
+%>
+			<form name="test_activate_form" action="test_activate.html" method="POST">
+			<input type="hidden" name="doc_id" value="<%=curDocID%>" />
+			<input type="hidden" name="assessment_id" value="<%=curObjectID%>" />
+			<input type="hidden" name="sid" value="<%=tools.get_sum_sid( curObjectID )%>"/>
+				<input name="submit" type="submit" class="inputButton" onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';" value="<%=tools.get_web_str('c_but_act_test')%>"/>
+			</form>
+<%
+	}
+	else
+	{
+%>
+<%
+		xarrRequests = XQuery( "for $elem in request_types where $elem/object_type = 'assessment' return $elem" );
+		for ( catRequestElem in xarrRequests )
+		{
+%>
+				<input type="button" value="<%=tools_web.get_cur_lng_name( catRequestElem.name )%>" onclick="document.location.href='view_doc.html?mode=request_create&doc_id=<%=curDocID%>&type=assessment&request_object_id=<%=curObjectID%>&request_type_id=<%=catRequestElem.PrimaryKey%>';return false;" class="inputButton" onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';">	
+<%
+		}
+	}
+%>
+		</table>
+
+
+<%
+	curKnowlegedDoc = curObject;
+	Server.Execute( "view_knowledge_parts_body.html" );
+%>
+
+		</TD>	
+	</TR>
+</TABLE>

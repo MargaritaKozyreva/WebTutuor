@@ -1,0 +1,64 @@
+<%
+Server.Execute( "include/access_init.html" );
+Server.Execute( "include/head.html" );
+%>
+<HTML> 
+<HEAD>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1251"/>
+<LINK HREF="style.css" REL="stylesheet" TYPE="text/css"/>
+<script type="text/javascript" src="catalog_grid.js"></script>
+<script type="text/javascript" src="scripts/browser.js"></script>
+<script language="javascript">
+function processChecked(_flag)
+{
+	if (_flag)
+	{
+		var _cur_elem = document.getElementById("education_method_name")	
+	
+		try
+		{
+			_value=_cur_elem.value;
+		}
+		catch(ex)
+		{
+			_value='';
+		}
+		
+		if (!dialogArguments.can_be_empty&&_value=='')
+		{
+			alert("<%=ms_tools.get_const('4nwtbqohq3')%>!")
+			return
+		}
+		dialogArguments.selected_object_ids = _value;
+	}
+	dialogArguments.handle = _flag;
+	window.parent.close(); 
+}
+</script>
+</HEAD>
+<body>
+	
+<table  height="100%" width="100%" border="0" cellspacing="0" cellpadding="0" class="activator">
+	<tr>
+		<td>
+			<%=XmlAttrEncode( tools.get_web_str('c_name') )%>:
+		</td>
+		<td width="80%">
+			<input type="text" id="education_method_name" style="width:100%" class="inputEdit"/>
+		</td>
+	</tr>
+	<tr>
+		<td colspan="2">
+			<table width="100%" border="0" cellspacing="0" cellpadding="0" class="activator">
+				<tr>
+					<TD ALIGN="CENTER" class="activator">
+						<INPUT TYPE="button" ID="ok" VALUE="<%=XmlAttrEncode( tools.get_web_str('c_create') )%>" onClick="processChecked(true);" CLASS="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';">
+						<INPUT TYPE="button" ID="cancel" VALUE="<%=XmlAttrEncode( tools.get_web_str('c_cancel') )%>" onClick="processChecked(false);" CLASS="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';">
+					</TD>
+				</tr>
+			</table>
+		</td>
+	</tr>
+</table>
+</body>
+</HTML>

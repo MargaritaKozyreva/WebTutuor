@@ -1,0 +1,27 @@
+<%
+Server.Execute( "include/sid_access_init.html" );
+
+try
+{
+	if ( curUser.access.access_role != 'admin' && curObject.person_id != curUserID )
+		throw '_crack_fuck_';
+}
+catch ( ehuu )
+{
+	Server.Execute( "view_access_panel.html" );
+	Cancel();
+}
+
+arrFields = Array('code','name','type','comment');
+for ( sFieldElem in arrFields )
+	if ( Request.Query.HasProperty( sFieldElem ) )
+		curObject.Child( sFieldElem ).Value = Request.Query.GetProperty( sFieldElem )
+
+curObjectDoc.Save();
+
+if ( Request.Query.HasProperty( 'ajax' ) && Request.Query.ajax == '1' )
+{
+}
+else
+	Response.Redirect( 'view_doc.html?mode=resource&doc_id=' + curDocID + '&object_id=' + curObjectID );
+%>

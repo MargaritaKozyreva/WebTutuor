@@ -1,0 +1,150 @@
+<HTML>
+<%Server.Execute( "include/head.html" )%>
+
+<%
+	curCourseID = Int( Request.QueryString.course_id );
+	curCourse = OpenDoc( UrlFromDocID( curCourseID ) ).TopElem;
+	
+	objectID = Int( Request.QueryString.object_id );
+	curLearning = OpenDoc( UrlFromDocID( objectID ) ).TopElem;
+%>
+
+<SCRIPT LANGUAGE="JAVASCRIPT">
+<!--
+	function course_launch( _width, _height, _index )
+	{
+		if( screen.availWidth < _width || screen.availHeight < _height )
+			alert("<%=tools.get_web_str('vcplb_message1')%>");
+			
+		window.parent.location.href = 'course_launch.html?course_id=<%=curCourseID%>&object_id=<%=objectID%>&sid=<%=tools.get_sum_sid( curCourseID )%>' + ( _index != "" ? "&part_code=" + _index : "" );
+	}
+	
+	function res(  )
+	{	
+		_div = document.getElementById("PartList");
+		_div.style.height = parseInt(document.body.clientHeight,10) - 30;
+	}
+//-->
+</SCRIPT>
+
+<BODY onLoad="res();" onResize="res();">
+
+
+<DIV CLASS="headerText" STYLE="position:relative; margin-top:5px;margin-bottom:5px;margin-left:5px;"><%=tools.get_web_str('vcs_struct')%></DIV> 
+
+<DIV ID="PartList" STYLE=" position:absolute; top:30px; width:100%; height:100%; overflow-y:auto;">
+<TABLE WIDTH="100%"  border="0" CELLSPACING="0" CELLPADDING="0"> 
+	<TR> 
+		<TD CLASS="tableHeaderNoText"><IMG SRC="pics/1blank.gif" WIDTH="1" HEIGHT="1" /></TD> 
+	</TR> 
+
+
+<%	
+	var counter = 0;
+	var _indent = '&nbsp;&nbsp;&nbsp;&nbsp;';
+	
+	function put_doc_xml( _code, _indent_str )
+	{
+		var _child_part_array = ArraySelect( curCourse.parts, 'parent_part_code == _code' );
+		var _len = _child_part_array.length;
+		var b = 0;
+		
+		for ( b = 0; b < _len; b++ )
+		{
+			_part_course = _child_part_array[b];			
+			_class = counter++ % 2 ? 'tableRowEven' : 'tableRowOdd';
+			
+%>
+	<TR VALIGN="top">
+		<TD CLASS="<%=_class%>">
+ 
+		<TABLE WIDTH="100%"  border="0" CELLSPACING="0" CELLPADDING="0">
+			<TR VALIGN="top">
+<%
+		if ( _indent_str != '' )
+		{
+%>	  
+				<TD CLASS="<%=_class%>" nowrap="nowrap"><%=_indent_str%></TD>
+<%
+		}
+%>		
+				<TD CLASS="<%=_class%>" nowrap="nowrap">        
+         <%			
+			switch ( _part_course.type )
+			{
+				case 'lesson':
+%>
+					<IMG SRC="pics/lesson.gif" WIDTH="12" HEIGHT="10" BORDER="0"/>             
+<%
+				break;
+				case 'test':
+%>
+					<IMG SRC="pics/test.gif" WIDTH="13" HEIGHT="11" BORDER="0"/>
+<%	
+				break;
+				default:
+%>
+					<IMG SRC="pics/folder.gif" WIDTH="13" HEIGHT="11" BORDER="0"/>
+<%
+		}
+%>
+				</TD>
+				<TD CLASS="<%=_class%>" WIDTH="100%">
+<%
+		_text_flag = '';
+		for ( _par_part in _part_course.completed_parent_parts )
+		{
+			_cur_part = _par_part.part_code.ForeignElem;
+			_st = curLearning.parts[ _cur_part.ChildIndex ].state_id;
+			if ( _st != 2 && _st != 4 )
+				_text_flag = _text_flag + '- ' + _cur_part.name + '\\n';
+		}
+
+		_index = _part_course.code;
+		if ( _part_course.type == 'folder' )
+		{
+%>
+				<%=tools_web.get_cur_lng_name( _part_course.name )%>
+<%		
+		}
+		else
+		{
+		if ( _text_flag == '' )
+		{
+%>			
+				<A HREF="#" onClick="course_launch( <%=curCourse.Width( _index )%>, <%=curCourse.Height( _index )%>, <%=_index%> ); return false;"><%=tools_web.get_cur_lng_name( _part_course.name )%></A>
+<%
+		}
+		else
+		{
+%>
+				<A HREF="#" onClick="alert( '<%=tools.get_web_str('vcplb_message2')%><%=_text_flag%>' ); return false;"><%=_part_course.name%></A>
+<%
+		}
+		}
+%>		
+		
+			</TD>
+			</TR>
+		</TABLE>
+		
+		</TD>	
+<%		
+		put_doc_xml( _part_course.code, _indent_str + _indent );
+			
+		}
+	}
+	
+	
+	put_doc_xml( '', '' );
+%>
+
+	<TR> 
+		<TD CLASS="tableFooter"><IMG SRC="pics/1blank.gif" WIDTH="1" HEIGHT="1" /></TD> 
+	</TR> 
+</TABLE>
+</DIV>				
+
+	
+</BODY>
+</HTML>

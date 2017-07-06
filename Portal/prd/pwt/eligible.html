@@ -1,0 +1,92 @@
+<%
+Response.WriteMode ='single';
+
+if ( ! global_settings.disp_pwt )
+{
+	throw 'PWT disabled.';
+	Cancel();
+}
+//alert(1111111)
+
+curHost = Request.UrlHost.toLowerCase();
+curHostSettings = global_settings.settings.hosts.GetOptChildByKey( curHost );
+if ( curHostSettings == undefined )
+	curHostSettings = global_settings.settings;
+isNtlmAuth = curHostSettings.portal_auth_type == 'ntlm';
+
+if ( Request.AuthLogin == '' )
+{
+	Response.SetWrongAuth( isNtlmAuth ? 'basic=0;ntlm=1' : '' );
+	Cancel();
+	//throw 'invalid login';
+}
+
+_report = 'User: ' + Request.AuthLogin + '. ';
+query =  XQuery( "for $elem in collaborators where $elem/lowercase_login = " + XQueryLiteral( StrLowerCase( Request.AuthLogin ) ) + " return $elem" );
+	
+if ( ArrayCount( query ) == 0 )
+{
+	LogEvent( 'pwt', 'ERROR Eligible. User not exists. ' + _report );
+	Response.SetWrongAuth( isNtlmAuth ? 'basic=0;ntlm=1' : '' );
+	Cancel();
+	//throw 'User not found.';
+}
+else
+{
+	curUserID = ArrayFirstElem( query ).id;
+	curUser = OpenDoc( UrlFromDocID( curUserID ) ).TopElem;
+
+	try
+	{	
+		if( ! isNtlmAuth && curUser.password != tools.make_password( Request.AuthPassword, false ) )
+		{
+			LogEvent( 'pwt', 'ERROR Eligible. Wrong password. ' + _report );
+			Response.SetWrongAuth( isNtlmAuth ? 'basic=0;ntlm=1' : '' );
+			Cancel();
+			//throw 'Invalid password.';
+		}
+	
+		content_id = Request.QueryString.contentid;
+		eligible_param = Request.QueryString.eligible_param;
+		_report = _report + 'ContentID: ' + content_id + '. ';
+		
+		_xquery = XQuery( "for $elem in courses where $elem/code = " + XQueryLiteral( String( content_id ) ) + " and $elem/pwt_disp = true() return $elem" );
+		if ( ArrayCount( _xquery ) == 0 )
+		{
+			LogEvent( 'pwt', 'ERROR Eligible. Content not available. ' + _report );
+			throw 'Content not available.';
+			Cancel();
+		}
+		
+		xml_data = LoadUrlData( 'x-local://' + DefaultDb + '/encrypt/' + content_id + '.xml' );
+		xmlDoc = OpenDocFromStr( xml_data ).TopElem;
+		xmlDoc.AddAttr( 'lifetime', '2592000' );
+		
+		encrypt_lib = new DllWrapper( AppDirectoryPath() + '\\wft_ondemand' + ( System.IsX64 ? '_64' : '' ) + '.dll' );
+		
+		encrypt_lib.RegisterProc( 'Encrypt_AsymmetricXML', 'string; cdecl', 'string', 'string', 'integer', 'integer; out' );
+		encrypt_lib.RegisterProc( 'Encrypt_FreeHandle', 'integer; cdecl', 'integer' );
+		
+		content_handle = CreateElem( 'x-local://wtv/wtv_position.xmd', 'position.org_id' );
+		content_handle.Value = 0;
+		
+		content_len = 4096;
+		content_xml = encrypt_lib.Encrypt_AsymmetricXML( eligible_param, xmlDoc.Xml, content_len, content_handle );
+//alert(content_xml);
+
+//alert(StrLen( content_xml ));
+		Response.AddHeader( "Content-Length", StrLen( content_xml ) );
+		Response.Write( content_xml );
+		
+		LogEvent( 'pwt', 'COMPLETE Eligible. ' + _report );
+		
+		if ( content_handle != 0 )
+			encrypt_lib.Encrypt_FreeHandle( content_handle );
+	}
+	catch ( err )
+	{
+		if ( ! IsCancelError( err ) )
+			LogEvent( 'pwt', 'ERROR Eligible. ' + _report + err );
+	}
+}
+%>

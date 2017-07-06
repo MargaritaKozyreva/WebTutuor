@@ -1,0 +1,12 @@
+<%
+Server.Execute( "include/access_init.html" );
+
+/*	resumeDoc = OpenNewDoc( 'x-local://wtv/wtv_resume.xmd' );
+		
+	resumeDoc.TopElem.person_id = curUserID;
+	resumeDoc.BindToDb( DefaultDb );
+	resumeDoc.Save();*/
+
+	Response.Redirect( "view_doc.html?mode=resume&resume_id=" + '' + "&doc_id=" + Request.Form.doc_id);
+
+%>

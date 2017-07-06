@@ -1,0 +1,491 @@
+<br>
+	
+<%
+	try
+	{
+		_action = Request.Form.action;
+	}
+	catch ( t )
+	{
+		_action = '0';
+	}	
+	
+	try
+	{
+		_sex = Request.Form.sex;
+	}
+	catch ( t )
+	{
+		_sex = '';
+	}
+	
+	try
+	{
+		_family_status = Request.Form.family_status;
+	}
+	catch ( t )
+	{
+		_family_status = '';
+	}
+	
+	try
+	{
+		_subdivision_id = Request.Form.subdivision_id;
+	}
+	catch ( t )
+	{
+		_subdivision_id = '';
+	}
+	
+	try
+	{
+		_age = Request.Form.age;
+	}
+	catch ( t )
+	{
+		_age = '';
+	}
+	
+	try
+	{
+		_educ_type_id = Request.Form.educ_type_id;
+	}
+	catch ( t )
+	{
+		_educ_type_id = '';
+	}
+	
+	try
+	{
+		_profession_area_id = Request.Form.profession_area_id;
+	}
+	catch ( t )
+	{
+		_profession_area_id = '';
+	}
+	
+	try
+	{
+		_lng_id = Request.Form.lng_id;
+	}
+	catch ( t )
+	{
+		_lng_id = '';
+	}	
+	
+	curPositionID = null;
+	if ( curUser.position_id != null )
+	{
+		curPositionID = curUser.position_id;
+	}
+	else
+	{
+		_position_array = XQuery( "for $obj in positions where $obj/basic_collaborator_id = " + curUserID + " return $obj" );
+		curPositionID = ( ArrayCount( _position_array ) > 0 ? ArrayFirstElem( _position_array ).id : null );
+	}
+	
+	if ( curPositionID == null )
+	{
+		curPosition = null;
+		_is_boss = false;
+	}
+	else
+	{
+		try
+		{
+			curPosition = OpenDoc( UrlFromDocID( curPositionID ) ).TopElem;
+			_is_boss = curPosition.is_boss;
+		}
+		catch (err)
+		{
+			_is_boss = false;
+		}
+	}
+	
+	_collaborators = Array();
+	_coll_counter = 0;
+	
+	_positions = Array();
+	_pos_counter = 0;
+/*	
+	function sub_nodes( _p_id )
+	{
+		var _subs =  XQuery( "for $obj in subs where $obj/parent_id = " + _p_id + " return $obj" );
+		var _sub;
+		
+		for ( _sub in _subs )
+		{
+			if ( _sub.type == 'position' && _sub.basic_collaborator_id.HasValue )
+				try
+				{
+					_collaborators[ _coll_counter ] = _sub.basic_collaborator_id.ForeignElem;
+					_coll_counter++;
+				}
+				catch ( ff )
+				{
+				}
+				
+			sub_nodes( _sub.id );
+		}
+	}
+*/	
+
+%>
+	
+<script language="JavaScript">
+function do_submit()
+{
+	document.stat_form.submit();
+}
+</script>
+
+	<%Server.Execute( 'view_text_area.html' )%>
+		
+	<form action="view_doc.html?mode=search_resume" name="stat_form" method="POST">
+	<input type="HIDDEN" name="doc_id" value="<%=curDocID%>">
+	<input type="HIDDEN" name="action" value="1">
+	
+	    <table width="100%" cellspacing="4" cellpadding="0">
+          <tr>
+		  	<td>
+			
+			<table width="100%" cellspacing="0" cellpadding="4" class="tableBorder">
+
+					<tr> 
+                        <td width="180" align="RIGHT"><b><%=tools.get_web_str('c_subd')%>:</b></td>
+                        <td align="LEFT"><select name="subdivision_id" id="subdivision_ids">
+                            <option SELECTED value=""><%=tools.get_web_str('c_all')%></option>
+<%	
+
+	function node_subdivision( _p_id, _indent )
+	{
+		var _cur_sub_array = XQuery( "for $obj in subs where $obj/parent_id = " + ( _p_id == null ? 'null()' : _p_id ) + " order by $obj/type, $obj/name return $obj" );
+		var _cur_sub;
+		
+		for ( _cur_sub in _cur_sub_array )
+		{
+			if ( _cur_sub.type != 'position' )
+			{
+%>
+			<option value="<%=_cur_sub.id%>"><%=( _indent + _cur_sub.name )%></option>
+<%
+			}	
+			
+			if ( _cur_sub.type == 'position' && _cur_sub.basic_collaborator_id.HasValue && ( _subdivision_id == '' || Int( _subdivision_id ) == _cur_sub.parent_id ) )
+			{
+				_positions[ _pos_counter ] = _cur_sub;
+				_pos_counter++;
+			}
+		
+			node_subdivision( _cur_sub.id, _indent + '&nbsp;&nbsp;&nbsp;&nbsp;' );
+		}
+	}
+	
+	if ( curUser.access.access_role == 'admin' )
+	{
+		node_subdivision( null, '' );
+	}
+	else
+		if ( _is_boss )
+		{
+			if ( curPosition.org_id.HasValue && ! curPosition.parent_object_id.HasValue )
+			{
+%>
+				<option value="<%=curPosition.org_id%>"><%=curPosition.org_id.ForeignElem.disp_name%></option>
+<%
+				node_subdivision( curPosition.org_id, '&nbsp;&nbsp;&nbsp;&nbsp;' );
+			}
+			else
+			{
+				if ( curPosition.parent_object_id != null )
+				{
+					curParentObject = OpenDoc( UrlFromDocID( curPosition.parent_object_id ) ).TopElem;
+%>
+				<option value="<%=curPosition.parent_object_id%>"><%=tools_web.get_cur_lng_name( curParentObject.name )%></option>
+<%			
+					node_subdivision( curPosition.parent_object_id, '&nbsp;&nbsp;&nbsp;&nbsp;' );
+				}
+			}
+		}
+		else
+		{
+			node_subdivision( 1111111, '' );
+		}
+	
+%>                          </select>
+<script language="JavaScript">
+selcur=document.forms['stat_form'].subdivision_id;
+for (i=0;i<selcur.options.length;i++)
+    if (selcur.options[i].value=="<%=_subdivision_id%>")
+        selcur.selectedIndex=i;
+</script> 
+                        </td>
+                      </tr>
+					  
+					  <tr> 
+                        <td width="180" align="RIGHT"><b><%=tools_web.get_web_str('vpb_sex')%>:</b></td>
+                        <td align="LEFT"> 
+						<select name="sex" id="sexs">
+                            <option SELECTED value=""><%=tools.get_web_str('c_all')%></option>
+
+                            <option value="m"><%=tools_web.get_web_str('vpb_m')%></option>
+							<option value="w"><%=tools_web.get_web_str('vpb_w')%></option>
+                         </select> 
+<script language="JavaScript">
+selcur=document.forms['stat_form'].sex;
+for (i=0;i<selcur.options.length;i++)
+    if (selcur.options[i].value=="<%=_sex%>")
+        selcur.selectedIndex=i;
+</script>
+					</td>
+                      </tr>
+					  <tr> 
+                        <td width="180" align="RIGHT"><b><%=tools_web.get_web_str('vrb_family_status')%>:</b></td>
+                        <td align="LEFT"> <select name="family_status" id="family_statuss">
+                            <option SELECTED value=""><%=tools.get_web_str('c_all')%></option>
+							<option SELECTED value="married"><%=tools_web.get_web_str('vrb_married')%></option>
+							<option SELECTED value="not_married"><%=tools_web.get_web_str('vrb_unmarried')%></option>
+							<option SELECTED value="divorced"><%=tools_web.get_web_str('vrb_divorcee')%></option>
+                          </select> 
+<script language="JavaScript">
+selcur=document.forms['stat_form'].family_status;
+for (i=0;i<selcur.options.length;i++)
+    if (selcur.options[i].value=="<%=_family_status%>")
+        selcur.selectedIndex=i;
+</script>
+					</td>
+                      </tr>
+					  
+					  <tr> 
+                        <td width="180" align="RIGHT" valign="TOP"><b><%=tools_web.get_web_str('vrb_education')%>:</b></td>
+                        <td align="LEFT">
+		<select name="educ_type_id">
+			<option SELECTED value=""><%=tools.get_web_str('c_all')%></option>
+<%
+	for ( _elem in common.expended_educ_types )
+	{
+%>		
+			<option value="<%=_elem.id%>" SELECTED><%=_elem.name%></option>
+<%
+	}
+%>
+         </select>
+<script language="JavaScript">
+selcur=document.forms['stat_form'].educ_type_id;
+for (i=0;i<selcur.options.length;i++) {
+    if (selcur.options[i].value=="<%=_educ_type_id%>") {
+        selcur.selectedIndex=i;
+    }
+	
+if (selcur.selectedIndex==-1) {selcur.selectedIndex=0;}
+}
+</script>		 
+						</td>
+                      </tr>
+
+					  <tr> 
+                        <td width="180" align="RIGHT" valign="TOP"><b><%=tools_web.get_web_str('vrb_professional_field')%>:</b></td>
+                        <td align="LEFT">
+		<select name="profession_area_id">
+			<option SELECTED value=""><%=tools.get_web_str('c_all')%></option>
+<%
+	for ( _elem in common.professional_areas )
+	{
+%>		
+			<option value="<%=_elem.id%>" SELECTED><%=_elem.name%></option>
+<%
+	}
+%>
+         </select>
+<script language="JavaScript">
+selcur=document.forms['stat_form'].profession_area_id;
+for (i=0;i<selcur.options.length;i++) {
+    if (selcur.options[i].value=="<%=_profession_area_id%>") {
+        selcur.selectedIndex=i;
+    }
+	
+if (selcur.selectedIndex==-1) {selcur.selectedIndex=0;}
+}
+</script>		 
+						</td>
+                      </tr>
+
+					  <tr> 
+                        <td width="180" align="RIGHT" valign="TOP"><b><%=tools_web.get_web_str('vrb_lng_know')%>:</b></td>
+                        <td align="LEFT">
+		<select name="lng_id">
+			<option SELECTED value=""><%=tools.get_web_str('c_all')%></option>
+<%
+	for ( _elem in common.languages )
+	{
+%>		
+			<option value="<%=_elem.id%>" SELECTED><%=_elem.name%></option>
+<%
+	}
+%>
+         </select>
+<script language="JavaScript">
+selcur=document.forms['stat_form'].lng_id;
+for (i=0;i<selcur.options.length;i++) {
+    if (selcur.options[i].value=="<%=_lng_id%>") {
+        selcur.selectedIndex=i;
+    }
+	
+if (selcur.selectedIndex==-1) {selcur.selectedIndex=0;}
+}
+</script>		 
+						</td>
+                      </tr>					  
+                    </table>
+
+		</td>
+	</tr>
+
+	<tr>
+		<td align="CENTER">
+			<table width="100%" border="0" cellspacing="0" cellpadding="0" class="activator">
+				<td align="CENTER" class="activator">
+					<input type="button" value="<%=tools_web.get_web_str('vkpb_search')%>" onclick="do_submit();" class="inputButton" onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';">
+				</td>
+			</table>				
+		</td>
+	</tr>
+
+
+<%
+	if ( _action == '1' )
+	{
+%>	
+	<tr>
+		<td>
+		<br>
+		
+<table width="100%"  border="0" cellspacing="0" cellpadding="3">
+					<tr>
+						<td class="tableHeaderWithText"><%=tools.get_web_str('vanb_person_info')%></td>
+						<td class="tableHeaderWithText"><%=tools_web.get_web_str('vrb_professional_field')%></td>
+						<td class="tableHeaderWithText"><%=tools_web.get_web_str('vrb_standard_of_education')%></td>
+						<td class="tableHeaderWithText"><%=tools_web.get_web_str('vrb_age')%></td>
+					</tr>
+					<tr>
+						<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+					</tr>
+
+<%
+	_where_str = ( _sex == "" ? "" : " $elem/sex = '" + _sex +"'" );
+	_where_str += ( _family_status == "" ? "" : ( _where_str == '' ? '' : ' and' ) + " $elem/family_status = '" + _family_status +"'" );
+	_where_str += ( _educ_type_id == "" ? "" : ( _where_str == '' ? '' : ' and' ) + " ( MatchSome( $elem/educ_type_id, '" + _educ_type_id + "') or $elem/main_educ_type_id='" + _educ_type_id + "')" );
+	_where_str += ( _lng_id == "" ? "" : ( _where_str == '' ? '' : ' and' ) + " MatchSome($elem/lng_id,'" + _lng_id + "')");
+	_where_str += ( _profession_area_id == "" ? "" : ( _where_str == '' ? '' : ' and' ) + " $elem/profession_area_id = '" + _profession_area_id + "'" ); 
+				
+	_query = "for $elem in resumes" + ( _where_str == '' ? '' : ' where' + _where_str ) + " order by $elem/person_fullname return $elem";
+	
+	ResumeCondArray = XQuery(_query);
+
+	if ( _subdivision_id != '' )
+	{
+		personIdArray = tools.get_sub_person_ids_by_subdivision_id( _subdivision_id );
+		ResumeSubArray=Array();
+		for (_personID in personIdArray)
+		{
+			personElems=XQuery ("for $elem in resumes where $elem/person_id=" + _personID + " return $elem");
+			ResumeSubArray=ArrayUnion(ResumeSubArray,personElems);
+		}
+	}
+	else 
+	{
+		if ( curUser.access.access_role == 'admin' )
+		{
+			ResumeSubArray = XQuery("for $elem in resumes return $elem");
+		}
+		else
+			if ( _is_boss )	
+			{
+				ResumeSubArray=Array();
+				_boss_sub_id = String();
+				if ( curUser.position_id.HasValue )
+				{
+					curUserPosition = XQuery("for $elem in positions where $elem/id=" + curUser.position_id + " return $elem");
+					if ( ArrayCount( curUserPosition ) != 0 )
+					{
+						cur_subdivision = ArrayFirstElem(curUserPosition).parent_object_id;
+						cur_org_id = ArrayFirstElem(curUserPosition).org_id;
+						if ( cur_subdivision.HasValue )
+							_boss_sub_id = cur_subdivision;
+						else
+							_boss_sub_id = cur_org_id;
+					}
+				}
+
+				if ( _boss_sub_id.HasValue)
+				{
+					
+					personIdArray = tools.get_sub_person_ids_by_subdivision_id( _boss_sub_id );
+					ResumeSubArray=Array();
+					for (_personID in personIdArray)
+					{
+						//alert('_personID = ' +  _personID)
+						//alert("for $elem in resumes where $elem/person_id=" + _personID + " return $elem")
+						personElems=XQuery("for $elem in resumes where $elem/person_id=" + _personID + " return $elem");
+						ResumeSubArray=ArrayUnion(ResumeSubArray,personElems);
+					}
+				}
+			}
+			else
+				ResumeSubArray=Array();
+	}		
+
+	
+	ResultArray = Array();
+	for (_resume_cond in ResumeCondArray)
+	{
+		ResultArray=ArrayUnion(ResultArray, ArraySelect(ResumeSubArray, "id == _resume_cond.id"));
+	}
+	
+	counter = 0;
+	for ( _resume in ResultArray )
+	{	
+	
+		_class = counter++ % 2 ? 'tableRowEven' : 'tableRowOdd';
+%>
+<tr align=center>
+<td class="<%=_class%>">
+<a href="view_doc.html?mode=resume&resume_id=<%=_resume.PrimaryKey%>&doc_id=<%=curDocID%>"><%=_resume.person_fullname%> ( <%=_resume.person_position%>, <%=_resume.person_subdivision%>)</a>
+</td>
+<td class="<%=_class%>">
+		<%=_resume.profession_area%>			
+</td>
+<td class="<%=_class%>"><%=_resume.education%></td>
+<td class="<%=_class%>">
+<%=
+//DateFunc( {_resume.birth_date}, '', "(   (DateToRawSeconds(#2) -  DateToRawSeconds(#1) ) /  86400   )")
+_resume.birth_date.HasValue ? (Year(Date())-Year(_resume.birth_date)): ""
+%>
+</td>
+</tr>
+
+<%
+	}
+%>
+					<tr>
+						<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+					</tr>
+
+</table>
+				
+			
+		</td>
+	</tr>
+<%
+	}
+%>
+
+
+	</table>
+	</form>

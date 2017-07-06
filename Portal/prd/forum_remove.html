@@ -1,0 +1,57 @@
+<%
+	Server.Execute('include/user_init.html');
+	// убедимся что эту страничку пользователь может просматривать
+	if (curUser.access.access_role != 'admin') 
+	{
+		Server.Execute( "view_access_panel.html" );
+		Cancel();
+	}
+
+	if ( Request.QueryString.HasProperty( 'remove_forum_id' ) )
+	{ 
+		forumID = Int( Request.QueryString.remove_forum_id );
+        try
+        {
+            _cur_doc = OpenDoc( UrlFromDocID( curDocID ) );
+            _field = _cur_doc.TopElem.catalogs.GetChildByKey( "forum" );
+            if ( _field != null && _field != undefined)
+            {
+                 for(_obj in _field.objects)
+                {    
+                	if(_obj.object_id == forumID)
+                    {
+	                    _obj.Delete();                        
+		                _cur_doc.Save();
+                        break;
+                    }
+                }
+            }
+        }
+        catch(x){}
+		// выбираем все Темы и Топики которые ссылаються на удаляемый форум
+		// затем по очереди их удаляем, последним удаляеться сам форум. 
+		forum_entry_array = XQuery( 'for $elem in forum_entrys where $elem/forum_id = ' + forumID + ' return $elem' );
+		try
+		{
+			for ( entry in forum_entry_array ) 
+			{
+				DeleteDoc( UrlFromDocID( entry.id ) );
+			}
+			catalog = ArrayFirstElem( curDoc.catalogs );
+			catalog.objects.DeleteChilds( 'object_id == ' + forumID );
+
+			DeleteDoc( UrlFromDocID( forumID ) );
+			
+			// что бы хлама не держать удаляем из списка прочтенных не существующий форум
+			readArray = XQuery( 'for $read in forum_theme_read_by_collaborators where $read/forum_id = '+ forumID +' return $read' );
+			for ( read in readArray ) 
+				DeleteDoc( UrlFromDocID( read.id ), ! global_settings.settings.save_deleted_in_trash );
+		}
+		catch ( err )
+		{
+			alert( err );
+		}		
+
+	}
+	
+%>

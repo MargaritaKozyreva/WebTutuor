@@ -1,0 +1,137 @@
+wsPanel, TitleWindow{
+	borderThicknessLeft: 0;
+	borderThicknessRight: 0;
+	borderThicknessTop: 0;
+	borderThicknessBottom: 0;
+	shadowDistance: 0;
+	headerHeight:20;
+	headerColors: #b3b3b3, #b3b3b3;
+	borderAlpha: 100;
+}
+/*Application {
+   backgroundColor: #6291A8;
+   backgroundGradientAlphas: 0, 0;
+}
+wsPanel, TitleWindow {
+   borderThicknessLeft: 0;
+   borderThicknessTop: 0;
+   borderThicknessBottom: 0;
+   borderThicknessRight: 0;
+   headerHeight: 20;
+   headerColors: #6b89ac, #146f96;
+	shadowDistance: 0;
+	borderAlpha: 100;
+}
+.wsTitle{
+	color: #ffffff;
+   fontWeight: bold;
+}*/
+List{
+   useRollOver: false;
+   selectionColor: #99CCFF;
+   selectionDuration: 0;
+   fontFamily: Verdana;
+   fontSize: 11;
+   fontWeight: normal;
+} 
+List,DataGrid{
+   useRollOver: false;
+   selectionColor: #99CCFF;
+   selectionDuration: 0;
+} 
+Button {
+   cornerRadius: 3;
+   highlightAlphas: 0, 0;
+}
+ComboBox {
+   cornerRadius: 3;
+}
+.dateChooserStyle {
+	todayColor: #cccccc;
+	dropShadowEnabled: false;
+}
+
+
+TextInput {
+	borderStyle: solid;
+	borderColor: #7d99ac;
+}
+/*Panel {
+	headerHeight: 			26;
+	roundedBottomCorners: 	true;
+	borderThicknessTop: 	0;
+	borderThicknessBottom: 	3;
+	borderThicknessLeft: 	3;
+	borderThicknessRight: 	3;
+	borderAlpha: 			1.0;
+	color:					#666666;
+	fontSize:				10;
+	titleStyleName: 		"mypanelTitle";
+}
+.mypanelTitle {
+	fontFamily: Arial;
+	fontSize: 	11;
+	color:		#ffffff;
+	fontWeight: bold;
+}
+.menuPanel {
+	headerHeight:			0;
+	borderStyle: 			solid;
+	borderColor: 			#666666;
+	borderThickness: 		1;
+	borderSides: 			bottom;
+	cornerRadius: 			0;
+	backgroundColor: 		#efefef;
+	dropShadowEnabled: 		false;
+}*/
+.menuDownButton {
+	/*upSkin:        Embed('assets/img/menuDownButton.png');
+	overSkin:      Embed('assets/img/menuDownButton.png');
+	downSkin:      Embed('assets/img/menuDownButton.png');
+	disabledSkin:  Embed('assets/img/menuDownButton.png');*/
+}
+.menuUpButton {
+	/*upSkin:        Embed('assets/img/menuUpButton.png');
+	overSkin:      Embed('assets/img/menuUpButton.png');
+	downSkin:      Embed('assets/img/menuUpButton.png');
+	disabledSkin:  Embed('assets/img/menuUpButton.png');*/
+}
+.closeButton {
+/*	upSkin:        Embed('vclass/images/panel/closeButton.png');
+	overSkin:      Embed('vclass/images/panel/closeButton.png');
+	downSkin:      Embed('vclass/images/panel/closeButton.png');
+	disabledSkin:  Embed('vclass/images/panel/closeButton.png');*/
+}
+.increaseButton {
+/*	upSkin:        Embed('vclass/images/panel/increaseButton.png');
+	overSkin:      Embed('vclass/images/panel/increaseButton.png');
+	downSkin:      Embed('vclass/images/panel/increaseButton.png');
+	disabledSkin:  Embed('vclass/images/panel/increaseButton.png');*/
+}
+.decreaseButton {
+/*	upSkin:        Embed('vclass/images/panel/decreaseButton.png');
+	overSkin:      Embed('vclass/images/panel/decreaseButton.png');
+	downSkin:      Embed('vclass/images/panel/decreaseButton.png');
+	disabledSkin:  Embed('vclass/images/panel/decreaseButton.png');*/
+}
+.minimizeButton {
+/*	upSkin:        Embed('vclass/images/panel/minimizeButton.png');
+	overSkin:      Embed('vclass/images/panel/minimizeButton.png');
+	downSkin:      Embed('vclass/images/panel/minimizeButton.png');
+	disabledSkin:  Embed('vclass/images/panel/minimizeButton.png');*/
+}
+.resizeHandler {
+/*	upSkin:        Embed('vclass/images/panel/resizeHandler.png');
+	overSkin:      Embed('vclass/images/panel/resizeHandler.png');
+	downSkin:      Embed('vclass/images/panel/resizeHandler.png');
+	disabledSkin:  Embed('vclass/images/panel/resizeHandler.png');*/
+}
+.coloredTab {
+	backgroundColor: #FF7F30;
+	color: #FFFFFF;
+}
+.defaultWindow
+{
+	backgroundImage: 'vclass/images/logo.png';
+	/*paddingTop: 430;*/
+}

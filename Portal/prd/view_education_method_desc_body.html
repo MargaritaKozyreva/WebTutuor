@@ -1,0 +1,14 @@
+<%
+	if ( education_methodDoc.desc.HasValue )
+	{
+%>	
+			<TABLE width="100%" border="0" cellspacing="0" cellpadding="10">
+				<TR class="description">
+					<TD>
+					<%=tools_web.get_web_desc( education_methodDoc.desc, UrlFromDocID( education_methodID ), 'education_method.desc' ) ;%>
+					</TD>
+				</TR>
+			</TABLE>
+<%
+	}
+%>

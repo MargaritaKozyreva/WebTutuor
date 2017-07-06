@@ -1,0 +1,113 @@
+<%Server.Execute( "view_desc.html" )%>	
+
+<div class="headerText" style="position:relative; margin-top:10px;margin-bottom:5px;margin-left:5px;"><%=tools.get_web_str('vcpb_title')%></div> 
+<table width="100%"  border="0" cellspacing="0" cellpadding="3"> 
+	<tr>
+		<td class="tableHeaderWithText"><%=tools.get_web_str('c_name')%></td>
+		<td class="tableHeaderWithText" width="100"><%=tools.get_web_str('c_edu_prog')%></td>
+		<td class="tableHeaderWithText" width="100"><%=tools.get_web_str('c_edu_method')%></td>
+		<td class="tableHeaderWithText" width="50"><%=tools.get_web_str('c_hour_duration')%></td>
+		<td class="tableHeaderWithText" width="50"><%=tools.get_web_str('c_person_num')%></td>
+		<td class="tableHeaderWithText" width="100"><%=tools.get_web_str('c_cost')%></td>
+	</tr>
+	<tr>
+		<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+		<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+		<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+		<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+		<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+		<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+	</tr>
+
+<%
+	var counter = 0;
+	var _indent = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
+	
+	function put_doc_xml( _id, _indent_str )
+	{
+		var _child_part_array = ArraySelect( curObject.programs, 'parent_progpam_id == _id' );
+		var _len = _child_part_array.length;
+		var b = 0;
+		
+		for ( b = 0; b < _len; b++ )
+		{
+			_part_course = _child_part_array[b];			
+			_class = counter++ % 2 ? 'tableRowEven' : 'tableRowOdd';
+			
+%>
+	<tr>
+		<td class="<%=_class%>">
+ 
+		<table width="100%"  border="0" cellspacing="0" cellpadding="0">
+			<tr>
+				<td class="<%=_class%>" nowrap="nowrap"><%=_indent_str%></td>
+				<td class="<%=_class%>" nowrap="nowrap"><img src="pics/folder.gif" width="13" height="11" border="0"/></td>
+				<td class="<%=_class%>" width="100%"><%=tools_web.get_cur_lng_name( _part_course.name )%></td>
+			</tr>
+		</table>
+	
+		</td>
+ 
+		<td class="<%=_class%>">
+<%
+	try
+	{
+		if ( _part_course.education_program_id != null )
+		{
+			_cur_education_program = _part_course.education_program_id.ForeignElem;
+%>
+			<a href="view_doc.html?mode=education_program&doc_id=<%=curDocID%>&object_id=<%=_part_course.education_program_id%>" title="<%=tools.get_web_str('vcpb_tip_prog')%>"><%=tools_web.get_cur_lng_name( _cur_education_program.name )%></a>
+<%
+		}		
+	}
+	catch ( ll )
+	{
+%>
+			<font color="#FF0033"><%=tools.get_web_str('c_deleted')%></font>
+<%
+	}
+%>		 
+		</td>
+		<td class="<%=_class%>">
+<%
+	try
+	{
+		if ( _part_course.education_method_id != null )
+		{
+			_cur_education_method = _part_course.education_method_id.ForeignElem;
+%>
+			<a href="view_doc.html?mode=education_method&doc_id=<%=curDocID%>&object_id=<%=_part_course.education_method_id%>" title="<%=tools.get_web_str('c_tip_edu_method')%>"><%=tools_web.get_cur_lng_name( _cur_education_method.name )%></a>
+<%
+		}		
+	}
+	catch ( ll )
+	{
+%>
+			<font color="#FF0033"><%=tools.get_web_str('c_deleted')%></font>
+<%
+	}
+%>		 
+		</td>	
+		<td class="<%=_class%>"><%=_part_course.duration%></td>
+		<td class="<%=_class%>"><%=_part_course.person_num%></td>
+		<td class="<%=_class%>"><%=( _part_course.cost != null ? _part_course.cost + ' ' + curLngCommon.cost_types.GetChildByKey( _part_course.cost_type ).name : '' )%></td>
+
+<%		
+		put_doc_xml( _part_course.id, _indent_str + _indent );
+			
+		}
+	}
+	
+	
+	put_doc_xml( null, '' );
+%>
+
+	<tr> 
+		<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td> 
+		<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td> 
+		<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td> 
+		<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td> 
+		<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+		<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td> 
+	</tr> 
+</table>

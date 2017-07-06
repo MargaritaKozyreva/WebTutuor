@@ -1,0 +1,45 @@
+<%Server.Execute( "include/user_init.html" )%>
+
+<link href="style.css" rel="stylesheet" type="text/css"/>
+<table width="100%" border="0" cellspacing="0" cellpadding="3">
+<tr> 
+	<td>
+<%
+try
+{
+	curDocID = null;
+	if ( global_settings.settings.disp_wellcome_screen )
+	{
+		docArray = XQuery( "for $elem in documents where $elem/code = '" + tools.get_web_str('c_doc_wellcome_screen') + "' return $elem" );
+		if ( ArrayCount( docArray ) != 0 )
+		{
+			curDocID = ArrayFirstElem( docArray ).id;
+			curDoc = OpenDoc( UrlFromDocID( curDocID ) ).TopElem;
+			Server.Execute( "view_text_area.html" );
+		}
+	}
+}
+catch ( err )
+{
+	alert( err );
+%>
+<FONT COLOR="#FF0033"><%=tools.get_web_str('c_deleted')%></FONT>
+<%
+}
+%>
+	</td>
+</tr>
+<tr>
+	<td>
+	
+	<table width="100%" border="0" cellspacing="0" cellpadding="0" class="activator">
+		<tr>
+			<TD ALIGN="CENTER" class="activator">
+				<input type="button" value="<%=tools.get_web_str('vlpb_next')%>" onclick="document.location.href='enter.html?sid=<%=tools.get_sum_sid( curUserID )%>'" class="inputButton" onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';"/>
+			</TD>
+		</tr> 
+	</table>
+	
+	</td>
+</tr>
+</table>

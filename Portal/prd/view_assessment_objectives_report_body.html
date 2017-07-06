@@ -1,0 +1,315 @@
+<%
+
+	/*
+		ѕараметр detailed:
+			detailed = 1 - отчет по компетенци€м в разрезе подразделений и сотрудников по рол€м.
+			detailed = expanded - отчет по компетенци€м и индикаторам по рол€м со среднеквадратичным отклонением
+			detailed = ? - отчет по компетенци€м и цел€м
+	*/
+
+	_curAssessmentAppraise = undefined;
+	_curAssessmentAppraiseID = "";
+	
+    Session.excel_html = "";
+	
+	if (Request.QueryString.HasProperty("assessment_appraise_id") && Request.QueryString.assessment_appraise_id != "")
+	{
+		try
+		{
+			_curAssessmentAppraise = OpenDoc(UrlFromDocID( Int( Request.QueryString.assessment_appraise_id ))).TopElem;
+			_curAssessmentAppraiseID = Request.QueryString.assessment_appraise_id;
+		}
+		catch(_opa_)
+		{
+			_curAssessmentAppraiseID = "";
+		}
+	}
+	
+	_is_detailed = "";
+    if (Request.QueryString.HasProperty("detailed"))
+    	_is_detailed = Request.QueryString.GetProperty("detailed");
+	
+	
+	/*
+		»сполн€емый код - беретс€ из описани€ документа, который вызывает отчет (curDoc)
+	
+		#REG_EVAL_CODE
+			регул€рно выполн€емый код на каждого оцениваемого при результате по подразделению.
+		#END REG_EVAL_CODE
+	
+		#REG_EVAL_CODE
+			код, выполн€ющийс€ в самом конце перед отображением, при результате по подразделению.
+		#END REG_EVAL_CODE
+	
+	
+		#PERSON_EVAL_CODE
+			код, выполн€ющийс€ в самом конце перед отображением по сотруднику
+		#END PERSON_EVAL_CODE
+		
+		√лобальные переменые:
+			RESULT_ARRAY - пустой массив.
+			RESULT_STRING - ѕуста€ строка, котора€ будет напечатана на форме в конце.
+			TO - частное суммы оценок целей от суммы весов целей
+			TC - результат оценки по компетенци€м (поле overall)
+			
+	*/
+	
+	
+	
+	
+	
+%>
+
+
+
+<table width="100%" cellspacing="5" cellpadding="4" class="tableBorder" height="50px">
+<tr valign="middle">
+	<td style="font-weight:bold; font-size:larger" width="100px">
+		<%=tools_web.get_web_str("vaasb_assessment_appraises")%>
+	</td>
+	<td style="font-size:larger; font-weight:lighter;">
+		<select id="assessment_selector" onchange="window.location.href = 'view_doc.html?mode=<%=curMode%>&doc_id=<%=curDocID%>&assessment_appraise_id=' + this.value <%=(_is_detailed != "" ? " + '&detailed=" + _is_detailed + "'" : "")%>">
+			<option value=""> - </option>
+<%
+		for ( _assessment_appraise in XQuery( 'for $assessment_appraise in assessment_appraises where $assessment_appraise/is_model = false() and $assessment_appraise/web_display = true() order by $assessment_appraise/name return $assessment_appraise' ) )
+		{
+			Response.Write("<option value='" + _assessment_appraise.id + "' " + (_curAssessmentAppraiseID != "" && Int(_curAssessmentAppraiseID) == _assessment_appraise.id ? "selected" : "") + ">" + _assessment_appraise.name + "</option>");
+		}
+%>
+		</select>
+	</td>
+</tr>
+</table>
+
+
+<%
+	if (_curAssessmentAppraise != undefined)
+	{
+%>
+
+<script src="scripts\tree\ua000000.js"></script>
+<script src="scripts\tree\ftiens40.js"></script>
+
+<script language="javascript">
+
+function daddy_plusplus(_object)
+{
+	while (_object.parentObj)
+	{
+		_object.total_sum = parseInt(_object.total_sum) + 1;
+		_object = _object.parentObj;
+	}
+}
+
+function paint_sum(_object)
+{	
+	if(_object.total_sum)
+		_object.desc = _object.desc + "&nbsp;<b>[" + _object.total_sum + "]</b>";
+	
+	if(_object.children)
+	for (var _i = 0; _i < _object.children.length; _i++)
+	{
+		paint_sum(_object.children[_i]);
+	}	
+}
+
+
+USETEXTLINKS = 1;
+STARTALLOPEN = 0;
+USEFRAMES = 0;
+USEICONS = 0;
+WRAPTEXT = 1;
+PRESERVESTATE = 1;
+ICONPATH = "scripts/tree/";
+
+foldersTree = gFld("<b><%=tools_web.get_web_str("ass_report_title")%></b>", 'javascript:undefined');
+
+<%
+
+var subs_var = "";
+var orgs_var = "";
+
+
+
+function add_org(_org, _html)
+{
+	if (StrContains(orgs_var, _org.id) == false)
+	{
+		Response.Write('var org' + _org.id +' = insFld(foldersTree, gFld("'+HtmlEncode(_org.name) + _html +'", "javascript:undefined")); \n');
+		Response.Write('org' + _org.id + '.total_sum = 0;\n');
+		orgs_var = orgs_var + _org.id;
+	}
+}
+
+
+function add_sub(_sub, _html)
+{
+	if (StrContains(subs_var, _sub.id) == false)
+	{
+		_parent_object = _sub.parent_object_id.OptForeignElem;
+		if (_parent_object != undefined)
+		{
+			add_sub(_sub.parent_object_id.ForeignElem, "");
+			_parent = 'sub' + _sub.parent_object_id;
+		}
+		else if (_sub.org_id.HasValue && _sub.org_id.OptForeignElem != undefined)
+		{
+			add_org(_sub.org_id.ForeignElem, "");
+			_parent = 'org' + _sub.org_id;
+		}
+		else
+		{
+			_parent = 'foldersTree';
+		}
+		
+		_href = "view_doc.html?mode=" + curMode + "&doc_id=" + curDocID + "&assessment_appraise_id=" + _curAssessmentAppraiseID + "&subdivision_id=" +_sub.PrimaryKey + (_is_detailed != "" ? "&detailed=" + _is_detailed:"");
+		
+		Response.Write('var sub' + _sub.id +' = insFld( ' + _parent + ', gFld("'+HtmlEncode(_sub.name)+ _html +'", "' + _href + '")); \n');
+		
+		Response.Write('sub' + _sub.id + '.total_sum = 0;\n');
+		
+		subs_var = subs_var + _sub.id + ",";
+	}
+}
+
+
+function add_position(_position, _html)
+{
+	_parent_object = _position.parent_object_id.OptForeignElem;
+	if (_parent_object != undefined)
+	{
+		add_sub(_parent_object, "");
+		_parent = 'sub' + _position.parent_object_id;
+	}
+	else if (_position.org_id.HasValue && _position.org_id.OptForeignElem != undefined)
+	{
+		add_org(_position.org_id.ForeignElem, "");
+		_parent = 'org' + _position.org_id;
+	}	
+	else
+	{
+		_parent = 'foldersTree';
+	}
+	
+	Response.Write("insDoc( " + _parent + ", gLnk('S', '<b>" + _position.basic_collaborator_fullname + _html + "</b>' , '" + tools_web.get_url_protocol( Request.Url ) + Request.UrlHost + UrlPath( Request.Url ) + "?mode=" + curMode + "&doc_id=" + curDocID + "&assessment_appraise_id=" + _curAssessmentAppraiseID + "&person_id=" + _position.basic_collaborator_id + (_is_detailed != "" ? "&detailed=" + _is_detailed : "") + "'));\n");
+	Response.Write("daddy_plusplus(" + _parent+ ");\n");
+	
+}
+
+
+if (curUser.access.access_role != "admin" && curUser.access.access_role != "hr")
+{
+		_posit = curUser.position_id.OptForeignElem
+		
+		if ( _posit != undefined)
+		{
+			if ( _posit.is_boss)
+			{
+				_elems_full = tools.get_sub_hierarchy(curUser.position_id.ForeignElem.parent_object_id ,'subdivision');
+				_elems_submit = Array();
+																	
+				for (_ef in _elems_full)
+				{
+					_query = "for $position in positions where $position/parent_object_id = " + _ef.id + " return $position";
+					_elems_submit = ArrayUnion(_elems_submit, XQuery(_query))
+				}
+		
+				_query = "for $fm in func_managers where $fm/person_id = " + curUserID + " and $fm/catalog = 'collaborator' return $fm";
+				_func_submit = XQuery(alert(_query));
+				
+				_x = 0;
+				for (_aud in _curAssessmentAppraise.auditorys)
+				{
+					if (ArrayOptFind(_elems_submit, 'basic_collaborator_id == _aud.PrimaryKey') != undefined)
+					{
+						_elems_full[_x] = _aud;
+						_x++;
+					}
+					else if (ArrayOptFind(_func_submit, 'object_id == _aud.PrimaryKey') != undefined)
+					{
+						_elems_full[_x] = _aud;
+						_x++;
+					}
+				}		
+				
+			}
+			else
+			{
+				
+				_query = "for $fm in func_managers where $fm/person_id = " + curUserID + " and $fm/catalog = 'collaborator' return $fm";
+				_func_submit = XQuery(_query);
+				_elems_full = Array();
+				
+				_x = 0;
+				for (_aud in _curAssessmentAppraise.auditorys)
+				{
+					if (ArrayOptFind(_func_submit, 'object_id == _aud.PrimaryKey') != undefined)
+					{
+						_elems_full[_x] = _aud;
+						_x++;
+					}
+				}
+			}
+		}
+		else
+		{
+			if (_posit == undefined)
+				alert(tools_web.get_web_str("ass_report_error1")+ " " + curUser.fullname );
+
+				_elems_full = ArraySelect(_curAssessmentAppraise.auditorys, "PrimaryKey == curUserID");
+		}
+		
+}
+else
+{
+	_elems_full = _curAssessmentAppraise.auditorys;
+}
+
+
+for (_collab in _elems_full)
+{
+	_posarr = XQuery("for $position in positions where $position/basic_collaborator_id = " + _collab.PrimaryKey + " return $position");
+	if (ArrayCount(_posarr) > 0)
+	{
+		add_position(ArrayFirstElem(_posarr), "");
+	}
+}
+
+
+%>
+
+
+paint_sum(foldersTree);
+
+</script>
+
+<table border="0" width="100%" style="height:100%">
+<tr>
+	<td id="treeArea" width="300px" valign="top">
+		<span class="TreeviewSpanArea" style="overflow:auto; width:300px">
+			<script>initializeDocument();</script>
+		</span>
+	</td>
+	
+	<td bgcolor="whitesmoke" valign="top">
+		<%
+        	switch(_is_detailed)
+            {
+            	case "1":
+                	Server.Execute( "view_assessment_objectives_report_detail.html" );
+                	break;
+                case "expanded":
+                    Server.Execute( "view_assessment_objectives_report_expanded.html" );
+                	break;
+            	default:
+                	Server.Execute( "view_assessment_objectives_report_data.html" );
+            }
+        
+			
+		%>
+	</td>
+</tr>
+</table>
+<%
+	}
+%>

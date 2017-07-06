@@ -1,0 +1,167 @@
+<%
+	_filter = 'active';
+	if ( Request.Form.HasProperty( 'filter_id' ) && Request.Form.filter_id != '' )
+		_filter = Request.Form.filter_id;
+		
+	_sort_type = 'start_date';
+	if ( Request.Form.HasProperty( 'sort_type' ) && Request.Form.sort_type != '' )
+		_sort_type = Request.Form.sort_type;
+%>
+<BR>
+<div class="headerText"><%=tools.get_web_str('vspb_title')%> <%=OpenDoc( UrlFromDocID ( Int( Request.QueryString.person_id ) ) ).collaborator.fullname%></div>
+<FORM ACTION="view_doc.html?mode=stat&doc_id=<%=curDocID%>&person_id=<%=Request.QueryString.person_id%>" NAME="set_person_form" METHOD="POST">
+<TABLE width="100%" cellspacing="0" cellpadding="5">
+<TR>
+<TD>
+	<TABLE width="100%" cellspacing="0" cellpadding="4" CLASS="tableBorder">	
+		<TR>		
+			<TD WIDTH="170" ALIGN="RIGHT"><%=tools.get_web_str('c_filter')%>:</TD>
+			<TD ALIGN="LEFT">
+				<select name="filter_id" onChange="document.set_person_form.submit();return false;">
+<%
+	for ( _ff in curLngCommon.web_filter_types )
+	{
+%>		
+					<option value="<%=_ff.id%>"><%=_ff.name%></option>
+<%
+	}
+%>		
+        		</select>
+<SCRIPT language="JavaScript">
+selcur=document.forms['set_person_form'].filter_id;
+selcur.selectedIndex==1;
+for (i=0;i<selcur.options.length;i++)
+    if (selcur.options[i].value=="<%=_filter%>") {
+        selcur.selectedIndex=i;
+		break;
+    }
+</SCRIPT>
+			</TD>
+		</TR>
+		<TR>
+			<TD WIDTH="170" ALIGN="RIGHT"><%=tools.get_web_str('c_sort')%>:</TD>
+			<TD ALIGN="LEFT">
+				<SELECT NAME="sort_type" onChange="document.set_person_form.submit();return false;">
+					<option SELECTED value="start_date"><%=tools.get_web_str('c_act_date')%></option>
+					<option value="last_date"><%=tools.get_web_str('c_finish_date')%></option>
+					<option value="course_name"><%=tools.get_web_str('c_course')%></option>
+					<option value="state_id"><%=tools.get_web_str('c_state')%></option>
+					<option value="score"><%=tools.get_web_str('c_score')%></option>					
+				</SELECT>
+<SCRIPT language="JavaScript">
+selcur=document.forms['set_person_form'].sort_type;
+selcur.selectedIndex==0;
+for (i=0;i<selcur.options.length;i++)
+    if (selcur.options[i].value=="<%=_sort_type%>") {
+        selcur.selectedIndex=i;
+		break
+    }
+</SCRIPT>
+			</TD>
+		</TR>
+	</TABLE>
+	
+</TD>
+</TR>
+<TR>
+<TD>
+ 
+<div class="headerText"><%=tools.get_web_str('c_course')%></div>
+<%
+	_order_str = '';
+	_order_code = '';
+	_active_flag = ( _filter != 'finish' );
+	
+	switch ( _sort_type )
+	{
+		case 'start_date':
+			_order_str = ' order by $learning/start_usage_date descending';
+			_order_code = 'start_usage_date';
+			break;
+		case 'last_date':
+			_order_str = ' order by $learning/last_usage_date descending';
+			_order_code = 'last_usage_date';
+			break;
+		case 'course_name':
+			_order_str = ' order by foreign-elem( $learning/course_id )/name';
+			_order_code = 'course_id.ForeignElem.name';
+			break;
+		case 'course_code':
+			_order_str = ' order by foreign-elem( $learning/course_id )/code';
+			_order_code = 'course_id.ForeignElem.code';
+			break;
+		case 'state_id':
+			_order_str = ' order by $learning/state_id';
+			_order_code = 'state_id';
+			break;
+		case 'score':
+			_order_str = ' order by $learning/score';
+			_order_code = 'score';
+			break;
+	}
+	
+	switch ( _filter )
+	{
+		case 'all':
+			learningArray = ArrayUnion( XQuery( "for $learning in active_learnings where $learning/person_id = " + Request.QueryString.person_id + " return $learning" ),
+										XQuery( "for $learning in learnings where $learning/person_id = " + Request.QueryString.person_id + " return $learning" ) );
+										
+			if ( _order_code != '' )
+				learningArray = ArraySort( learningArray, _order_code, '+' );
+			break
+			
+		case 'finish':
+			learningArray = XQuery( "for $learning in learnings where $learning/person_id = " + Request.QueryString.person_id + _order_str + " return $learning" );
+			break;
+			
+		default:
+			learningArray = XQuery( "for $learning in active_learnings where $learning/person_id = " + Request.QueryString.person_id + _order_str + " return $learning" );
+	}
+
+	Server.Execute( "view_learning_list_body.html" );
+%>
+
+</TD>
+</TR>
+<TR>
+<TD>
+ 
+<div class="headerText"><%=tools.get_web_str('c_test')%></div>
+<%
+	switch ( _filter )
+	{
+		case 'all':
+			learningArray = ArrayUnion( XQuery( "for $learning in active_test_learnings where $learning/person_id = " + Request.QueryString.person_id + " return $learning" ),
+										XQuery( "for $learning in test_learnings where $learning/person_id = " + Request.QueryString.person_id + " return $learning" ) );
+										
+			if ( _order_code != '' )
+				learningArray = ArraySort( learningArray, _order_code, '+' );
+			break
+			
+		case 'finish':
+			learningArray = XQuery( "for $learning in test_learnings where $learning/person_id = " + Request.QueryString.person_id + _order_str + " return $learning" );
+			break;
+			
+		default:
+			learningArray = XQuery( "for $learning in active_test_learnings where $learning/person_id = " + Request.QueryString.person_id + _order_str + " return $learning" );
+	}
+
+	Server.Execute( "view_learning_list_body.html" );
+%>
+
+</TD>
+</TR>
+<TR>
+<TD>
+
+	<table width="100%" border="0" cellspacing="0" cellpadding="0" class="activator">
+		<TD ALIGN="CENTER" class="activator">
+			<INPUT TYPE="SUBMIT" VALUE="<%=tools.get_web_str('c_refresh')%>" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';">
+		</TD>
+	</table>
+
+</TD>
+</TR>
+</TABLE>
+</FORM>
+<BR/>

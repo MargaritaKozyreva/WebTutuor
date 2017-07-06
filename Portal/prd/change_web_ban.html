@@ -1,0 +1,15 @@
+<%
+	Server.Execute( "include/sid_access_init.html" );
+
+	docPerson = OpenDoc( UrlFromDocID( Int( Request.QueryString.p ) ) );
+	docPerson.TopElem.access.web_banned = ! docPerson.TopElem.access.web_banned;
+	docPerson.Save();
+	
+	tools.create_notification( '7', docPerson.DocID );
+	
+	curMode = 'hrm_persons';
+	if ( Request.QueryString.HasProperty( 'mode' ) )
+		curMode = Request.QueryString.mode;
+	
+	Response.Redirect( 'view_doc.html?mode=' + curMode + '&doc_id=' + Request.QueryString.doc_id + '&object_id=' + Request.QueryString.p );
+%>

@@ -1,0 +1,329 @@
+<%Server.Execute( 'include/sid_access_init.html' )%>
+<%
+	Ps = OpenDoc( UrlFromDocID( Int( Request.QueryString.inv_id ) ) ).TopElem;
+	
+	if ( Ps.org_id != null )
+	{
+		part = Ps.org_id.ForeignElem;
+	}
+	else
+	{
+		doc = OpenNewDoc( 'wtv_org.xmd' );
+		part = doc.TopElem;
+	}
+	
+	my_org = global_settings.settings.own_org;
+	try 
+	{
+		total_price_in_words = TextInt( Ps.amount, 0 ) + ' ' + ArraySelectByKey( lists.currency_types[0].mod_names, IntModType( Ps.amount ), 'id' )[0].name
+							+ ' ' + ( 100 * ( Ps.amount - Int( Ps.amount ) ) ) + ' ' + ArraySelectByKey( lists.currency_types[0].mod_names, IntModType( 100 * ( Ps.amount - Int( Ps.amount ) ) ), 'id' )[0].cent_name;
+	}
+	catch( e )
+	{
+		total_price_in_words = '';
+	}	
+%>
+<html>
+<head>
+<meta http-equiv=Content-Type content="text/html; charset=windows-1251">
+
+<style>
+<!--
+.xl20
+	{
+	font-weight:700;
+	text-align:center-across;}
+.xl22
+	{
+	vertical-align:bottom;
+	border-top:.5pt solid windowtext;
+	border-right:none;
+	border-bottom:none;
+	border-left:.5pt solid windowtext;}
+.xl25
+	{
+	vertical-align:bottom;
+	border-top:.5pt solid windowtext;
+	border-right:.5pt solid windowtext;
+	border-bottom:none;
+	border-left:.5pt solid windowtext;}
+.xl26
+	{
+	border-top:.5pt solid windowtext;
+	border-right:.5pt solid windowtext;
+	border-bottom:none;
+	border-left:none;}
+.xl27
+	{
+	text-align:center;
+	vertical-align:top;
+	border-top:none;
+	border-right:.5pt solid windowtext;
+	border-bottom:.5pt solid windowtext;
+	border-left:.5pt solid windowtext;}
+.xl28
+	{
+	vertical-align:top;
+	border-top:none;
+	border-left:none;
+	border-bottom:.5pt solid windowtext;
+	border-right:.5pt solid windowtext;}
+.xl30
+	{
+	vertical-align:bottom;
+	border-top:none;
+	border-right:none;
+	border-bottom:none;
+	border-left:.5pt solid windowtext;}
+.xl31
+	{
+	vertical-align:bottom;}
+.xl32
+	{
+	text-align:center;
+	border:.5pt solid windowtext;}
+.xl33
+	{
+	border-top:.5pt solid windowtext;
+	border-right:.5pt solid windowtext;;
+	border-bottom:none;
+	border-left:none;}
+.xl34
+	{font-size:14.0pt;
+	font-weight:700;
+	text-align:center-across;
+	vertical-align:bottom;}
+.xl35
+	{text-align:center-across;
+	vertical-align:bottom;}
+.xl36
+	{
+	text-align:center;
+	border-top:.5pt solid windowtext;
+	border-right:none;
+	border-bottom:.5pt solid windowtext;
+	border-left:.5pt solid windowtext;
+	white-space:normal;}
+.xl38
+	{
+	text-align:right;
+	vertical-align:top;
+	border:.5pt solid windowtext;
+	border-right:none;
+	border-top:none;}
+.xl39
+	{
+	text-align:general;
+	vertical-align:top;
+	border-top:none;
+	border-right:none;
+	border-bottom:.5pt solid windowtext;
+	border-left:.5pt solid windowtext;
+	white-space:normal;}
+.xl40
+	{
+	text-align:center;
+	vertical-align:bottom;
+	border-top:none;
+	border-right:none;
+	border-bottom:.5pt solid windowtext;
+	border-left:.5pt solid windowtext;}
+.xl41
+	{
+	text-align:right;
+	vertical-align:bottom;
+	border-top:none;
+	border-right:none;
+	border-bottom:.5pt solid windowtext;
+	border-left:.5pt solid windowtext;}
+.xl42
+	{
+	text-align:right;
+	vertical-align:bottom;
+	border-top:none;
+	border-right:.5pt solid windowtext;
+	border-bottom:.5pt solid windowtext;
+	border-left:.5pt solid windowtext;}
+.xl44
+	{
+	font-weight:700;
+	text-align:right;}
+.xl45
+	{
+	font-weight:700;
+	text-align:right;
+	border:.5pt solid windowtext;
+	border-top-style:none;}
+.xl46
+	{
+	text-align:right;
+	vertical-align:bottom;}
+.xl47
+	{
+	font-weight:700;
+	text-align:right;
+	vertical-align:bottom;}
+.xl48
+	{
+	vertical-align:top;
+	border-top:none;
+	border-right:none;
+	border-bottom:.5pt solid windowtext;
+	border-left:.5pt solid windowtext;
+	white-space:normal;}
+.xl49
+	{
+	font-style:italic;
+	vertical-align:top;
+	white-space:normal;}
+.xl50
+	{
+	font-weight:700;
+	text-decoration:underline;
+	text-underline-style:single;}
+.xl51
+	{
+	font-weight:700;}
+-->
+</style>
+</head>
+<body BGCOLOR="#FFFFFF" link=blue vlink="#B38FEE"> 
+<table border=0 cellpadding=0 cellspacing=0 width=611> 
+  <tr height=17> 
+    <td colspan=6 height=17 class=xl50 width=611><%=HtmlEncode( my_org.name )%></td> 
+  </tr> 
+  <tr height=17> 
+    <td height=17 colspan=6 ></td> 
+  </tr> 
+  <tr height=17> 
+    <td colspan=6 height=17 class=xl51>Адрес: <%=HtmlEncode( my_org.essentials.legal_address )%>, тел.: <%=my_org.phone%></td> 
+  </tr> 
+  <tr height=17> 
+    <td height=17 colspan=6 ></td> 
+  </tr> 
+  <tr height=21> 
+    <td height=21 colspan=6 class=xl20 align=center>Образец заполнения платежного поручения</td> 
+  </tr> 
+  <tr height=17> 
+    <td height=17 class=xl22 colspan=3>Получатель</td> 
+    <td class=xl25>&nbsp;</td> 
+    <td class=xl26 colspan=2>&nbsp;</td> 
+  </tr> 
+  <tr height=37> 
+    <td colspan=3 height=37 class=xl48 width=352>ИНН <%=my_org.essentials.inn%> <%=HtmlEncode( my_org.name )%></td> 
+    <td class=xl27>Сч. №</td> 
+    <td class=xl28 colspan=2><%=my_org.essentials.bank_account.no%></td> 
+  </tr> 
+  <tr height=17> 
+    <td height=17 class=xl22 colspan=3>Банк получателя</td> 
+    <td class=xl32>БИК</td> 
+    <td class=xl33 colspan=2><%=my_org.essentials.bank_account.bank.bic%></td> 
+  </tr> 
+  <tr height=17> 
+    <td colspan=3 height=17 class=xl48 width=352><%=my_org.essentials.bank_account.bank.name%></td> 
+    <td class=xl27>Сч. №</td> 
+    <td class=xl28 colspan=2><%=my_org.essentials.bank_account.cno%></td> 
+  </tr> 
+  <tr height=15> 
+    <td height=15 colspan=6></td> 
+  </tr> 
+  <tr height=24> 
+    <td height=24 colspan=6 class=xl34 align=center>СЧЕТ № <%=Ps.code%> от <%=StrLongDate( Ps.date )%></td> 
+  </tr> 
+  <tr height=24> 
+    <td height=24></td> 
+    <td></td> 
+    <td colspan=4 class=xl35></td> 
+  </tr> 
+  <tr height=15> 
+    <td height=15 colspan=6></td> 
+  </tr> 
+  <tr  height=17> 
+    <td colspan=6 height=17 >Заказчик: <%=HtmlEncode( part.name )%></td> 
+  </tr> 
+  <tr  height=17> 
+    <td colspan=6 height=17 >Плательщик: <%=HtmlEncode( part.name )%></td> 
+  </tr> 
+  <tr height=17> 
+    <td height=17 colspan=6 ></td> 
+  </tr> 
+  <tr height=70> 
+    <td height=70 class=xl36>№</td> 
+    <td class=xl36 width=269>Наименование<br> 
+      товара</td> 
+    <td class=xl36 width=57>Единица<br> 
+      изме-<br> 
+      рения</td> 
+    <td class=xl36 width=51>Коли-<br> 
+      чество</td> 
+    <td class=xl36>Цена, руб</td> 
+    <td class=xl32>Сумма, руб</td> 
+  </tr> 
+<%
+	for ( _product in Ps.courses )
+	{
+%>
+  <tr height=51> 
+    <td height=51 class=xl38><%=(_product.ChildIndex + 1)%></td> 
+    <td class=xl39 width=269><%=HtmlEncode( "Электронный курс '" + _product.course_id.ForeignElem.name + "'" )%></td> 
+    <td class=xl40>шт</td> 
+    <td class=xl40><%=_product.units_num%></td> 
+    <td class=xl41><%=StrReal( _product.price, 2, true )%></td> 
+    <td class=xl42><%=StrReal(_product.units_num*_product.price,2,true)%></td> 
+  </tr>
+<%
+	}
+%>
+  <tr height=17> 
+    <td height=17 ></td> 
+    <td colspan=2 class=xl31></td> 
+    <td ></td> 
+    <td class=xl44>Итого:</td> 
+    <td class=xl45><%=StrReal( Ps.amount, 2, true )%></td> 
+  </tr> 
+  <tr height=17> 
+    <td height=17 ></td> 
+    <td colspan=2 class=xl31></td> 
+    <td ></td> 
+    <td class=xl44>Итого НДС:</td> 
+    <td class=xl45><%=StrReal( Ps.amount, 2, true )%></td> 
+  </tr> 
+  <tr height=17> 
+    <td height=17></td> 
+    <td colspan=2 ></td> 
+    <td class=xl46></td> 
+    <td class=xl47>Всего к оплате:</td> 
+    <td class=xl45><%=StrReal( Ps.amount, 2, true )%></td> 
+  </tr> 
+  <tr height=17> 
+    <td height=17 colspan=6 ></td> 
+  </tr> 
+  <tr height=17> 
+    <td colspan=6 height=17 class=xl49 width=611>К оплате: <%=total_price_in_words%></td> 
+  </tr> 
+  <tr height=17> 
+    <td colspan=6 height=17 class=xl49 width=611>Оплата производится в рублях по курсу ЦБ РФ на день оплаты</td> 
+  </tr> 
+  <tr height=17> 
+    <td height=17 colspan=6 ></td> 
+  </tr> 
+  <tr height=33> 
+    <td height=33  colspan=6>Руководитель предприятия_____________________ (<%=my_org.director.shortname%>)</td> 
+  </tr> 
+  <tr height=17> 
+    <td height=17 colspan=6 ></td> 
+  </tr> 
+  <tr height=30> 
+    <td height=30  colspan=6>Главный бухгалтер____________________________ (<%=my_org.chief_accountant.shortname%>)</td> 
+  </tr> 
+  <tr height=0> 
+    <td width=26></td> 
+    <td width=269></td> 
+    <td width=57></td> 
+    <td width=51></td> 
+    <td width=104></td> 
+    <td width=104></td> 
+  </tr> 
+</table> 
+</body>
+</html>

@@ -1,0 +1,206 @@
+<%
+Server.Execute( "include/user_init.html" )
+Server.Execute( "include/head.html" )
+curDocID=Request.QueryString.GetProperty("doc_id")
+
+if (Request.QueryString.HasProperty("catalog_name"))
+{
+	catalog_name=Request.QueryString.GetProperty("catalog_name")
+}
+else
+{
+	catalog_name='course';
+}
+
+
+if (Request.QueryString.HasProperty("multi_select"))
+{
+	multi_select=Request.QueryString.GetProperty("multi_select")
+}
+else
+{
+	multi_select='0';
+}
+
+learning_obj_id=undefined;
+if (Request.QueryString.HasProperty("learning_obj_id"))
+{
+	try
+	{
+		learning_obj_id=Int(Request.QueryString.GetProperty("learning_obj_id"))
+	}
+	catch(ex)
+	{
+	}
+	
+}
+
+if (learning_obj_id==undefined)
+{
+	Response.Write("<font color='red' stle='font-weight: boldest'>" + tools_web.get_web_str('dsctp_err1_mess') + "</font><br/>");
+	Cancel();
+}
+else
+{
+	try
+	{
+		learning_obj=ArrayFirstElem(XQuery("for $elem in "+catalog_name+"s where $elem/id="+learning_obj_id+" return $elem"))
+		
+		learning_obj_name=catalog_name!='assessment'?learning_obj.name:learning_obj.title	
+		
+	}
+	catch(ex)
+	{
+		Response.Write("<font color='red' stle='font-weight: boldest'>" + tools_web.get_web_str('dsctp_err2_mess') + " " + ex + "</font><br/>");
+		Cancel();
+	}
+}
+%>
+<HTML>
+<HEAD>
+<base target=_self>
+<title><%=tools_web.get_web_str('vcrb_parameters')%></title>
+<script src="scripts/calendar/calendar.js"></script>
+<script>
+document.title='<%=tools_web.get_web_str('vcrb_parameters')%>';
+function check(obj_name)
+{
+	if (obj_name!='days')
+	{
+		document.getElementById('duration_days').disabled=true;
+	}
+	else
+	{
+		document.getElementById('duration_days').disabled=false;
+	}
+	document.getElementById('duration_type').value=obj_name;
+}
+//----------------------------------------------------------------------------------------------------------------------------------------------------//
+function doSubmit( _action, _id )
+{
+	err=''
+	try
+	{
+		dialogArguments.start_learning_date=document.getElementById('wanted_date').value
+		err='1'
+		dialogArguments.duration_type=document.getElementById('duration_type').value
+		err='2'
+		dialogArguments.duration_days=document.getElementById('duration_days').value
+		err='3'
+		dialogArguments.miss_last_learning_date=document.getElementById('miss_last_learning_date').checked
+		err='4'
+		dialogArguments.last_learning_date=document.getElementById('last_learning_date').value
+		err='5'
+		try
+		{
+			dialogArguments.apply_for_all_learnings=document.getElementById('apply_for_all_learnings').checked
+		}
+		catch(ex)
+		{
+			dialogArguments.apply_for_all_learnings=false;
+		}
+		err='6'
+	}
+	catch(ex)
+	{
+		alert(err+' '+ex)
+	}
+	
+	
+	dialogArguments.handle=true;
+	window.close(); 
+}
+//----------------------------------------------------------------------------------------------------------------------------------------------------//
+</script>
+</head>
+
+<BODY>
+<table  align="center" width="100%" cellspacing="0" cellpadding="4">
+	<tr>
+		<td align="left" colspan="3">
+<%
+Response.Write("<b>"+ms_tools.get_const('xe4gq6rgue') + ' ' + ( catalog_name == 'course' ? StrNonTitleCase( ms_tools.get_const('idpqed1cat') ) : StrNonTitleCase( ms_tools.get_const('fwrbmwrbht') ) ) + ' &quot;' + HtmlEncode(learning_obj_name) + '&quot;'+"</b><br/>");	
+%>
+		</td>
+	</tr>
+	<tr>
+		<td align="left" width="10%">
+			&nbsp;
+		</td>
+		<td align="left" width="20%">
+			<%=ms_tools.get_const('ah4z9c9oyu')%>:
+		</td>
+		<td valign="middle" align="left">
+		<input type="text" style="width: 70px" id="wanted_date" name="wanted_date"  class="inputEdit" readonly><a href="#"  tn="wanted_date" onClick="var h=0; var offP = this.offsetParent; while(offP.id != 'main_block' && offP.tagName.toUpperCase()!='BODY') {h+=offP.offsetTop; offP = offP.offsetParent;} ; showCalendar(this, document.getElementById('wanted_date'), 'dd.mm.yyyy','ru',1, null, h + 40); return false;" id="cal_wanted_date" name="cal_wanted_date"><img src="/scripts/calendar/calendar.gif" width="24" height="22" border="0" align="absmiddle" /></a>
+		</td>
+	</tr>
+	<tr>
+		<td align="left">
+			&nbsp;
+		</td>
+		<td align="left" valign="top">
+			<%=ms_tools.get_const('ij926v78io')%>:
+		</td>
+		<td valign="top" align="left">
+			<input type="hidden" name="duration_type" id="duration_type" value="from_learning"/>
+			<input type="radio" name="dur_type"  onclick="check(this.value)" value="from_learning" checked="checked"/><%=StrNonTitleCase( ms_tools.get_const('vtpz5x2dzi') )%><br/>
+			<input type="radio" name="dur_type"  onclick="check(this.value)" value="days"/><input type="text" style="width: 40px" id="duration_days" name="duration_days"  class="inputEdit" onblur="if (isNaN(parseInt(this.value))) this.value=''; else this.value = parseInt(this.value);">&nbsp;<%=StrNonTitleCase( ms_tools.get_const('2kaidfx9na') )%><br/>
+			<input type="radio" name="dur_type"  onclick="check(this.value)" value="not_specified"/><%=StrNonTitleCase(  ms_tools.get_const('d8ed1y4k76') )%>
+		</td>
+	</tr>
+	<tr>
+		<td align="left" colspan="3">
+			&nbsp;
+		</td>
+	</tr>
+	<tr>
+		<td align="left">
+			&nbsp;
+		</td>
+		<td align="left" colspan="2">
+			<input type="checkbox" name="miss_last_learning_date"  id="miss_last_learning_date" onclick="document.getElementById('div_with_link').style.display=this.checked?'inline':'none'" value="days"/><%=ms_tools.get_const('wrgenti9gr')%>:
+		</td>
+	</tr>
+	<tr>
+		<td align="left" colspan="2">
+			&nbsp;
+		</td>
+		<td valign="top" align="left">
+			<div id="div_with_link" style="display:none">
+				<input type="text" style="width: 70px" id="last_learning_date" name="last_learning_date"  class="inputEdit" readonly><a href="#" tn="last_learning_date" onClick="var h=0; var offP = this.offsetParent; while(offP.id != 'main_block' && offP.tagName.toUpperCase()!='BODY') {h+=offP.offsetTop; offP = offP.offsetParent;} ; showCalendar(this, document.getElementById('last_learning_date'), 'dd.mm.yyyy','ru',1, null, h + 40); return false;" id="cal_last_learning_date" name="cal_last_learning_date"><img src="/scripts/calendar/calendar.gif" width="24" height="22" border="0" align="absmiddle" /></a>
+			</div>
+		</td>
+	</tr>
+<%
+if (multi_select!='0')
+{
+%>
+<tr>
+		<td align="left" colspan="3">
+			&nbsp;
+		</td>
+	</tr>
+	<tr>
+		<td align="left">
+			&nbsp;
+		</td>
+		<td align="left" colspan="2">
+			<input type="checkbox" name="apply_for_all_learnings" id="apply_for_all_learnings"/><%=ms_tools.get_const('fn8zlh5ntq')%>
+		</td>
+	</tr>
+<%
+}
+%>
+</table>
+<table  align="center" width="100%" cellspacing="0" cellpadding="4">
+	<tr>
+		<td align="right">
+<input type="button" value="<%=tools.get_web_str('c_confirm')%>" onClick="doSubmit('save');" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+		</td>
+		<td align="left">
+			<input type="button" value="<%=tools.get_web_str('c_cancel')%>" onClick="dialogArguments.handle=false; window.parent.close();" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+		</td>
+	</tr>
+</table>
+</body>
+</html>

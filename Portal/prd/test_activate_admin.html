@@ -1,0 +1,89 @@
+<%
+	Server.Execute( "include/sid_access_init.html" );
+
+	_mode = ( Request.Form.HasProperty( 'mode' ) ? Request.Form.mode : '0' );
+	_pos_num = ( Request.Form.HasProperty( 'position_num' ) && Request.Form.position_num != '' ? Int( Request.Form.position_num ) : 0 );
+	_redirect = ( Request.Form.HasProperty( 'redirect' ) && Request.Form.redirect != '' ? Request.Form.redirect : 'set_test' );
+	_attempts_num = ( Request.Form.HasProperty( 'attempts_num' ) && Request.Form.attempts_num != '' ? Int( Request.Form.attempts_num ) : null );
+		
+	assessmentDoc = OpenDoc( UrlFromDocID( Int( Request.Form.assessment_id ) ) ).TopElem;
+	_message_text = "";
+	
+	try
+	{
+		_duration = ( Request.Form.HasProperty( 'day_num' ) && Request.Form.day_num != "" ? Int( Request.Form.day_num ) : null );
+	}
+	catch(err)
+	{
+		_duration = null;
+	}
+	
+	_start_learning_date = Date();
+	try
+	{
+		if ( Request.Form.HasProperty( 'start_learning_date' )  && Request.Form.HasProperty( 'start_learning_time' )  )
+		{
+			_start_learning_date = Date( StrDate( Date( Request.Form.start_learning_date ), false ) + ' ' + Request.Form.start_learning_time );
+			_start_learning_date = ( _start_learning_date < Date() ? Date() : _start_learning_date )
+		}
+	}
+	catch(err)
+	{
+	}	
+
+	function set_test( _person_id )
+	{
+		try
+		{
+			res = tools.activate_test_to_person( Int( _person_id ), Request.Form.assessment_id, null, null, assessmentDoc, null, _duration, _start_learning_date );
+			try
+			{
+				res.TopElem;
+			}
+			catch ( e )
+			{
+				_message_text = tools.get_web_str('caa_message1');
+			}
+			
+		}
+		catch ( err )
+		{
+			alert( err );
+		}
+	}
+	
+	if ( _mode == '0' )
+	{
+		set_test( Request.Form.collaborator_id );
+	}
+	else
+	{
+		if ( Request.Form.HasProperty( 'selected_object_ids' ) )
+		{
+			for ( _pers in Trim( Request.Form.selected_object_ids ).split( ';' ) )
+				if ( _pers != '' )
+					set_test( _pers );	
+		}
+		else
+		{
+			for ( m = 0; m < _pos_num; m++ )
+				if ( Request.Form.HasProperty( 'pos_' + m ) )
+					set_test( Request.Form.GetProperty( 'pos_' + m ) );			
+		}
+	}	
+	
+	if ( _message_text != "" )
+	{
+%>
+<script language="JAVASCRIPT">
+	alert( "<%=_message_text%>" );
+	location.href="<%=( 'view_doc.html?mode=' + _redirect + '&doc_id=' + Request.Form.doc_id )%>";
+</script>
+<%
+	}
+	else
+	{
+		Response.Redirect( 'view_doc.html?mode=' + _redirect + '&s=1&doc_id=' + Request.Form.doc_id );
+	}
+	Cancel();
+%>

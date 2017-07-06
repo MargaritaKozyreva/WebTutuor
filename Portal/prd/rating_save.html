@@ -1,0 +1,29 @@
+<%
+	Server.Execute( "include/user_init.html" );
+	
+	docResponse = OpenDoc( UrlFromDocID( Int(Request.Form.object_id) ) )
+	
+	_status = Int(Request.Form.status_field);
+
+	if (_status > 0 )
+		docResponse.TopElem.status = true;
+	else
+		docResponse.TopElem.status = false;
+
+	docResponse.TopElem.objects.Clear();
+	_i = 0;
+
+	while(Request.Form.HasProperty("object_index_" + _i))
+	{
+		_obj = docResponse.TopElem.objects.ObtainChildByKey(Int(Request.Form.GetProperty("object_id_" + _i)));
+		_obj.object_name = Request.Form.GetProperty("object_name_" + _i);
+		_i++;
+	}
+	
+		
+	_href = 'view_doc.html?mode=ratings&doc_id=' + Request.Form.doc_id +'&object_id='+Request.Form.object_id + '&is_post=1';
+		
+	docResponse.Save();
+		
+	Response.Redirect( _href );
+%>

@@ -1,0 +1,760 @@
+<%
+_read_only = true;
+if ( Request.QueryString.HasProperty("edit") && Request.QueryString.GetProperty("edit") == "1")
+	_read_only = false;
+
+_is_new = false;
+if ( curUserID != null && Request.Query.HasProperty( 'is_new' ) && Request.Query.is_new == '1'  )
+	_is_new = true;	
+
+
+	
+	
+//СОХРАНЕНИЕ ПОДПИСКИ
+is_new_object = false;
+try
+{
+	//alert( "+++++++"  )
+	for ( _elem in Request.Form )
+			{
+				alert(_elem + " = " + eval("Request.Form." + _elem ))
+			}
+	Request.Form.name;
+	
+	if ( Request.Form.HasProperty("is_new") && Request.Form.GetProperty("is_new") == "true" )
+	{
+		is_new_object = true;
+		curObjectDoc = OpenNewDoc( 'x-local://wtv/wtv_vacancy_subscription.xmd' );
+		curObjectDoc.BindToDb( DefaultDb );
+		curObject = curObjectDoc.TopElem;
+		curObjectID = curObjectDoc.DocID;	
+	}
+	
+	curObject.name = Request.Form.name;
+	curObject.is_active = (Request.Form.is_active == "true");
+	curObject.full_text_search_str = Request.Form.key_word_in_fulltext;
+	//curObject.site_id = curSiteID;
+	curObject.person_id = curUserID;
+	tools.common_filling( 'collaborator', curObject, curUserID, curUser );
+	
+	curObject.conditions.Clear();
+	
+	for ( _key_word_in_name in String( UnifySpaces((Request.Form.key_word_in_name ))).split(" ") )
+	{
+		if ( _key_word_in_name == "" )
+			continue;
+		_child = curObject.conditions.AddChild();
+		_child.field = "name";
+		_child.title = "Название";
+		_child.value = _key_word_in_name;
+	}
+	
+	for ( _prof_area in String(Request.Form.GetProperty("prof_areas_ids")).split(","))
+	{
+		if ( _prof_area == "" )
+			continue;
+		_child = curObject.conditions.AddChild();
+		_child.field = "profession_area_id";
+		_child.title = tools.get_web_str('vrb_professional_field');
+		_child.value = _prof_area;
+	}
+	
+	form_field_array = Array( "max_age", "min_age", "min_wage", "max_wage", "currency_type", "educ_type", "employment_type", "region_id" );
+	doc_field_array = Array( "max_age", "min_age", "min_wage", "max_wage", "currency_type_id", "educ_type_id", "employment_type_id", "region_id" ); 
+	doc_field_name_array = Array( tools.get_web_str('c_max_age'), tools.get_web_str('c_min_age'), tools.get_web_str('c_min_wage'), tools.get_web_str('c_max_wage'), tools.get_web_str('c_currency_type'), tools.get_web_str('c_educ_type'), tools.get_web_str('c_employment_type'), tools.get_web_str('vrb_region') ); 
+	
+	i = 0;
+	while ( i < ArrayCount( form_field_array ) )
+	{
+		_value = Request.Form.GetProperty( form_field_array[i] );
+		if ( _value == "" )
+		{
+			i++;
+			continue;
+		}
+		_child = curObject.conditions.AddChild();
+		_child.field = doc_field_array[i];
+		_child.title = doc_field_name_array[i];
+		_child.value = _value;
+		i++;
+	}
+	
+	curObjectDoc.Save();	
+	if ( is_new_object )
+	{
+		//Response.Redirect("view_doc.html?mode=vacancy_subscription&doc_id=<%=curDocID%>&object_id=" + curObjectID + "&edit=1")
+%>		
+		<SCRIPT TYPE="text/javascript">
+			window.location.href = "view_doc.html?mode=vacancy_subscription&doc_id=<%=curDocID%>&object_id=<%=curObjectID%>&edit=1"
+		</SCRIPT>
+<%	
+	}
+		//Response.Redirect( Request.Form.GetProperty("url_redirect") )
+}
+catch(err)
+{
+	alert( "ERROR!! " + err )
+}
+	
+	if ( !is_new_object && Request.Form.HasProperty("url_redirect") && Request.Form.GetProperty("url_redirect") != "" )
+	{
+%>
+		<SCRIPT TYPE="text/javascript">
+			window.location.href = "<%=Request.Form.GetProperty("url_redirect")%>"
+		</SCRIPT>
+<%	
+	}
+
+
+//ТРАНСЛЯЦИЯ УСЛОВИЙ ПОИСКА из ПОДПИСКИ в локальные переменные шаблона	
+	
+	categ_array = Array();
+	_prof_areas_str = "";
+	_prof_area_ids = "";
+	local_var_array = Array( "_max_age", "_min_age", "_min_wage", "_max_wage", "_currency_type", "_educ_type", "_employment_type", "_region_id" );
+	form_property_array = Array( "max_age", "min_age", "min_wage", "max_wage", "currency_type_id", "educ_type_id", "employment_type_id", "region_id" ); 
+	i = 0;
+	while ( i < ArrayCount( local_var_array ) )
+	{
+		eval( local_var_array[i] + ' = ""' )
+		i++;
+	}
+	_key_word_in_name = "";
+	
+	if ( !_is_new )
+	{
+		for ( _cond in ArraySelect( curObject.conditions, "field=='name'" ) )
+		{
+			_key_word_in_name += _cond.value + " "
+		}
+		_key_word_in_name = UnifySpaces( _key_word_in_name );
+		
+		i = 0;
+		while ( i < ArrayCount( local_var_array ) )
+		{
+			eval( local_var_array[i] + ' = ""' )
+			try
+			{
+				_find = eval ( ( 'ArrayOptFind( curObject.conditions, "field==\'' + form_property_array[i] + '\'" )' ))
+				if ( _find != undefined )
+					eval( ( local_var_array[i] + ' = _find.value' ) )
+			}
+			catch(err)
+			{
+				alert("@@@@" + err)
+			}
+			i++;
+		}
+		if ( _region_id != "" )
+			_region_id = Int( _region_id );
+			
+		
+
+		
+		for ( _cond in ArraySelect( curObject.conditions, "field=='profession_area_id'" ) )
+		{
+			categ_array[ArrayCount(categ_array)] = _cond.value;
+			_prof_area_ids += _cond.value + ",";
+			_find = ArrayOptFind( lists.professional_areas, "id=='" + _cond.value +"'" );
+				if ( _find != undefined )
+					_prof_areas_str += _find.name + " | ";
+		}
+	}
+	
+
+%>
+
+<script language="javascript">
+	
+	function save( _url_redirect )
+	{
+		_log = "";
+<%
+	if ( !_read_only || _is_new )
+	{
+%>
+		if ( document.getElementById("name").value == "")
+			_log += "<%=tools.get_web_str('vvsb_log_mess_1')%> <br>";
+		document.getElementById("log_label").innerHTML = _log;
+<%
+	}
+%>
+		document.getElementById("url_redirect").value = _url_redirect;
+		if ( _log == "" )
+			document.all["subscription_param"].submit();
+	}
+	
+	
+	function sort_result(_field_name, _url_redirect, _cur_sort_type )
+	{
+		//document.getElementById("sort_field").value = _field_name;
+		//_old_value = document.getElementById("sort_type").value;
+		//document.getElementById("sort_type").value = ( _old_value == "+" ? "-" : "+" );
+		
+		window.location.href = _url_redirect + "sort_field=" + _field_name + "&sort_type=" + (_cur_sort_type == "1" ? "0" : "1");
+		//document.all["subscription_param"].submit();
+	}
+	
+</script>
+
+<%
+_url = "view_doc.html?mode=vacancy_subscription&doc_id=" + curDocID + "&object_id=" + curObjectID + ( _read_only ? "&edit=1": "" );
+
+%>
+<form ACTION="<%=tools_web.get_query_string( true, "is_new;")%>" name="subscription_param" method="post" onSubmit="alert('Submit!!!!')">
+	<input type="hidden" name="init" value="">
+	<input type="hidden" name="is_new" value="<%=_is_new%>">
+	<input type="hidden" name="url_redirect" id="url_redirect" value="<%=Request.Url%>">
+	<input type=hidden name="sort_field" id="sort_field" value="<%=Request.Form.HasProperty('sort_field') ? Request.Form.GetProperty('sort_field') : 'name'%>">
+	<input type=hidden name="sort_type" id="sort_type" value="<%=Request.Form.HasProperty('sort_type') ? Request.Form.GetProperty('sort_type') : '+'%>">
+	<input type=hidden name="num_elem_in_page" value="<%=Request.Form.HasProperty('num_elem_in_page') ? Request.Form.GetProperty('num_elem_in_page') : '50'%>">
+
+<p align=right> <a onClick="save('<%=_url%>')" href="#"><%=_is_new ? "" : _read_only ? 'Редактировать': 'Посмотреть вакансии' %> </a></p>
+
+<label id="log_label" style="color:red"></label>
+<%
+if ( _read_only && !_is_new )
+{
+	result_array = curObject.refresh_suitable_vacancys();
+	//result_array = Array();
+	/*
+	try
+	{
+		curObject.Name;
+		result_array = XQuery("for $elem in vacancys where $elem/is_closed=false() return $elem");
+		
+		
+		_temp_array = Array();
+		if ( _key_word_in_name != "" )
+		{
+			for ( _key_word in UnifySpaces(_key_word_in_name).split(" ") )
+			{
+				alert(_key_word)
+				if ( _key_word == "" )
+					continue;
+				sub_result_array = XQuery("for $elem in vacancys where contains($elem/name, '" + _key_word + "') and $elem/is_closed=false() return $elem");
+				
+				result_cross_array = Array();
+				i = 0;
+				for ( _sub_res_elem in sub_result_array )
+				{
+					alert( _sub_res_elem.name )
+					if ( ArrayOptFind( result_array, "id==" + _sub_res_elem.id ) != undefined )
+					{
+						alert("$$$ " + _sub_res_elem.name)
+						result_cross_array[i] = _sub_res_elem;
+						i++;
+					}
+				}
+				_temp_array = ArrayUnion( _temp_array, result_cross_array );
+			}
+			result_array = _temp_array;
+		}
+				
+		_key_word_in_fulltext = curObject.full_text_search_str;
+		_temp_array = Array();
+		if ( _key_word_in_fulltext != "" )
+		{
+			for ( _key_word in UnifySpaces(_key_word_in_fulltext).split(" ") )
+			{
+				if ( _key_word == "" )
+					continue;
+				sub_result_array = XQuery("for $elem in vacancys where doc-contains($elem/id, 'DefaultDb', '" + _key_word + "') and $elem/is_closed=false() return $elem");
+				
+				result_cross_array = Array();
+				for ( _sub_res_elem in sub_result_array )
+					if ( ArrayOptFind( result_array, "id==" + _sub_res_elem.id ) != undefined )
+						result_cross_array[ArrayCount(result_cross_array)] = _sub_res_elem;
+				_temp_array = ArrayUnion( _temp_array, result_cross_array );
+			}
+			result_array = _temp_array;
+		}
+		
+		if ( _min_age != "" )
+			result_array = ArrayUnion( ArraySelect( result_array, "min_age>=" + _min_age ), ArraySelect( result_array, "!min_age.HasValue" ));
+		
+		if ( _max_age != "" )
+			result_array = ArrayUnion( ArraySelect( result_array, "max_age<=" + _max_age ), ArraySelect( result_array, "!max_age.HasValue" ));
+	
+		if ( _min_wage != "" )
+			result_array = ArrayUnion( ArraySelect( result_array, "min_wage>=" + _min_wage ), ArraySelect( result_array, "!min_wage.HasValue" ));
+			
+		if ( _max_wage != "" )
+			result_array = ArrayUnion( ArraySelect( result_array, "max_wage<=" + _max_wage ), ArraySelect( result_array, "!max_wage.HasValue" ));
+		
+		if ( _currency_type != "" )
+			result_array = ArrayUnion( ArraySelect( result_array, "currency_type_id=='" + _currency_type + "'" ), ArraySelect( result_array, "!currency_type_id.HasValue" ));
+			
+		if ( _educ_type != "" )
+			result_array = ArrayUnion( ArraySelect( result_array, "educ_type_id=='" + _educ_type + "'" ), ArraySelect( result_array, "!educ_type_id.HasValue" ));
+			
+		if ( _employment_type != "" )
+			result_array = ArrayUnion( ArraySelect( result_array, "employment_type_id=='" + _employment_type + "'" ), ArraySelect( result_array, "!employment_type_id.HasValue" ));
+			
+		if ( _region_id != "" )
+		{
+			_regions_array = XQuery('CatalogHierSubset( "regions", ' + Int(_region_id) + ' )');
+			sub_result_array = ArrayUnion( ArraySelect( result_array, "region_id==" + Int(_region_id) ), ArraySelect( result_array, "!region_id.HasValue" ));
+			for ( _region in _regions_array )
+				sub_result_array = ArrayUnion( sub_result_array, ArraySelect( result_array, "region_id==" + _region.id ) );
+			result_array = sub_result_array;
+		}
+		
+		if ( ArrayCount( categ_array ) > 0 )
+		{
+			sub_result_array = ArraySelect( result_array, "!profession_area_id.HasValue" );
+			for ( _prof_area in categ_array )
+				if ( _prof_area != "" )
+					sub_result_array = ArrayUnion ( sub_result_array, ArraySelect( result_array, "profession_area_id=='" + _prof_area + "'" ) )
+			result_array = sub_result_array;
+		}
+		
+		result_array = ArraySort( result_array, "creation_date", "-" )
+		if ( Request.QueryString.HasProperty("sort_field") && Request.QueryString.GetProperty("sort_field") != "")
+			result_array = ArraySort( result_array, Request.QueryString.GetProperty("sort_field"), Request.QueryString.HasProperty("sort_type") ? Request.QueryString.GetProperty("sort_type") == "1" ? "+" : "-" : "+" );
+		
+		//alert("COUNT = " + ArrayCount( result_array ))
+	}
+	catch(err)
+	{
+		alert(err)
+	}
+	*/
+%>
+
+Параметры отбора вакансий: 
+<UL>
+<%
+	if ( _key_word_in_name != "" )
+	{
+%>
+		<LI>Ключевые слова в названии должности: <b><%=_key_word_in_name%></b> </LI>
+<%
+	}
+	if ( curObject.full_text_search_str.HasValue )
+	{
+%>
+		<LI>Ключевые слова в тексте вакансии: <b><%=curObject.full_text_search_str%></b> </LI>	
+<%
+	}
+	if ( _prof_areas_str != "" )
+	{
+%>
+		<LI>Профессиональная область: <b><%=_prof_areas_str%></b> </LI>	
+<%
+	}
+	if ( _region_id != "" )
+	{
+		try
+		{
+			curRegion = OpenDoc( UrlFromDocID( _region_id ) ).TopElem;
+%>
+		<LI>Регион: <b><%=curRegion.name%></b> </LI>	
+<%
+		}
+		catch(err)
+		{}
+	}
+	_educ_elem = ArrayOptFind( common.educ_types, "id=='" + _educ_type + "'" )
+	if ( _educ_type != "" && _educ_elem != undefined )
+	{
+%>
+		<LI>Образование: <b><%=_educ_elem.name%></b> </LI>	
+<%
+	}
+	_employment_elem = ArrayOptFind( common.employment_types, "id=='" + _employment_type + "'" )
+	if ( _employment_type != "" && _employment_elem != undefined )
+	{
+%>
+		<LI>Занятость: <b><%=_employment_elem.name%></b> </LI>	
+<%
+	}
+	if ( _max_age != "" || _min_age != "" )
+	{
+%>
+		<LI>Возраст: <b><%=_min_age != "" ? "от " + _min_age : ""%> <%= _max_age != ""  ? " до " + _max_age : ""%> лет</b> </LI>	
+<%
+	}
+	if ( _min_wage != "" || _max_wage != "" )
+	{
+		_currency_elem = ArrayOptFind( lists.currency_types, "id=='" + _currency_type + "'" )
+%>
+		<LI>Доход: <b><%=_min_wage != "" ? "от " + _min_wage : ""%> <%=_max_wage != "" ? " до " + _max_wage : ""%> <%=(_currency_type != "" && _currency_elem != undefined )? _currency_elem.short_name : ""%></b> </LI>
+<%
+	}
+%>
+</UL>
+
+
+	<table width="100%"  border="0" cellspacing="0" cellpadding="3">
+					<tr>
+						<td class="tableHeaderWithText">&nbsp;</td>
+						<td class="tableHeaderWithText" width="20%"><a href="<%=Request.Url%>#" onclick="sort_result( 'name', '<%=tools_web.get_query_string( true, "is_new;sort_field;sort_type")%>', '<%=Request.QueryString.HasProperty("sort_type") ? Request.QueryString.GetProperty("sort_type")  : "1"%>' )"><%=tools.get_web_str('c_name')%></a></td>
+						<td class="tableHeaderWithText"><a href="<%=Request.Url%>#" onclick="sort_result( 'profession_area_id', '<%=tools_web.get_query_string( true, "is_new;sort_field;sort_type")%>', '<%=Request.QueryString.HasProperty("sort_type") ? Request.QueryString.GetProperty("sort_type")  : "1"%>' )">Проф.область</a></td>
+
+						<td class="tableHeaderWithText"><a href="<%=Request.Url%>#" onclick="sort_result( 'avg_wage', '<%=tools_web.get_query_string( true, "is_new;sort_field;sort_type")%>', '<%=Request.QueryString.HasProperty("sort_type") ? Request.QueryString.GetProperty("sort_type")  : "1"%>' )">Доход</a></td>
+						<td class="tableHeaderWithText"><a href="<%=Request.Url%>#" onclick="sort_result( 'region_id', '<%=tools_web.get_query_string( true, "is_new;sort_field;sort_type")%>', '<%=Request.QueryString.HasProperty("sort_type") ? Request.QueryString.GetProperty("sort_type")  : "1"%>' )">Регион</a></td>
+						<td class="tableHeaderWithText"><a href="<%=Request.Url%>#" onclick="sort_result( 'employment_type_id', '<%=tools_web.get_query_string( true, "is_new;sort_field;sort_type")%>', '<%=Request.QueryString.HasProperty("sort_type") ? Request.QueryString.GetProperty("sort_type")  : "1"%>' )">Тип занятости</a></td>						
+						<td class="tableHeaderWithText"><a href="<%=Request.Url%>#" onclick="sort_result( 'creation_date', '<%=tools_web.get_query_string( true, "is_new;sort_field;sort_type")%>', '<%=Request.QueryString.HasProperty("sort_type") ? Request.QueryString.GetProperty("sort_type")  : "1"%>' )">Дата публикации</a></td>						
+						<td class="tableHeaderWithText">&nbsp;</td>
+					</tr>
+					<tr>
+						<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>				
+						<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>	
+						<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>	
+						<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>	
+					</tr>
+	<%
+		counter = 0;
+		for ( _result in result_array  )
+		{
+			_class = counter++ % 2 ? 'tableRowEven' : 'tableRowOdd';
+	%>
+				<TR VALIGN="MIDDLE">					
+						<TD class="<%=_class%>">&nbsp;</TD>
+						<TD class="<%=_class%>"><a HREF="view_doc.html?mode=vacancy&object_id=<%=_result.id%>&doc_id=<%=curDocID%>"><%=_result.name%></a></TD>
+						<TD class="<%=_class%>"><%=_result.profession_area_id.HasValue ? _result.profession_area_id.OptForeignElem.name : ""%></TD>
+						<TD class="<%=_class%>"><%=_result.min_wage.HasValue ? "от " + _result.min_wage + " " : ""%><%=_result.max_wage.HasValue ? " до " + _result.max_wage + " " : ""%>
+						<%=( (_result.max_wage.HasValue || _result.min_wage.HasValue) && _result.currency_type_id.HasValue )? " " + _result.currency_type_id.OptForeignElem.short_name : ""%>
+						</TD>
+						<TD class="<%=_class%>">
+						<%
+							if ( _result.region_id.HasValue )
+								try
+								{
+									regionDoc = OpenDoc( UrlFromDocID( _result.region_id )  ).TopElem;
+									Response.Write( regionDoc.name )
+								}
+								catch(err)
+								{}
+						%></TD>
+						<TD class="<%=_class%>"><%=_result.employment_type_id.HasValue ? _result.employment_type_id.OptForeignElem.name : ""%></TD>
+						<TD class="<%=_class%>"><%=_result.creation_date%></TD>
+						<TD class="<%=_class%>"></TD>
+					</TR>
+	
+	<%
+		}
+	%>
+	
+				<tr>
+						<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>						
+					</tr>
+		</table>
+
+
+
+<%
+}
+if ( !_read_only || _is_new )
+{
+
+%>
+
+<%
+	
+	function node_subdivision( _p_id, _p_name, _indent )
+	{
+		_cur_sub_array = XQuery( "for $obj in regions where $obj/parent_object_id = " + ( _p_id == null ? 'null()' : _p_id ) + " order by $obj/name return $obj" );
+
+		for ( _cur_sub in _cur_sub_array )
+		{
+			_selected = ( _region_id == _cur_sub.id  ? " selected" : "");
+		%>
+			<option value="<%=_cur_sub.id%>" <%=_selected%>><%=( _indent + _cur_sub.name )%></option>
+		<%
+			node_subdivision( _cur_sub.id, _cur_sub.name, _indent + '&nbsp;&nbsp;&nbsp;&nbsp;' );
+		}
+	}
+	
+%>
+
+
+
+	
+	<table width="100%"  border="0" cellspacing="1" cellpadding="3">
+		<tr valign=top>
+			<td width=260>
+				<b>Название подписки: &nbsp;&nbsp;&nbsp;</b> 
+			</td>
+			<td>
+				<input type="text" value="<%=_is_new ? '' : curObject.name%>" name="name" id="name" size="30"/> 
+			</td>
+	
+			<td width=150>
+				<b>Состояние:&nbsp;&nbsp;&nbsp;</b>
+			</td>
+			<td>
+				<input type="radio" name="is_active" id="is_active" value="true" <%= _is_new ? " checked" : (curObject.is_active ? " checked" : "") %>> Включена <br>
+				<input type="radio" name="is_active" id="is_active" value="false" <%= _is_new ? "" : ( curObject.is_active ? "" : " checked" ) %>> Выключена <br>
+			</td>
+		</tr>
+		<tr valign=top>
+			<td width=260>
+				<b>Ключевые слова в названии должности: &nbsp;&nbsp;&nbsp;</b> 
+				<br>(слова разделяются пробелами)
+			</td>
+			<td>
+				<input type="text" value="<%=_is_new ? "" : _key_word_in_name%>" name="key_word_in_name" size="30"/> 
+			</td>
+	
+			<td width=150>
+				<b>Регион:&nbsp;&nbsp;&nbsp;</b>
+			</td>
+			<td>
+				<select name="region_id">
+					<option value=""></option>
+					<%
+						
+						for (_region in XQuery("for $elem in regions where $elem/parent_object_id=null() order by $elem/name return $elem"))
+						{
+							_selected = ( (_region_id == _region.id)  ? " selected" : "");
+							%>
+								<option value="<%=_region.id%>" <%=_is_new ? "" : _selected%>><%=( _region.name )%></option>
+							<%
+							node_subdivision( _region.id, _region.name, '&nbsp;&nbsp;&nbsp;&nbsp;' );
+						}
+						
+					%>
+				</select>
+			</td>
+		</tr>	
+		<tr valign=top>	
+			<td  width=260>
+				<b>Ключевые слова в тексте вакансии:&nbsp;&nbsp;&nbsp; </b> 
+				<br>(слова разделяются пробелами)
+			</td>
+			<td>
+				<input type="text" value="<%=_is_new ? "" : curObject.full_text_search_str%>" name="key_word_in_fulltext" size="30"/>
+			</td>
+	
+			<td width=150>
+				<b>Образование:&nbsp;&nbsp;&nbsp;</b>
+			</td>
+			<td>
+				<select name="educ_type">
+					<option value=""></option>
+					<%
+						
+						for (_educ_type_elem in common.educ_types)
+						{
+							_selected = ( (_educ_type == _educ_type_elem.id)  ? " selected" : "");
+							%>
+								<option value="<%=_educ_type_elem.id%>" <%=_is_new ? "" : _selected%>><%=( _educ_type_elem.name )%></option>
+							<%
+						}
+						
+					%>
+				</select>
+			</td>
+		</tr>	
+		<tr valign=top>	
+			<td width=260>
+				<b>Возраст:&nbsp;&nbsp;&nbsp;</b> 
+			</td>
+			<td>
+				<input type="text" value="<%=_min_age%>" name="min_age" size="8" onchange="check_int(this);"/> <b>&nbsp;&nbsp;-&nbsp;&nbsp;</b> <input type="text" value="<%=_max_age%>" name="max_age" size="8" onchange="check_int(this);"/>
+			</td>
+	
+			<td width=150>
+				<b>Тип занятости:&nbsp;&nbsp;&nbsp;</b>
+			</td>
+			<td>
+				<select name="employment_type">
+					<option value=""></option>
+					<%
+						
+						for (_employment_type_elem in common.employment_types)
+						{
+							_selected = ( (_employment_type == _employment_type_elem.id)  ? " selected" : "");
+							%>
+								<option value="<%=_employment_type_elem.id%>" <%=_selected%>><%=( _employment_type_elem.name )%></option>
+							<%
+						}
+						
+					%>
+				</select>
+			</td>
+		</tr>	
+		<tr valign=top>	
+			<td width=260>
+				<b>Уровень дохода:&nbsp;&nbsp;&nbsp;</b> 
+			</td>
+			<td>
+				<input type="text" value="<%=_min_wage%>" name="min_wage" size="8" onchange="check_int(this);"/> <b>&nbsp;&nbsp;-&nbsp;&nbsp;</b> <input type="text" value="<%=_max_wage%>" name="max_wage" size="8" onchange="check_int(this);"/>
+				<select name="currency_type">
+					<option value=""></option>
+					<%
+						
+						for (_currency in lists.currency_types)
+						{
+							_selected = ( (_currency_type == _currency.id)  ? " selected" : "");
+							%>
+								<option value="<%=_currency.id%>"<%=_selected%>><%=( _currency.id )%></option>
+							<%
+						}
+						
+					%>
+				</select>
+			</td>
+	
+			<td>
+				
+			</td>
+			<td>
+			
+			</td>
+		</tr>
+	</table>
+	
+	
+<br><br><br>
+<b>Профессиональная область:&nbsp;&nbsp;&nbsp;</b> <%=_prof_areas_str%>
+<br>
+
+<SCRIPT LANGUAGE="JavaScript">
+<!--//
+	function check_all (_checked)
+	{
+		prof_areas_str = "";
+<%
+		for ( _prof_area in lists.professional_areas )
+		{
+%>
+			document.getElementById("prof_area_<%=_prof_area.id%>").checked = _checked;
+			prof_areas_str = prof_areas_str + "<%=_prof_area.id%>,";
+<%
+			
+		}
+%>
+		if ( _checked )
+			document.getElementById("prof_areas_ids").value = prof_areas_str;
+		else
+			document.getElementById("prof_areas_ids").value = "";
+	}
+	
+	function prof_area_select( _value, _checked, _name )
+	{
+		
+		_curr_value = document.getElementById("prof_areas_ids").value;
+		if ( _checked )
+		{
+			_new_value = _curr_value + _value + ",";
+		}
+		else
+		{
+			_index = _curr_value.indexOf(_value);
+			part1 = _curr_value.slice( 0, _index );
+			part2 = _curr_value.slice( _index + 1 + _value.length );
+			if ( _index >= 0 )
+				_new_value = part1 + part2;
+		}
+		document.getElementById("prof_areas_ids").value = _new_value;
+	}
+	
+	function hide_show( _value )
+	{
+
+		elem_show_block = document.getElementById("show_block");
+		elem_block = document.getElementById("prof_areas_block");
+		if ( elem_show_block.value == "1" )
+			elem_show_block.value = "0";
+		else
+			elem_show_block.value = "1";
+		
+		if ( elem_show_block.value == "1" )
+			elem_block.style.display = 'inline';
+		else
+			elem_block.style.display = 'none';
+		return false;
+		
+	}
+	
+	function check_int( _object )
+	{
+		var re = new RegExp( "^[0-9]*$" );
+		if ( _object.value != '' && _object.value.match(re) == null )
+		{
+			alert( "Введите целое число" );
+			_object.value = "";
+			return;
+		}
+	}
+//-->
+</SCRIPT>
+<%
+_selected_flag_all = "";
+if ( Request.Form.HasProperty( "all_prof_area" ) )
+	_selected_flag_all = " checked";
+%>
+<table width="100%" border="0">
+  <tr>
+<%
+
+	if ( Request.Form.HasProperty("show_block") && Request.Form.GetProperty("show_block") == "1" )
+		_prof_block_enable = true;
+	else
+		_prof_block_enable = false;
+	_prof_block_display = _prof_block_enable ? "inline" : "none";
+%>
+    <!--<td align="right"><a href="<%=tools_web.get_query_string( true, "prof_block_enable;")%>prof_block_enable=<%=!_prof_block_enable%>"><%=_prof_block_enable ? "Скрыть" : "Показать" %></a></td> 
+	
+	
+    <input type=button onclick="hide_show( this.value)" value='<%=_prof_block_enable ? "Скрыть блок выбора профессии" : "Показать блок выбора профессии" %>' name="button_show_hide">
+	<br>-->
+	<td align="right">
+	<a onclick="hide_show( this.value)" href="#">Скрыть/показать блок выбора профессии</a>
+	</td>
+  </tr>
+</table>
+<input type=hidden name="show_block" id="show_block" value="<%=Request.Form.HasProperty('show_block') ? Request.Form.GetProperty('show_block') : '0'%>">
+<input type="hidden" size=200 name="prof_areas_ids" id="prof_areas_ids" value="<%=_prof_area_ids%>"><br>
+
+
+
+<div id="prof_areas_block" style="display: <%=_prof_block_display%>">
+				
+<input type="checkbox" name="all_prof_area" value="1"<%=_selected_flag_all%> onClick="check_all(this.checked)"><br>
+					<%
+					for ( _prof_area in ArraySort( lists.professional_areas, "name", "+" ) )
+					{
+						
+						_selected_flag="";
+						
+						if ( (ArrayOptFind( categ_array, "This=='" + _prof_area.id + "'" )) != undefined ) 
+							_selected_flag=" checked";
+						%>
+						
+						<input type="checkbox" name="prof_area_<%=_prof_area.id%>" id="prof_area_<%=_prof_area.id%>" value="<%=_prof_area.id%>"<%=_selected_flag%> onclick="prof_area_select( this.value, this.checked, '<%=_prof_area.name%>' )"><%=_prof_area.name%><br>
+						<%
+					}
+					%>
+</div>
+	<p><center><input type="button" value="Сохранить" class="inputButton" onClick="save('<%=tools_web.get_query_string( true, "is_new;")%>');" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"> &nbsp;&nbsp;&nbsp;
+	<!-- <a href="<%=tools_web.get_query_string( true, "reset;")%>reset=1">Очистить форму</a> -->
+	<!-- <input type="reset" value="Очистить форму" class="inputButton" onClick__="reset();" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"> -->
+	
+	<%
+	//alert( tools_web.get_query_string( true, "reset;") )
+	%>
+	
+	</center></p>
+	
+</form>
+
+
+
+
+<%
+}
+%>

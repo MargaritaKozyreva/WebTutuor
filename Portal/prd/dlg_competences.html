@@ -1,0 +1,80 @@
+<%Server.Execute( "include/user_init.html" )%>
+
+<HTML>
+<HEAD>
+<title><%=tools_web.get_web_str("ass_competences")%></title>
+</HEAD>
+<BODY>
+<center><b><%=tools_web.get_web_str("ass_competences")%></b></center>
+<hr/>
+<span id="competenceSpanArea" STYLE="width:480px; height:400;overflow:scroll; border:3px window-inset;background-color: white;"></span>
+
+
+<script language="javascript">
+
+function handleClick(checkbox)
+{
+	var node = xmltree.selectSingleNode(".//competence[@id='"+checkbox.value+"']");
+	
+	if (checkbox.checked)
+	{
+		node.setAttribute("selected",1);
+	}
+	else
+	{
+		node.setAttribute("selected",0);
+	}
+}
+
+
+
+
+
+
+var xmltree=dialogArguments.xtree;
+var competenceSpanArea = document.all["competenceSpanArea"];
+
+var competences = xmltree.selectNodes(".//competence[@top='1']");
+var checked = '';
+
+for (i=0; i<competences.length; i++)
+{
+	if(competences[i].getAttribute("selected")==1) checked = ' checked'; else checked = '';
+
+	competenceSpanArea.insertAdjacentHTML("beforeEnd","<input type='checkbox' name='check_"+competences[i].getAttribute('id')+"' id='check_"+competences[i].getAttribute('id')+"' value='"+competences[i].getAttribute('id')+"' onClick='handleClick(this)'"+checked+"> <b>"+competences[i].getAttribute('name')+"</b> <br/>");
+	
+	if (competences[i].childNodes.length > 0 ) //!!!!!!!!!!!!!!!!!!!
+	{
+		
+		competenceSpanArea.insertAdjacentHTML("beforeEnd","<div id='div_"+competences[i].getAttribute('id')+"'>");
+			
+		for (j=0; j<competences[i].childNodes.length; j++)
+		{
+			var indicator = competences[i].childNodes[j];
+			if (indicator.getAttribute("type")==1)
+			{	
+				if(indicator.getAttribute("selected")==1) checked = ' checked'; else checked = '';
+				
+				competenceSpanArea.insertAdjacentHTML("beforeEnd","&nbsp;<li><input type='checkbox' name='check_"+indicator.getAttribute('id')+"' id='check_"+indicator.getAttribute('id')+"' value='"+indicator.getAttribute('id')+"' onClick='handleClick(this)'"+checked+"> &nbsp; - "+indicator.getAttribute('name')+" <br/>");
+			}
+		}; 
+		
+		competenceSpanArea.insertAdjacentHTML("beforeEnd","</div>");
+	}
+}
+
+
+
+
+
+</script>
+
+<table width="100%" border="1">
+<tr><td align="center">
+<input type="button" name="ok" value="<%=tools_web.get_web_str("c_save")%>" onClick="dialogArguments.handle=true; dialogArguments.xtree=xmltree; window.parent.close();" size=10>&nbsp;&nbsp;&nbsp
+<input type="button" name="cancel" value="<%=tools_web.get_web_str("c_cancel")%>" onClick="dialogArguments.handle=false; window.parent.close();">
+</td></tr>
+</table>
+
+</BODY>
+</HTML>

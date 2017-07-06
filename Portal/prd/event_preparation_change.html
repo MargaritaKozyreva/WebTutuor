@@ -1,0 +1,51 @@
+<%
+	Server.Execute( "include/sid_access_init.html" );
+
+	curPreparationID = Request.Form.event_preparation_id;
+	curPreparation = curObject.even_preparations.GetChildByKey( curPreparationID );
+
+	if ( curUser.access.access_role == 'admin' || curObject.tutors.ChildByKeyExists( curUserID ) )
+	{
+		if ( Request.Form.action == 'delete' )
+		{
+			curPreparation.Delete();
+			if ( curObject.status_id != 'close' && curObject.status_id != 'cancel' )
+			    tools.create_notification( '54', curPreparation.person_id, '', curObjectID );
+		}
+		else
+		{
+			try
+			{
+				curPreparation.plan_date = Date( Request.Form.plan_date );
+			}
+			catch(_pd_error_)
+			{
+			}
+			try
+			{
+				curPreparation.fact_date = Date( Request.Form.fact_date );
+			}
+			catch(_pd_error_)
+			{
+			}
+
+			curPreparation.status_id = Request.Form.status_id;
+			curPreparation.comment = Request.Form.comment;
+		}
+	}
+
+	if ( curUserID == curPreparation.person_id )
+	{
+		curPreparation.status_id = Request.Form.status_id;
+		curPreparation.comment_person = Request.Form.comment_person;
+	}
+
+	curObjectDoc.Save();
+
+	if ( Request.Form.action == 'delete' )
+		Response.Redirect( 'view_doc.html?mode=event&object_id=' + curObjectID + '&doc_id=' + Request.Form.doc_id );
+	else
+		Response.Redirect( 'view_doc.html?mode=event_preparation&object_id=' + curObjectID + '&doc_id=' + Request.Form.doc_id + '&event_preparation_id=' + curPreparationID );
+
+	Cancel();
+%>

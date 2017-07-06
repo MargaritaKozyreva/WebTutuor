@@ -1,0 +1,401 @@
+<%
+function buildReport(myFuckinDoc, _pas, is_human)
+{
+		var competenceArray = Array();
+		var compCounter = 0;
+
+
+		if (myFuckinDoc != undefined)
+		for (_pa in _pas)
+		{
+			if (_pa.status.HasValue)
+			{
+				_cur_status = myFuckinDoc.statuses.ObtainChildByKey(_pa.status);
+				_cur_status.index = _cur_status.PrimaryKey.ForeignElem.index;
+				
+				_paDoc = OpenDoc(UrlFromDocID(_pa.id)).TopElem;
+				
+				_cur_aatype = _curAssessmentAppraise.participants.GetOptChildByKey(_pa.status);
+				if (_cur_aatype == undefined)
+					continue;
+				_cur_aatype = _cur_aatype.assessment_appraise_types.GetOptChildByKey(_pa.assessment_appraise_type);
+				if (_cur_aatype == undefined)
+					continue;
+				
+				
+				for ( _comp in  _paDoc.competences)
+				{
+					_curCompetence = ArrayOptFind(competenceArray, 'id == _comp.PrimaryKey');
+					if (_curCompetence == undefined)
+					{
+						try
+						{
+							_curCompetenceDoc = OpenDoc(UrlFromDocID(_comp.PrimaryKey)).TopElem;
+						}
+						catch(_shit_)
+						{
+							continue;
+						}
+						
+						_curCompetence = new Object;
+						_curCompetence.id = _comp.PrimaryKey;
+						_curCompetence.TopElem = _curCompetenceDoc;
+						
+						competenceArray[compCounter] = _curCompetence;
+						compCounter++;
+						
+					}
+
+
+					_block = _curCompetence.TopElem.competence_block_id;
+					
+					if (_block == null)
+						_block = 0;
+
+					_cur_block = _cur_status.blocks.ObtainChildByKey(_block);
+					_curDescBlock = myFuckinDoc.blocks.ObtainChildByKey(_block);
+					
+					if (_block == 0)
+						_curDescBlock.block_name = "-";
+					else
+						_curDescBlock.block_name = _cur_block.PrimaryKey.ForeignElem.name;
+					
+					_cur_competence = _cur_block.competences.ObtainChildByKey(_curCompetence.id);
+					_curDescComp = _curDescBlock.competences.ObtainChildByKey(_curCompetence.id);
+					
+					if (_curDescComp.competence_name == '')
+						_curDescComp.competence_name = _curCompetence.TopElem.name;
+					
+					if (_comp.mark == "" || _comp.mark == "N")
+					{
+						_cur_competence.show_score = _comp.mark;
+					}
+					else
+					{
+						_scale = _curCompetence.TopElem.scales.GetOptChildByKey(_comp.mark);
+						if (_scale != undefined)
+						{
+							_cur_competence.show_score = _scale.name;
+							if (_scale.percent.HasValue)
+								_cur_competence.score = _cur_competence.score + _scale.percent + 1; //_cur_aatype.incrementation;
+							else
+								_cur_competence.score = _cur_competence.score + _scale.ChildIndex + 1; //_cur_aatype.incrementation;
+						}
+						else
+						{
+							try
+							{
+								_cur_competence.score = Real(_comp.mark) + _cur_competence.score + 1;//_cur_aatype.incrementation;
+								_cur_competence.show_score = _comp.mark;
+							}
+							catch(_v_prolete_)
+							{
+								//
+							}
+						}
+							
+					}
+					
+					
+				}
+				
+				_cur_status.counter = _cur_status.counter + 1;
+				
+				
+			}
+		}
+		
+		
+		
+		
+		for (_status in myFuckinDoc.statuses)
+		{
+		
+			_b_count = 0.0;
+			_b_sum = 0.0;
+			
+			for (_block in _status.blocks)
+			{
+				_count = 0.0;
+				_sum = 0.0;
+				for (_competence in _block.competences)
+				{
+					_sum = _sum + _competence.score;
+					_count = _count + 1.0;
+				}
+				if (_count > 0)
+					_block.score = _sum / _count;
+					
+				_b_count = _b_count + 1.0;
+				_b_sum = _b_sum + _block.score;
+			}
+			
+			if (_b_count > 0)
+				_status.total_score = _b_sum / _b_count;
+		
+		}
+		
+		
+%>
+		<table width="100%"  border="0" cellspacing="0" cellpadding="3" style="border: solid black 1px">
+		<tr>
+<%
+		if (is_human)
+		{
+%>
+			<th style="border:1px solid"><%=tools_web.get_web_str("c_subd")%></th>
+			<th style="border:1px solid"><%=tools_web.get_web_str("c_position")%></th>
+			<th style="border:1px solid"><%=tools_web.get_web_str("c_fio")%></th>
+<%
+		}
+		else
+		{
+%>
+			<th style="border:1px solid" colspan="3"><%=tools_web.get_web_str("c_subd")%></th>
+<%
+		}
+		
+		
+		_sStatuses = ArraySort(myFuckinDoc.statuses, 'index', '+');
+		for (_status in _sStatuses)
+		{
+%>	
+			<th style="border:1px solid"><%=_status.PrimaryKey.ForeignElem.name%></th>
+<%
+		}
+%>
+		</tr>
+		
+		<tr bgcolor="silver">
+<%
+		if (is_human)
+		{
+%>	
+			<td style="border:1px solid">
+			<%
+				try
+				{
+					Response.Write(myFuckinDoc.person_id.ForeignElem.position_id.ForeignElem.parent_object_id.ForeignElem.name);
+				}
+				catch(zhopa)
+				{
+					Response.Write("&nbsp;");
+				}
+			%>
+			</td>
+			<td style="border:1px solid"><%=myFuckinDoc.position_name%></td>
+			<td style="border:1px solid"><%=myFuckinDoc.person_fullname%></td>
+<%
+		}
+		else
+		{
+%>
+				<td style="border:1px solid"  colspan="3">
+				<%
+					try
+					{
+						Response.Write(myFuckinDoc.department_id.ForeignElem.name);
+					}
+					catch(zhopa)
+					{
+						Response.Write("&nbsp;");
+					}
+				%>
+				</td>
+<%
+		}
+		_sStatuses = ArraySort(myFuckinDoc.statuses, 'index', '+');
+		for (_status in _sStatuses)
+		{
+%>	
+			<td style="border:1px solid" align="center"><%=_status.total_score%></td>
+<%
+		}
+%>
+			</td>
+		</tr>
+		
+		
+		
+		
+<%
+		for (_desc_block in myFuckinDoc.blocks)
+		{
+%>
+		<tr bgcolor="lightgrey">
+			<td colspan="3" style="border:1px solid"><%=_desc_block.block_name%></td>
+<%
+			for (_status in _sStatuses)
+			{
+				_cur_block = _status.blocks.GetChildByKey(_desc_block.PrimaryKey);
+%>
+				<td align="center" style="border:1px solid"><%=_cur_block.score%></td>
+<%
+				
+			}		
+%>		
+		</tr>
+<%
+			for (_desc_comp in _desc_block.competences)
+			{
+%>
+			<tr>
+				<td colspan="3" style="border:1px solid"><%=_desc_comp.competence_name%></td>
+<%
+				for (_status in _sStatuses)
+				{
+					_cur_block = _status.blocks.GetChildByKey(_desc_block.PrimaryKey);
+					_cur_comp = _cur_block.competences.GetChildByKey(_desc_comp.PrimaryKey);
+%>
+					<td align="center" style="border:1px solid"><%=_cur_comp.score%></td>
+<%
+				
+				}		
+%>		
+				
+				
+			</tr>	
+<%
+			}
+		}
+%>
+		</table>
+<%
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+//-------------------------------------------------------------
+
+
+	_my_fuckin_form = '<?xml version=&quot;1.0&quot; encoding=&quot;windows-1251&quot;?><SPXML-FORM><oo_report_form><person_id TYPE="integer" FOREIGN-ARRAY="collaborators"/><person_fullname TYPE="string"/><position_name TYPE="string"/><department_id TYPE="integer" FOREIGN-ARRAY="subdivisions"/><department_name TYPE="string"/><statuses><status MULTIPLE="1" PRIMARY-KEY="status_id"><status_id TYPE="string" FOREIGN-ARRAY="common.assessment_appraise_participants"/><counter TYPE="integer" DEFAULT="0" NOT-NULL="1"/><index TYPE="integer"/><blocks><block MULTIPLE="1" PRIMARY-KEY="block_id"><block_id TYPE="integer" FOREIGN-ARRAY="competence_blocks"/><score TYPE="real" NOT-NULL="1" DEFAULT="0.0"/><competences><competence MULTIPLE="1" PRIMARY-KEY="competence_id"><competence_id TYPE="integer" FOREIGN-ARRAY="competences"/><competence_name TYPE="string"/><show_score TYPE="string"/><score TYPE="real" NOT-NULL="1" DEFAULT="0.0"/></competence></competences></block></blocks><total_score TYPE="real" NOT-NULL="1" DEFAULT="0.0"/></status></statuses><blocks><block MULTIPLE="1" PRIMARY-KEY="block_id"><block_id TYPE="integer" FOREIGN-ARRAY="competence_blocks"/><block_name TYPE="string"/><competences><competence MULTIPLE="1" PRIMARY-KEY="competence_id"><competence_id TYPE="integer" FOREIGN-ARRAY="competences"/><competence_name TYPE="string"/></competence></competences></block></blocks></oo_report_form></SPXML-FORM>';
+
+	RegisterFormFromStr('oo_report_form', _my_fuckin_form);
+
+	if (Request.QueryString.HasProperty("person_id") && Request.QueryString.person_id != "" && ArrayOptFind(_elems_full, "PrimaryKey + '' == Request.QueryString.person_id" ) != undefined )
+	{
+/*
+	_my_fuckin_form = '<?xml version=&quot;1.0&quot; encoding=&quot;windows-1251&quot;?>
+	<SPXML-FORM>
+	<oo_report_form>
+		<person_id TYPE="integer" FOREIGN-ARRAY="collaborators"/>
+		<person_fullname TYPE="string"/>
+		<position_name TYPE="string"/>
+		
+		<department_id TYPE="integer" FOREIGN-ARRAY="subdivisions"/>
+		<department_name TYPE="string"/>
+		
+		<statuses>
+			<status MULTIPLE="1" PRIMARY-KEY="status_id">
+				<status_id TYPE="string" FOREIGN-ARRAY="common.assessment_appraise_participants"/>
+				<counter TYPE="integer" DEFAULT="0" NOT-NULL="1"/>
+				<index TYPE="integer"/>
+				<blocks>
+					<block MULTIPLE="1" PRIMARY-KEY="block_id">
+						<block_id TYPE="integer" FOREIGN-ARRAY="competence_blocks"/>
+						<score TYPE="real" NOT-NULL="1" DEFAULT="0.0"/>
+						<competences>
+							<competence MULTIPLE="1" PRIMARY-KEY="competence_id">
+								<competence_id TYPE="integer" FOREIGN-ARRAY="competences"/>
+								<show_score TYPE="string"/>
+								<score TYPE="real" NOT-NULL="1" DEFAULT="0.0"/>
+							</competence>
+						</competences>
+					</block>
+				</blocks>
+				<total_score TYPE="real" NOT-NULL="1" DEFAULT="0.0"/>
+			</status>
+		</statuses>
+		
+		
+		<blocks>
+			<block MULTIPLE="1" PRIMARY-KEY="block_id">
+				<block_id TYPE="integer" FOREIGN-ARRAY="competence_blocks"/>
+				<block_name TYPE="string"/>
+				<competences>
+					<competence MULTIPLE="1" PRIMARY-KEY="competence_id">
+						<competence_id TYPE="integer" FOREIGN-ARRAY="competences"/>
+						<competence_name TYPE="string"/>
+					</competence>
+				</competences>
+			</block>		
+		</blocks>
+		
+		
+	</oo_report_form>
+	</SPXML-FORM>';
+		
+*/
+				
+		_my_pas = XQuery("for $pa in pas where $pa/person_id = " + Request.QueryString.person_id + " and $pa/assessment_appraise_id = " + _curAssessmentAppraiseID + " and $pa/is_done = true() and $pa/assessment_appraise_type = 'competence_appraisal' return $pa");
+		
+		
+				
+		try
+		{
+			_myFuckinDoc = OpenNewDoc( 'oo_report_form').TopElem;
+			_myFuckinDoc.person_id = Request.QueryString.person_id;
+			_myFuckinDoc.person_fullname = _myFuckinDoc.person_id.ForeignElem.fullname;
+			_myFuckinDoc.position_name = _myFuckinDoc.person_id.ForeignElem.position_name;
+		}
+		catch(_nenavizhu_)
+		{
+			Response.Write("<center><b>"+tools_web.get_web_str("ass_report_error2")+":</b><br/><br/>" + _nenavizhu_ + "</center>");
+			_myFuckinDoc = undefined;
+		}
+
+		buildReport(_myFuckinDoc, _my_pas, true);
+	}
+	else if( Request.QueryString.HasProperty("subdivision_id") && Request.QueryString.subdivision_id != "" )
+	{
+		positionArray = XQuery( "CatalogHierSubset('subs'," + Request.QueryString.subdivision_id + ")" );
+		positionArray = ArraySelect( positionArray, 'basic_collaborator_id.HasValue' );
+		curPersonsArray = ArrayExtract( positionArray, 'basic_collaborator_id' );
+		curPersonsArray = QueryCatalogByKeys( 'collaborators', 'id', curPersonsArray );
+		
+		pa_array = XQuery("for $pa in pas where $pa/assessment_appraise_id = " + _curAssessmentAppraiseID + " and $pa/is_final = true() order by $pa/status return $pa");
+		
+		var competenceArray = Array();
+		var compCounter = 0;
+		
+		try
+		{
+			_myFuckinDoc = OpenNewDoc( 'oo_report_form').TopElem;
+			_myFuckinDoc.department_id = Request.QueryString.subdivision_id;
+			_myFuckinDoc.department_name = _myFuckinDoc.department_id.ForeignElem.name;
+		}
+		catch(_nenavizhu_)
+		{
+			Response.Write("<center><b>" +tools_web.get_web_str("ass_report_error2")+ ":</b><br/><br/>" + _nenavizhu_ + "</center>");
+			_myFuckinDoc = undefined;
+		}
+		
+		if (_myFuckinDoc != undefined)
+		{
+			_my_pas = Array();
+					
+			if (_myFuckinDoc != undefined)
+			for (_elem in _elems_full)
+			{
+				if (ArrayOptFind(curPersonsArray , "PrimaryKey == _elem.PrimaryKey") != undefined)
+				{
+					_my_pas = ArrayUnion(_my_pas, XQuery("for $pa in pas where $pa/person_id = " + _elem.PrimaryKey + " and $pa/assessment_appraise_id = " + _curAssessmentAppraiseID + " and $pa/is_done = true() and $pa/assessment_appraise_type = 'competence_appraisal' return $pa"));
+				}
+			}
+		
+		
+			buildReport(_myFuckinDoc, _my_pas, false);
+		}
+	}
+%>

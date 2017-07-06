@@ -1,0 +1,340 @@
+<%
+if( curObject.type == 'collaborator' )
+{
+	try
+	{
+		curPerson = OpenDoc( UrlFromDocID( curObject.person_id ) ).TopElem;
+	}
+	catch(_hren_)
+	{
+		curPerson = undefined;
+	}
+}
+else
+	curPerson = curObject;
+%>
+<br/>		
+<table width="100%" cellspacing="0" cellpadding="4" class="tableBorder">
+	<tr>
+		<td width="100" align="left"><%=tools_web.get_web_str("c_fio")%>:</td>
+		<td style="font-weight:normal"><%=(curPerson != undefined ? curPerson.fullname : "&nbsp;-&nbsp;")%></td>
+	</tr>
+    <tr>
+		<td width="100" align="left"><%=tools_web.get_web_str("uf_email")%>:</td>
+		<td style="font-weight:normal"><%=curObject.email%></td>
+	</tr>
+	<tr>
+		<td width="100" align="left"><%=tools_web.get_web_str("vkpb_rating")%>:</td>
+		<td style="font-weight:normal"><%=curObject.rating%></td>
+	</tr>
+</table>
+<br/>
+<%
+	_knowledge_parts = XQuery("for $kp in knowledge_parts where contains($kp/experts, " + curObjectID + ") return $kp");
+	if (ArrayOptFirstElem(_knowledge_parts) != undefined)
+	{
+%>
+<table width="100%"  border="0" cellspacing="0" cellpadding="0">
+	<tr>
+		<td class="tableHeaderTextLeft"><img src="pics/1blank.gif" width="0" height="0" /></td>
+		<td class="tableHeaderText" colspan="3"><p class="tableHeaderTextInner"><%=tools_web.get_web_str("vkpb_knowledge_parts_title")%></p></td>
+		<td class="tableHeaderTextRight"><img src="pics/1blank.gif" width="0" height="0" /></td>
+	</tr>
+	<tr>
+		<td class="tableHeaderWithTextLeft"><img src="pics/1blank.gif" width="0" height="0" /></td>
+		<td class="tableHeaderWithText"><%=tools_web.get_web_str("vkpb_part")%></td>
+		<td class="tableHeaderWithText"><%=tools_web.get_web_str("vkpb_classifier")%></td>
+		<td class="tableHeaderWithText">*</td>
+		<td class="tableHeaderWithTextRight"><img src="pics/1blank.gif" width="0" height="0" /></td>
+	</tr>
+	<tr>
+		<td class="tableHeaderNoTextLeft"><img src="pics/1blank.gif" width="0" height="0" /></td>
+		<td class="tableHeaderNoText" width="50%"><img src="pics/1blank.gif" width="0" height="0" /></td>
+		<td class="tableHeaderNoText" width="50%"><img src="pics/1blank.gif" width="0" height="0" /></td>
+		<td class="tableHeaderNoText" width="50px"><img src="pics/1blank.gif" width="0" height="0" /></td>
+		<td class="tableHeaderNoTextRight"><img src="pics/1blank.gif" width="0" height="0" /></td>
+	</tr>
+<%				
+	counter = 0;
+	for ( _knowledge_part in _knowledge_parts)
+	{
+		if ( global_settings.settings.check_access_on_lists )
+			try
+			{
+				if ( tools_web.check_access( OpenDoc( UrlFromDocID ( _knowledge_part.PrimaryKey ) ).TopElem, curUserID, curUser, Session ) == false )
+					continue;
+			}
+			catch(_opa_)
+			{
+				continue;
+			}
+		_class = counter++ % 2 ? 'tableRowEven' : 'tableRowOdd';
+		_classl = counter++ % 2 ? 'tableRowEvenLeft' : 'tableRowOddLeft';		
+		_classr = counter++ % 2 ? 'tableRowEvenRight' : 'tableRowOddRight';
+%>
+		<tr>
+			<td class="<%=_classl%>"></td>					
+			<td class="<%=_class%>">
+				<a href="view_doc.html?mode=knowledge_part&knowledge_part_id=<%=_knowledge_part.PrimaryKey%>&doc_id=<%=curDocID%>"><%=_knowledge_part.name%></a>
+			</td>
+			<td class="<%=_class%>">
+		<%
+			_classifier = _knowledge_part.knowledge_classifier_id.OptForeignElem;
+			
+			if (_classifier != undefined)
+			{
+				Response.Write('<a href="view_doc.html?mode=knowledge_classifier&knowledge_classifier_id=' + _knowledge_part.knowledge_classifier_id + '&doc_id=' + curDocID + '">' + _classifier.name + '</a>');
+			}
+			else			
+			{
+				Response.Write(tools_web.get_web_str("vkpb_not_classified"));
+			}
+		%>
+			</td>
+			<td class="<%=_class%>">
+		<%
+			if (_knowledge_part.require_acknowledgement)
+				Response.Write(tools_web.get_web_str("veb_require_acknowledgement"));
+		%>
+				&nbsp;
+			</td>
+			<td class="<%=_classr%>"></td>
+		</tr>
+<%
+	}
+%>
+	<tr>
+		<td class="tableFooterLeft"><img src="pics/1blank.gif" width="0" height="0" /></td>
+		<td class="tableFooter" colspan="3"><img src="pics/1blank.gif" width="0" height="0" /></td>
+		<td class="tableFooterRight"><img src="pics/1blank.gif" width="0" height="0" /></td>
+	</tr>
+</table>
+<%
+	}
+	Server.Execute( "view_desc.html" );
+%>
+<BR/>
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+<tr>
+	<td class="tableHeaderTextLeft"><img src="pics/1blank.gif" width="0" height="0" /></td>
+	<td class="tableHeaderText" width="100%"><p class="tableHeaderTextInner"><%=tools_web.get_web_str("veb_my_questions")%></p></td>
+	<td class="tableHeaderTextRight"><img src="pics/1blank.gif" width="0" height="0" /></td>
+</tr>
+</table>
+<table width="100%"  border="0" cellspacing="0" cellpadding="0">
+	<tr>
+		<td class="tableHeaderTextLeft"><img src="pics/1blank.gif" width="0" height="0" /></td>
+<%
+	if (curUserID == curObject.person_id)
+	{
+%>
+		<td class="tableHeaderWithText" width="200px"><%=tools_web.get_web_str('veb_from')%></td>
+		<td class="tableHeaderWithText" width="100px"><%=tools_web.get_web_str('c_date')%></td>
+		<td class="tableHeaderWithText" width="100px"><%=tools_web.get_web_str('c_status')%></td>
+		<td class="tableHeaderWithText" width="30px">FAQ</td>
+		<td class="tableHeaderWithText" width="30px"><%=tools_web.get_web_str('vcb_open')%></td>
+<%
+	}
+%>
+		<td class="tableHeaderWithText"><%=tools_web.get_web_str('c_question')%></td>
+		<td class="tableHeaderWithText"><%=tools_web.get_web_str('c_answer')%></td>
+		<td class="tableHeaderTextRight"><img src="pics/1blank.gif" width="0" height="0" /></td>
+	</tr>
+	<tr>
+		<td class="tableHeaderNoTextLeft"><img src="pics/1blank.gif" width="0" height="0" /></td>
+<%
+	if (curUserID == curObject.person_id)
+	{
+%>
+		<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+		<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+		<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+		<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+		<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+<%
+	}
+%>
+		<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+		<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+		<td class="tableHeaderNoTextRight"><img src="pics/1blank.gif" width="0" height="0" /></td>
+	</tr>
+	<tbody id="expert_question_recycler">
+<%
+	xarrMyQuestion =  XQuery("for $q in expert_questions where $q/expert_id = " + curObjectID + (curUserID == curObject.person_id ? "":" and ($q/is_disclosed = true() or $q/person_id = "+curUserID+")") + " order by $q/question return $q");
+	iCounter = 0;
+	for (catQuestionElem in xarrMyQuestion)
+	{
+		sClassLeft = iCounter % 2 ? "tableRowEvenLeft" : "tableRowOddLeft";
+		sClass = iCounter % 2 ? "tableRowEven" : "tableRowOdd";
+		sClassRight = iCounter % 2 ? "tableRowEvenRight" : "tableRowOddRight";
+		teQuestionElem = OpenDoc(UrlFromDocID(catQuestionElem.PrimaryKey)).TopElem;
+%>
+		<tr>
+			<td class="<%=sClassLeft%>"><input type="hidden" name="expert_question_<%=iCounter%>" id="expert_question_<%=iCounter%>" value="<%=catQuestionElem.id%>"/></td>
+<%
+		if (curUserID == curObject.person_id)
+		{
+%>
+			<td class="<%=sClass%>"><%=catQuestionElem.person_fullname%></td>
+			<td class="<%=sClass%>"><%=catQuestionElem.date%></td>
+			<td class="<%=sClass%>"><%=tools_web.get_web_str((catQuestionElem.status ? "veqb_is_answered" : "veqb_is_not_answered" ))%></td>
+			<td class="<%=sClass%>"><input type="checkbox" name="is_faq_<%=catQuestionElem.id%>" value="1" <%=(catQuestionElem.is_faq ? "checked":"")%> onclick="changeQInfo('<%=catQuestionElem.id%>', 'is_faq', this);"/></td>
+			<td class="<%=sClass%>"><input type="checkbox" name="is_disclosed_<%=catQuestionElem.id%>" value="1" <%=(catQuestionElem.is_disclosed ? "checked":"")%> onclick="changeQInfo('<%=catQuestionElem.id%>', 'is_disclosed', this);"/></td>
+<%
+		}
+%>
+			<td class="<%=sClass%>"><a href="view_doc.html?mode=expert_question&doc_id=<%=curDocID%>&object_id=<%=catQuestionElem.PrimaryKey%>"><%=(StrLen(teQuestionElem.question) > 100 ? String(teQuestionElem.question).substr(0,100)+"...":teQuestionElem.question)%></a></td>
+			<td class="<%=sClassRight%>"><%=(StrLen(teQuestionElem.answer) > 50 ? String(teQuestionElem.answer).substr(0,50):teQuestionElem.answer)%></td>
+		</tr>
+<%
+		iCounter++;
+	}
+%>
+	</tbody>
+	<tr>
+		<td class="tableFooterLeft"><img src="pics/1blank.gif" width="1" height="1" /></td>
+<%
+		if (curUserID == curObject.person_id)
+		{
+%>
+		<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+		<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+		<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+		<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+		<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+<%
+		}
+%>
+		<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+		<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+		<td class="tableFooterRight"><img src="pics/1blank.gif" width="1" height="1" /></td>
+	</tr>
+</table>
+<input type="hidden" value="<%=iCounter%>" id="expert_questions_count"/>
+<script language="javascript">
+<!--
+	var sErrorMessage = <%=CodeLiteral( tools_web.get_web_str('veb_err_post') )%>;
+<%
+		if (curUserID == curObject.person_id)
+		{
+%>
+	function changeQInfo(sDocIdParam, sFldNam, domSrcControl)
+	{
+		var sDangerGifPath = 'pics/no.gif';
+		$(domSrcControl).hide().after("<img border='0' src='pics/ajax-loader-tiny.gif'/>");
+		$.ajax({type: 'POST', url: 'document_save.html',  data: 'ajax=1&data_0_id='+sDocIdParam+'&data_0_source_fields='+sFldNam+'&data_0_destination_fields='+$(domSrcControl).is(':checked'),async: true, success: function(data){if (parseInt(data) != 1) {window.alert(sErrorMessage); $(domSrcControl).next("img").attr('src',sDangerGifPath);} else $(domSrcControl).show().next("img").remove();}, error: function(xht, msg){window.alert(sErrorMessage+"\n" + msg); $(domSrcControl).next("img").attr('src',sDangerGifPath);} });
+	}
+	MM_preloadImages('pics/ajax-loader-tiny.gif');
+<%
+		}
+%>
+	MM_preloadImages('pics/progress.gif');
+	function askQuestion(senderButton)
+	{
+		if ($("div#_curious_div textarea#ask_expert").val() == "")
+		{
+			window.alert(<%=CodeLiteral( tools_web.get_web_str('veb_err_question_text') )%>);
+			return false;
+		}
+		var sXmlKnowledges = "<knowledge_parts>";
+		var arrOfKnowledgeIDs = $("div#_curious_div input#knowledge_part_id").val().split(";");
+		for (var i=0; i< arrOfKnowledgeIDs.length; i++)
+		if (arrOfKnowledgeIDs[i] != "")
+		{
+			sXmlKnowledges+= "<knowledge_part><knowledge_part_id>"+arrOfKnowledgeIDs[i]+"</knowledge_part_id></knowledge_part>";
+		}
+		sXmlKnowledges+= "</knowledge_parts>";
+		$(senderButton).hide().after("<img border='0' src='pics/progress.gif'/>");
+		var sCode = "tools.create_notification('70', docResponse.DocID, '', null,docResponse.TopElem);";
+		$.ajax({
+		type: "POST",
+		url: "document_save.html",
+		data: "ajax=1&data_0_new=2&data_0_doc_form=expert_question&data_0_source_fields=question;person_id;expert_id;date&data_0_destination_fields=[encoded]"+escape($("div#_curious_div textarea#ask_expert").val())+";"+$("div#_curious_div input#curious_person_id").val()+ ";<%=curObjectID%>;[@formula]Date()&data_0_xml_0="+escape(sXmlKnowledges)+"&data_0_xml_assign_node_0=TopElem.knowledge_parts&code_access=<%=Md5Hex(String((Session.sid|curUserID)))%>&code_0_eval=" + escape(sCode),
+		success: function() 
+		{
+			window.location.href=window.location.href;
+			//$(senderButton).show().next("img").remove();
+		},
+		error: function(xht,msg) {window.alert(sErrorMessage+"\n" + msg); $(senderButton).show().next("img").remove();}
+		});
+	}
+-->
+</script>
+<br/>
+<input type="button" onclick="$('div#_curious_div').show('fast');$(this).hide('fast');" value="<%=HtmlEncode(tools_web.get_web_str("veb_ask_expert"))%>" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+<div id="_curious_div" style="display: none">
+<input type="hidden" id="curious_person_id" value="<%=curUserID%>"/>
+<table width="100%">
+	<tr>
+		<td align="left"><%=tools_web.get_web_str("c_question")%></td>
+	</tr>
+	<tr>
+		<td align="left">
+			<textarea id="ask_expert" name="ask_expert" style="width: 100%" rows="5"></textarea>
+		</td>
+	</tr>
+<%
+	if (curUserID == curObject.person_id)
+	{
+%>
+		<tr>
+			<td align="left">
+				<table width="100%" cellspacing="0" cellpadding="2" border="0">
+					<tr>
+						<td width="100px"><%=tools_web.get_web_str('veb_question_call')%></td>
+						<td><input type="text" id="disp_asker_id" value="<%=curUser.fullname%>" class="inputEdit" style="width:100%" readonly/></td>
+						<td width="25px">
+						<input type="button" value="..." class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="
+							var pars=new Object(); pars.check_access = true;
+							var strAttr='status:no;dialogWidth:780px;dialogHeight:550px;help:no;resizable:1';
+							xShowModalDialog('dlg_select.html?doc_id=<%=curDocID%>&catalog_name=collaborator&typein=1&multi_select=0&rand='+Math.random(), pars, strAttr);
+							if (!pars.handle ) return false;
+							
+							$('div#_curious_div input#curious_person_id').val(pars.element_id);
+							$('div#_curious_div input#disp_asker_id').val(pars.element_name);
+						" style="width: 25px"/>
+						</td>
+					</tr>
+				</table>
+			</td>
+		</tr>
+<%
+	}
+%>
+	<tr>
+		<td align="left">
+			<table width="100%" cellspacing="0" cellpadding="2" border="0">
+				<tr>
+					<td width="100%"><input type="text" id="disp_knowledge_part" value="" class="inputEdit" style="width:100%;display:none" readonly/>
+					<input type="hidden" name="knowledge_part_id" id="knowledge_part_id" value=""/>
+					<span id="selectknowledge_advice_sign" style="width:100%;text-align: right;font-weight: bold"><%=tools_web.get_web_str('veb_sel_know_map')%></span>
+					</td>
+					<td>
+					<input type="button" value="..." class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="
+						var pars=new Object(); pars.check_access = true;
+						pars.can_be_empty = true;
+						pars.xquery_qual = 'contains($elem/experts, \'<%=curObjectID%>\')';
+						var strAttr='status:no;dialogWidth:780px;dialogHeight:550px;help:no;resizable:1';
+						xShowModalDialog('dlg_select.html?doc_id=<%=curDocID%>&catalog_name=knowledge_part&typein=0&multi_select=1&rand='+Math.random(), pars, strAttr);
+						if (!pars.handle ) return false;
+						$('input[name=\'disp_knowledge_part_elem666\']').remove();
+						if (pars.elemNamesArray.length > 0)
+							$('span#selectknowledge_advice_sign').hide();
+						else
+							$('span#selectknowledge_advice_sign').show();
+						$('input#knowledge_part_id').val(pars.selected_object_ids);
+						for (var i=0;i<pars.elemNamesArray.length;i++)
+						{							$('input#disp_knowledge_part').clone().attr({id:'',name:'disp_knowledge_part_elem666'}).val(pars.elemNamesArray[i]).show().insertBefore('input#knowledge_part_id');
+						}
+					" style="width: 25px"/>
+					</td>
+				</tr>
+			</table>
+		</td>
+	</tr>
+</table>
+	<input type="button" onclick="askQuestion(this);" value="<%=HtmlEncode(tools_web.get_web_str("veb_ask_expert"))%>" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+</div>
+<!--
+<p><a href="view_doc.html?mode=expert_questions&doc_id=<%=curDocID%>&object_id=<%=curObjectID%>"><%=tools_web.get_web_str('veb_go_questions')%> &raquo;&raquo;</a></p>
+-->

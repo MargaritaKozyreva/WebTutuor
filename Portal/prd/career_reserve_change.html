@@ -1,0 +1,893 @@
+<%
+
+/*alert('<====>');
+for (a in Request.Query)
+{
+	alert(a+"="+Request.Query.GetProperty(a));
+}
+alert('<====>');*/
+
+Server.Execute( "include/sid_access_init.html" );
+
+
+docCareerReserve = OpenDoc( UrlFromDocID( Int( Request.Form.career_reserve_id ) ) );
+
+if (Request.Query.HasProperty("tab"))
+	_selectedTab = Int(Request.Query.GetProperty("tab"));
+else
+	_selectedTab = 0;
+
+curDocID=Request.Form.doc_id
+bIsBoss=false
+fldBoss=tools.get_uni_user_boss(docCareerReserve.TopElem.person_id)
+if (fldBoss!=undefined)
+{
+	bIsBoss=(fldBoss.id==curUserID);
+}
+bIsMainTutor = false
+try
+{
+	bIsMainTutor = docCareerReserve.TopElem.tutors.GetChildByKey( curUserID ).is_responsible;
+}
+catch(ex)
+{
+}
+bIsPerson=(curUserID==docCareerReserve.TopElem.person_id)
+
+
+function fnTaskString(strTaskIdParam)
+{
+	strReturn=''
+	try
+	{
+		bCanActivateTest=false;
+		bCanActivateCourse=false;
+		bCanAddToEvent=false;
+		bHasWhatToSave=false;
+		
+		fldEvent=undefined
+		fldEduMethod=undefined;
+		
+		fldTask=docCareerReserve.TopElem.tasks.GetOptChildByKey(strTaskIdParam);
+		if (fldTask!=undefined)
+		{
+					bIsTutor=(fldTask.tutor_id == curUserID)
+					bIsCommissionPerson=(ArrayOptFind(fldTask.commission_persons,'person_id=='+curUserID)!=undefined)
+					
+					strResponce=''
+					switch ( fldTask.type )
+					{
+						case 'learning':
+						
+							if ( fldTask.object_id.HasValue || fldTask.active_learning_id.HasValue )
+							{
+								fldActiveLearn=fldTask.active_learning_id.OptForeignElem
+								fldCourse=fldTask.object_id.OptForeignElem
+								if(fldActiveLearn!=undefined&&fldCourse!=undefined)
+								{
+									strResponce='<a href="view_doc.html?object_id='+fldActiveLearn.id+'&course_id='+fldCourse.id+'&mode=learning_proc&doc_id='+curDocID+'&sid='+tools.get_sum_sid(fldActiveLearn.id)+'">' + fldTask.name + '</a>';
+								}
+								else if (fldActiveLearn!=undefined&&fldCourse==undefined)
+								{
+									strResponce='<a href="view_doc.html?object_id='+fldActiveLearn.id+'&mode=learning_proc&doc_id='+curDocID+'&sid='+tools.get_sum_sid(fldActiveLearn.id)+'">' + fldTask.name + '</a>';
+								}
+								else if (fldActiveLearn==undefined&&fldCourse!=undefined)
+								{
+									strResponce='<a href="view_doc.html?object_id='+fldCourse.id+'&mode=course_info&doc_id='+curDocID+'">' + fldTask.name + '</a>';
+									bCanActivateCourse=true;
+								}
+								else
+								{
+									strResponce='<a href="view_doc.html?mode=active_learning&doc_code=active_learnings&doc_id='+curDocID+'">' + fldTask.name + '</a>';
+								}
+								
+							}
+							else
+								strResponce=fldTask.name; 
+							break;
+						case 'test_learning':
+							if ( fldTask.object_id.HasValue || fldTask.active_test_learning_id.HasValue )
+							{
+	
+								fldActiveLearn=fldTask.active_test_learning_id.OptForeignElem
+								fldTest=fldTask.object_id.OptForeignElem
+								if(fldActiveLearn!=undefined&&fldTest!=undefined)
+								{
+									strResponce='<a href="view_doc.html?object_id='+fldActiveLearn.id+'&assessment_id='+fldTest.id+'&mode=test_learning_proc&doc_id='+curDocID+'&sid='+tools.get_sum_sid(fldActiveLearn.id)+'">' + fldTask.name + '</a>';
+								}
+								else if (fldActiveLearn!=undefined&&fldTest==undefined)
+								{
+									strResponce='<a href="view_doc.html?object_id='+fldActiveLearn.id+'&mode=test_learning_proc&doc_id='+curDocID+'&sid='+tools.get_sum_sid(fldActiveLearn.id)+'">' + fldTask.name + '</a>';
+								}
+								else if (fldActiveLearn==undefined&&fldTest!=undefined)
+								{
+									strResponce='<a href="view_doc.html?object_id='+fldTest.id+'&mode=assessment&doc_id='+curDocID+'">' + fldTask.name + '</a>';
+									bCanActivateTest=true;
+								}
+								else
+								{
+									strResponce='<a href="view_doc.html?mode=active_test_learning&doc_code=active_test_learnings&doc_id='+curDocID+'">' + fldTask.name + '</a>';
+								}
+							}
+							else
+								strResponce=fldTask.name; 
+							break;
+						case 'document_learning':
+							if ( fldTask.type_document == 'absolute_doc' )
+								strResponce='<a href="' + fldTask.link_document + '">' + fldTask.name + '</a>';
+							else
+								if ( fldTask.object_id.HasValue )
+									strResponce='<a href="view_doc.html?doc_id='+ fldTask.object_id +'">' + fldTask.name + '</a>';
+								else	
+									strResponce='fldTask.name'; 
+							break;
+						case 'education_method':
+							fldEduMethod=fldTask.object_id.OptForeignElem
+							if ( fldEduMethod!= undefined )
+							{
+								
+								fldEvent=fldTask.event_id.OptForeignElem
+								fldEventResult=fldTask.event_result_id.OptForeignElem
+								
+								if(fldEvent!=undefined&&fldEventResult!=undefined)
+								{
+									strResponce='<a href="view_doc.html?mode=event_result&event_id='+fldEvent.id+'&person_id='+curObject.person_id+'&doc_id='+curDocID+'">' + fldTask.name + '</a>';
+								}
+								else if(fldEvent!=undefined&&fldEventResult==undefined)
+								{
+									strResponce='<a href="view_doc.html?object_id='+fldEvent.id+'&mode=event&doc_id='+curDocID+'">' + fldTask.name + '</a>';
+									bCanAddToEvent=true;
+								}
+								else
+								{
+									strResponce='<a href="view_doc.html?mode=education_method&doc_id='+curDocID+'&object_id='+fldEduMethod.id+'">' + fldTask.name + '</a>';
+									bCanAddToEvent=true;
+								}
+							}
+							else
+								strResponce=fldTask.name; 
+							break;	
+							
+							
+						default:	
+	
+							strResponce=fldTask.name; 
+					}
+					
+				if (bIsPerson)
+				{
+					strResponce=(strResponce);
+				}
+				else if (bIsBoss||bIsTutor||bIsMainTutor)
+				{
+					strResponce=(StrReplace(StrReplace(strResponce,'test_learning_proc','test_learning_stat'),'learning_proc','learning_stat'));
+				}
+				else
+				{
+					strResponce=(fldTask.name);
+				}
+		
+				strColor=''
+				if(fldTask.plan_date.HasValue)
+				{
+					if (fldTask.plan_date<Date())
+					{
+						strColor=StrHexColor( '255,210,210' )
+					}
+				}
+		
+		
+				strReturn=strReturn+'
+				<form name="task_form_'+fldTask.id+'" id="task_form_'+fldTask.id+'" action="career_reserve_change.html" method="post">
+					<input type="hidden" name="doc_id" id="doc_id" value="'+curDocID+'"/>
+					<input type="hidden" name="career_reserve_id" id="career_reserve_id" value="'+Request.Form.career_reserve_id+'"/>
+					<input type="hidden" name="sid" id="sid" value="'+tools.get_sum_sid( curDocID )+'"/>
+					<input type="hidden" name="command" id="command" value=""/>
+					<input type="hidden" name="task_id" id="task_id" value=""/>
+					<input type="hidden" name="selected_object_ids" id="selected_object_ids" value=""/>
+				<table width="100%"  height="100%" align="center" cellpadding="4"  cellspacing="1" border="0">
+			<tr>
+				<td width="15%" align="left">
+					<b>'+tools.get_web_str('c_desc')+':</b>
+				</td>
+				<td align="left" colspan="2">
+					'+HtmlEncode(fldTask.desc)+'
+					&nbsp;
+					<div id="hideLinkDiv_'+fldTask.id+'" name="hideLinkDiv_'+fldTask.id+'" style="display:none">'+strResponce+'</div>
+					<div id="hideStatusDiv_'+fldTask.id+'" name="hideStatusDiv_'+fldTask.id+'" style="display:none">'+HtmlEncode(fldTask.status.ForeignElem.name)+'</div>
+					<div id="hideDateDiv_'+fldTask.id+'" name="hideDateDiv_'+fldTask.id+'" style="display:none">'+StrDate( fldTask.plan_date, false )+'</div>
+					<div id="hideColorDiv_'+fldTask.id+'" name="hideColorDiv_'+fldTask.id+'" style="display:none">'+strColor+'</div>
+				</td>
+			</tr>		
+			<tr>
+				<td align="left" valign="middle">
+					<b>'+tools.get_web_str('c_mentor')+':</b>
+				</td>
+				<td align="left" width="20%" valign="middle">'
+				
+				strReturn=strReturn+( fldTask.tutor_id.OptForeignElem != undefined ? '<a href="view_doc.html?mode=collaborator&doc_id='+curDocID+'&object_id='+fldTask.tutor_id+'">'+fldTask.tutor_id.OptForeignElem.person_fullname+'</a>' : '- не указан -' )+'&nbsp;</td>'
+				
+				if ( bIsMainTutor )
+				{
+					strReturn=strReturn+'<td><input type="button" value="'+tools.get_web_str('c_choose')+'" onClick="fnChangeTutorPerson( \''+(fldTask.tutor_id.HasValue?fldTask.tutor_id:'')+'\', \''+fldTask.PrimaryKey+'\');" class="inputButton" onMouseOver="this.className=\'inputButtonOver\';" onMouseOut="this.className=\'inputButton\';"/></td>'
+					bHasWhatToSave=true;
+				}
+				else
+				{
+					strReturn=strReturn+'<td>&nbsp;</td>'
+				}
+			strReturn=strReturn+'	
+			</tr>
+			<tr>
+				<td align="left" valign="middle">
+					<b>'+tools.get_web_str('c_status')+':</b>
+				</td>
+				<td valign="middle" colspan="2">'
+				
+				if ( bIsMainTutor||bIsTutor )
+				{
+
+					strReturn=strReturn+'<select name="status'+fldTask.PrimaryKey+'" onblur="fnChangeStatus(\''+fldTask.PrimaryKey+'\',\''+fldTask.status+'\')">>'
+
+					for (_status_type in common.career_reserve_status_types)
+					{
+						if ( _status_type.id == fldTask.status ) 
+							selected_flag = ' selected';
+						else 
+							selected_flag = '';
+		
+						strReturn=strReturn+'<option '+selected_flag+' value="'+_status_type.id+'"> '+_status_type.name+' </option>'
+					} 
+					strReturn=strReturn+'</select>'
+					bHasWhatToSave=true;
+				}
+				else 
+				{
+					strReturn=strReturn+fldTask.status.ForeignElem.name;
+				}
+				strReturn=strReturn+'&nbsp;</td>'
+
+			strReturn=strReturn+'	
+			</tr>
+			<tr>
+				<td align="left">
+					<b>'+tools.get_web_str('c_plan_date')+':</b>
+				</td>
+				<td valign="middle" colspan="2" >'
+		
+					if ( (bIsTutor||bIsMainTutor) && ( fldTask.status == "active" || fldTask.status == "plan" ) )
+					{
+						
+						strReturn=strReturn+'<input type="text" name="plan_date'+fldTask.PrimaryKey+'" id="plan_date'+fldTask.PrimaryKey+'" style="width: 60px" class="inputEdit" value="'+StrDate( fldTask.plan_date, false )+'" /><a href=\'#\' tn=\'plan_date'+fldTask.PrimaryKey+'\' onClick=\'var h=0; var offP = this.offsetParent; while(offP.id != "main_block" && offP.tagName.toUpperCase()!="BODY") {h+=offP.offsetTop; offP = offP.offsetParent;} ; showCalendar(this, document.getElementById("plan_date'+fldTask.PrimaryKey+'"), "dd.mm.yyyy","ru",1, null, h + 40); return false;\' id=\'pcal'+fldTask.PrimaryKey+'\' name=\'pcal'+fldTask.PrimaryKey+'\'><img src=\'scripts/calendar/calendar.gif\' width="24" height="22" border="0" align="absmiddle" /></a>'
+						bHasWhatToSave=true;
+		
+					}
+					else
+					{
+						strReturn=strReturn+StrDate( fldTask.plan_date, false )
+					}
+					strReturn=strReturn+'
+					&nbsp;
+				</td>
+			</tr>
+			<tr>
+				<td align="left">
+					<b>'+tools.get_web_str('c_fact_date')+':</b>
+				</td>
+				<td colspan="2">'
+		
+					if ( (bIsTutor||bIsMainTutor) && fldTask.status == "active" )
+					{
+						strReturn=strReturn+'
+						<input type="text" name="fact_date'+fldTask.PrimaryKey+'" id="fact_date'+fldTask.PrimaryKey+'" style="width: 60px" class="inputEdit" value="'+StrDate( fldTask.fact_date, false )+'" /><a href=\'#\' tn=\'fact_date'+fldTask.PrimaryKey+'\' onClick=\'var h=0; var offP = this.offsetParent; while(offP.id != "main_block" && offP.tagName.toUpperCase()!="BODY") {h+=offP.offsetTop; offP = offP.offsetParent;} ; showCalendar(this, document.getElementById("fact_date'+fldTask.PrimaryKey+'"), "dd.mm.yyyy","ru",1, null, h + 40); return false;\' id=\'pcal'+fldTask.PrimaryKey+'\' name=\'pcal'+fldTask.PrimaryKey+'\'><img src=\'scripts/calendar/calendar.gif\' width="24" height="22" border="0" align="absmiddle" /></a>'
+						bHasWhatToSave=true;
+		
+					}
+					else
+					{
+						strReturn=strReturn+StrDate( fldTask.fact_date, false );
+					}
+				strReturn=strReturn+'	
+				&nbsp;	
+				</td>
+			</tr>
+			<tr>
+				<td align="left">
+					<b>'+tools.get_web_str('ass_mark')+':</b>
+				</td>
+				<td colspan="2" align="left">'
+					if ( (bIsTutor||bIsMainTutor) && fldTask.status == "active" )
+					{	
+					strReturn=strReturn+'<input type="text" name="score'+fldTask.PrimaryKey+'" id="score'+fldTask.PrimaryKey+'" style="width: 60px" class="inputEdit" value="'+fldTask.score+'" onchange="check_real_value(this.value, this.id)"/>'
+						bHasWhatToSave=true;
+					}
+					else
+					{
+						if ( fldTask.type == "defence" )
+						{
+							strReturn=strReturn+'<input type="hidden" name="score'+fldTask.PrimaryKey+'" id="score'+fldTask.PrimaryKey+'" value="'+fldTask.score+'"/>'
+							strReturn=strReturn+'<div name="div_score'+fldTask.PrimaryKey+'" id="div_score'+fldTask.PrimaryKey+'">'+fldTask.score+'</div>'
+						}
+						else
+						{
+							strReturn=strReturn+ fldTask.score
+						}
+					}
+				strReturn=strReturn+'&nbsp;	
+				</td>
+			</tr>
+			<tr>
+				<td align="left" valign="top">
+					<b>'+tools.get_web_str('vcrb_mentor_comment')+':</b>
+				</td>
+				<td colspan="2" align="left">'
+				if ( bIsTutor||bIsMainTutor )
+				{
+					strReturn=strReturn+'<textarea style="width:100%" rows="5" name="tutor_comment'+fldTask.PrimaryKey+'">'+fldTask.tutor_comment+'</textarea>';
+					bHasWhatToSave=true;
+				}
+				else
+					strReturn=strReturn+HtmlEncode(fldTask.tutor_comment);
+							
+				strReturn=strReturn+'
+				&nbsp;	
+				</td>
+			</tr>
+			<tr>
+				<td align="left" valign="top">
+					<b>'+tools.get_web_str('veresb_p_comment')+':</b>
+				</td>
+				<td colspan="2" align="left">'	
+					if ( fldTask.status == "active" && ( bIsMainTutor || ( bIsPerson ) ) )
+					{
+						strReturn=strReturn+'<textarea rows="5" style="width:100%" name="person_comment'+fldTask.PrimaryKey+'">'+fldTask.person_comment+'</textarea>';
+						bHasWhatToSave=true;
+					}
+					else
+						strReturn=strReturn+fldTask.person_comment;
+		strReturn=strReturn+'
+				&nbsp;	
+				</td>
+			</tr>'	
+		if ( fldTask.type == "defence" )
+		{
+						
+			strReturn=strReturn+'<tr>
+				<td colspan="3">
+				<b>'+tools.get_web_str('vcrb_commission')+':</b>'
+				
+				if (ArrayOptFirstElem(fldTask.commission_persons)!=undefined)
+				{
+					strReturn=strReturn+'<table border=0>
+						<tr>
+							<td><b>'+tools.get_web_str('c_fio')+'</b></td>
+							<td><b>'+tools.get_web_str('c_position')+'</b></td>
+							<td><b>'+tools.get_web_str('c_subd')+'</b></td>
+							<td><b>'+tools.get_web_str('ass_mark')+'</b></td>
+							<td><b>'+tools.get_web_str('c_comment')+'</b></td>
+						</tr>'
+						for ( _comission_person in fldTask.commission_persons )
+						{
+						strReturn=strReturn+'<tr>
+							<td>'+(_comission_person.person_id.OptForeignElem != undefined ? '<a href="view_doc.html?mode=collaborator&doc_id='+curDocID+'&object_id='+_comission_person.person_id+'">'+_comission_person.person_id.ForeignElem.fullname+'</a>' : _comission_person.person_fullname)+'</td>
+							<td>'+_comission_person.person_position_name+'</td>
+							<td>'+_comission_person.person_subdivision_name+'</td>
+							<td>'
+			
+							if ( ( bIsTutor||bIsMainTutor || _comission_person.person_id == curUserID ) && fldTask.status == "active")
+							{
+			
+								strReturn=strReturn+'<input type="text" style="width: 60px" class="inputEdit" name="score_'+fldTask.PrimaryKey+'_'+_comission_person.PrimaryKey+'" id="score_'+fldTask.PrimaryKey+'_'+_comission_person.PrimaryKey+'" value="'+_comission_person.score+'" onchange="comission_score_change( this.value, this.id, \''+fldTask.PrimaryKey+'\', \''+(ArrayMerge( fldTask.commission_persons, "person_id", ";" ))+'\'  )">'	
+								bHasWhatToSave=true;					
+							}
+							else
+							{
+								strReturn=strReturn+'<input type="hidden" name="score_'+fldTask.PrimaryKey+'_'+_comission_person.PrimaryKey+'" id="score_'+fldTask.PrimaryKey+'_'+_comission_person.PrimaryKey+'" value="'+_comission_person.score+'">'	
+								strReturn=strReturn+ _comission_person.score ;
+							}
+						strReturn=strReturn+'
+							</td>
+							<td>'
+			
+							if ( ( bIsTutor||bIsMainTutor || _comission_person.person_id == curUserID ) && fldTask.status == "active" )
+							{
+			
+								strReturn=strReturn+'<textarea rows="4" cols="40" name="comment_'+fldTask.PrimaryKey+'_'+_comission_person.PrimaryKey+'">'+_comission_person.comment+'</textarea>'
+								bHasWhatToSave=true;
+							}
+							else
+								strReturn=strReturn+HtmlEncode(_comission_person.comment) ;
+			
+							strReturn=strReturn+'&nbsp;
+							</td>
+						</tr>'
+						}
+					strReturn=strReturn+'			
+					</table>'
+				}
+		
+			if ( bIsTutor||bIsMainTutor )
+			{
+						
+			strReturn=strReturn+'<div align=left>
+				<input type="button" value="'+tools.get_web_str('veb_b7')+'" onClick="change_commission_persons( \''+(ArrayExtract(fldTask.commission_persons, "person_id").join(";"))+'\', \''+fldTask.PrimaryKey+'\');" class="inputButton" onMouseOver="this.className=\'inputButtonOver\';" onMouseOut="this.className=\'inputButton\';"/>
+			</div>'
+		
+			}
+		strReturn=strReturn+'				
+			</td>
+		</tr>'
+		
+		}
+		
+		
+
+		if ( bIsPerson ||bIsTutor ||bIsCommissionPerson ||bIsMainTutor)
+		{
+		
+						
+		strReturn=strReturn+'<tr>
+			<td colspan="3" align="left" style="font-weight:normal">'
+			
+			if ( bHasWhatToSave)
+			{
+				strReturn=strReturn+'<input type="button" value="'+tools.get_web_str('c_save')+'" onclick="do_save_event(\''+fldTask.PrimaryKey+'\');return false;" class="inputButton" onmouseover="this.className=\'inputButtonOver\';" onmouseout="this.className=\'inputButton\';"/>&nbsp;'
+			}
+			
+			if ( bIsMainTutor)
+			{
+				strReturn=strReturn+'<input type="button" value="'+tools.get_web_str('c_delete')+'" onclick="do_delete_event(\''+fldTask.PrimaryKey+'\');return false;" class="inputButton" onmouseover="this.className=\'inputButtonOver\';" onmouseout="this.className=\'inputButton\';"/>&nbsp;'
+			}
+			
+			if ( bIsTutor||bIsMainTutor)
+			{
+				if (bCanActivateTest||bCanActivateCourse||bCanAddToEvent)
+				{
+					if (bCanActivateTest)
+					{
+			
+						strReturn=strReturn+'<input type="button" value="'+tools.get_web_str('vmpb_create_active_ass')+'" onclick="fnAddPerson(\''+fldTask.PrimaryKey+'\',\''+fldTask.object_id+'\',\'assign_test\');return false;" class="inputButton" onmouseover="this.className=\'inputButtonOver\';" onmouseout="this.className=\'inputButton\';"/>'
+			
+					}	
+					
+					if (bCanActivateCourse)
+					{
+			
+						strReturn=strReturn+'<input type="button" value="'+tools.get_web_str('vscb_submit')+'" onclick="fnAddPerson(\''+fldTask.PrimaryKey+'\',\''+fldTask.object_id+'\',\'assign_course\');return false;" class="inputButton" onmouseover="this.className=\'inputButtonOver\';" onmouseout="this.className=\'inputButton\';"/>'
+					}
+					if (bCanAddToEvent)
+					{
+						if (fldEvent!=undefined)
+						{
+							try
+							{
+								teEvent=OpenDoc( UrlFromDocID( fldEvent.id ) ).TopElem;
+							}
+							catch(ex)
+							{
+								teEvent=undefined;
+							}
+							
+							if (teEvent!=undefined)
+							{
+								if ( teEvent.is_open && teEvent.status_id != 'project' && teEvent.status_id != 'close' && teEvent.status_id != 'cancel' )
+								{
+
+									if ( curUser.in_request_black_list )
+									{
+										strReturn=strReturn+'<br/><b>'+tools.get_web_str('veb_text_in_request_black_list')+'</b>'
+									}
+									else if ( teEvent.date_request_over.HasValue && teEvent.date_request_over < Date() )
+									{
+										strReturn=strReturn+'<br/><b>'+tools.get_web_str('veb_request_time_expired')+'</b>'
+									}
+									else if ( teEvent.date_request_begin.HasValue && teEvent.date_request_begin > Date() )
+									{
+										strReturn=strReturn+'<br/><b>'+tools.get_web_str('veb_request_time_begin')+'</b>'
+									}
+									else if ( teEvent.default_request_type_id.HasValue )
+									{
+										strReturn=strReturn+'<input type="button" value="'+tools.get_web_str('c_text_create_request')+'" onclick="document.location.href=\'view_doc.html?mode=request_create&doc_id='+curDocID+'&request_object_id='+fldEvent.id+'&request_type_id='+teEvent.default_request_type_id+'\';return false;" class="inputButton" onmouseover="this.className=\'inputButtonOver\';" onmouseout="this.className=\'inputButton\';">'
+									}
+									else
+									{
+										strReturn=strReturn+'<br/><b>'+tools.get_web_str('c_text_create_request')+'<b>:'
+										_request_type_array = XQuery( "for $elem in request_types where $elem/object_type = 'event' return $elem" )
+										for ( _request_type in _request_type_array )
+										{
+											strReturn=strReturn+'<br/><input type="button" value="'+tools_web.get_cur_lng_name( _request_type.name )+'" onclick="document.location.href=\'view_doc.html?mode=request_create&type=event&doc_id='+curDocID+'&request_object_id='+fldEvent.id+'&request_type_id='+_request_type.PrimaryKey+'\';return false;" class="inputButton" onmouseover="this.className=\'inputButtonOver\';" onmouseout="this.className=\'inputButton\';">'
+										}
+									}
+								}
+							}
+						}
+						else if (fldEduMethod!=undefined)
+						{
+
+							if (fldEduMethod.is_open)
+							{
+								strReturn=strReturn+'<br/><b>'+tools.get_web_str('c_text_create_request')+'<b>:'			
+								_request_type_array = XQuery( "for $elem in request_types where $elem/object_type = 'education_method' return $elem" )
+								for ( _request_type in _request_type_array )
+								{
+									strReturn=strReturn+'<br/><input type="button" value="'+tools_web.get_cur_lng_name( _request_type.name )+'" onclick="document.location.href=\'view_doc.html?mode=request_create&type=event&doc_id='+curDocID+'&request_object_id='+fldEduMethod.id+'&request_type_id='+_request_type.PrimaryKey+'\';return false;" class="inputButton" onmouseover="this.className=\'inputButtonOver\';" onmouseout="this.className=\'inputButton\';">'
+								}
+							}
+						}
+					}						
+				}
+			}
+		
+			strReturn=strReturn+'</td>	
+		</tr>'
+		}
+		
+
+		strReturn=strReturn+'		
+		</table>
+		</form>'
+		}
+		else
+		{
+			strReturn='err: No Task found'
+		}
+	}
+	catch(ex)
+	{
+		strReturn='err: '+ex
+	}
+	return strReturn
+}
+
+if ( Request.Form.command == 'delete_resumes' )
+{
+	Server.Execute('resume_delete.html');
+}
+else if (Request.Form.command == 'show_task_desc')
+{
+	if ( Request.Form.HasProperty("task_id"))
+	{
+		Response.Write(EncodeCharset(fnTaskString(Request.Form.task_id), 'utf-8' ));
+	}
+	else
+	{
+		Response.Write(EncodeCharset('err: '+'No task selected', 'utf-8' ));
+	}
+	
+}
+else if ( Request.Form.command == 'change_tutor_person' )
+{
+	try
+	{
+		fldTask=docCareerReserve.TopElem.tasks.GetOptChildByKey(Request.Form.task_id);
+		
+		if (fldTask!=undefined)
+		{
+			fldTask.tutor_id=Int(Request.Form.selected_object_ids)
+		}
+		docCareerReserve.Save();
+		Response.Write(EncodeCharset(fnTaskString(Request.Form.task_id), 'utf-8' ));
+	}
+	catch(ex)
+	{
+		Response.Write(EncodeCharset('err: '+ex, 'utf-8' ));
+	}
+}
+else if ( Request.Form.command == 'change_status' )
+{
+	try
+	{
+		fldTask=docCareerReserve.TopElem.tasks.GetOptChildByKey(Request.Form.task_id);
+		
+		if (fldTask!=undefined)
+		{
+			fldTask.status=Request.Form.GetProperty('status'+fldTask.PrimaryKey)
+		}
+		docCareerReserve.Save();
+		Response.Write(EncodeCharset(fnTaskString(Request.Form.task_id), 'utf-8' ));
+	}
+	catch(ex)
+	{
+		Response.Write(EncodeCharset('err: '+ex, 'utf-8' ));
+	}
+}
+else if ( Request.Form.command == 'change_commission_persons' )
+{
+	try
+	{
+		comm_personArray = String( Request.Form.selected_object_ids ).split( ';' );
+		_task_id = Request.Form.task_id;
+		fldTask = docCareerReserve.TopElem.tasks.GetOptChildByKey( _task_id )			
+
+		if (fldTask!=undefined)
+		{
+			for ( _select_person in comm_personArray )
+			{
+				_is_new_flag = true;
+				for ( _person in fldTask.commission_persons )
+					if ( _select_person == String( _person.PrimaryKey ) )
+					{
+						_is_new_flag = false;
+						break;
+					}
+									
+					if ( _is_new_flag )
+					{
+						_child = fldTask.commission_persons.ObtainChildByKey( Int( _select_person ) );
+						tools.common_filling( 'collaborator', _child, Int( _select_person ) );
+					}
+			}
+								
+			for ( _person in fldTask.commission_persons )
+			{
+				_del_flag = true;
+				for ( _select_person in comm_personArray )
+					if ( _select_person == String( _person.PrimaryKey ) )
+					{
+						_del_flag = false;
+						break;
+					}
+										
+				if ( _del_flag )
+					_person.Delete();
+			}
+		}
+		docCareerReserve.Save();
+		Response.Write(EncodeCharset(fnTaskString(Request.Form.task_id), 'utf-8' ));
+	}
+	catch(ex)
+	{
+		Response.Write(EncodeCharset('err: '+ex, 'utf-8' ));
+	}
+
+}
+else if ( Request.Form.command == 'assign_test' )
+{
+	try
+	{
+		fldTask=docCareerReserve.TopElem.tasks.GetOptChildByKey(Request.Form.task_id);
+		iObjectId=Int(Request.Form.target_id)
+		
+		if (fldTask!=undefined)
+		{
+			fldTestLearning = tools.activate_test_to_person( docCareerReserve.TopElem.person_id, iObjectId );
+			try
+			{	
+				fldTask.active_test_learning_id = fldTestLearning.TopElem.Doc.DocID;
+			}
+			catch (err)
+			{
+				fldTask.active_test_learning_id = fldTestLearning ;
+			}
+		}
+		docCareerReserve.Save();
+		Response.Write(EncodeCharset(fnTaskString(Request.Form.task_id), 'utf-8' ));
+	}
+	catch(ex)
+	{
+		Response.Write(EncodeCharset('err: '+ex, 'utf-8' ));
+	}
+
+}
+else if ( Request.Form.command == 'assign_course' )
+{
+	try
+	{
+		fldTask=docCareerReserve.TopElem.tasks.GetOptChildByKey(Request.Form.task_id);
+		iObjectId=Int(Request.Form.target_id)
+		
+		if (fldTask!=undefined)
+		{
+			fldLearning = tools.activate_course_to_person( docCareerReserve.TopElem.person_id, iObjectId );
+			try
+			{	
+				fldTask.active_learning_id = fldLearning.TopElem.Doc.DocID;
+			}
+			catch (err)
+			{
+				fldTask.active_learning_id = fldLearning ;
+			}
+		}
+		docCareerReserve.Save();
+		Response.Write(EncodeCharset(fnTaskString(Request.Form.task_id), 'utf-8' ));
+	}
+	catch(ex)
+	{
+		Response.Write(EncodeCharset('err: '+ex, 'utf-8' ));
+	}
+}
+else if ( Request.Form.command == 'save_task' )
+{
+	try
+	{
+		fldTask=docCareerReserve.TopElem.tasks.GetOptChildByKey(Request.Form.task_id);
+		
+		if (fldTask!=undefined)
+		{
+			field_array = Array( Array( "status", "" ), Array( "tutor_comment", "" ), Array( "plan_date", "Date" ), Array( "fact_date", "Date" ), Array( "score", "Real" ), Array( "person_comment", "" ), Array( "tutor_id", "Int" ) );
+						
+			for ( _field in field_array )
+			{
+				_field_name = _field[0];
+				_field_type = _field[1];
+				if ( Request.Form.HasProperty( _field_name + fldTask.PrimaryKey ) )
+					_field_value = DecodeCharset(Request.Form.GetProperty( _field_name + fldTask.PrimaryKey ), 'utf-8' );
+				else
+					continue;
+	
+				try
+				{
+					switch( _field_type )
+					{
+						case "Date":
+							fldTask.Child( _field_name ).Value = Date( _field_value );
+							break;
+						case "Real":
+							fldTask.Child( _field_name ).Value = Real( _field_value );
+							break;
+						case "Int":
+							fldTask.Child( _field_name ).Value = Int( _field_value );
+							break;
+						default:
+							fldTask.Child( _field_name ).Value = _field_value;
+					}
+				}
+				catch(err)
+				{
+				}
+			}
+			
+			for ( _commission_person in fldTask.commission_persons )
+			{
+				_score_field_form_name = "score_" + fldTask.PrimaryKey + "_" + _commission_person.PrimaryKey;
+				_comment_field_form_name = "comment_" + fldTask.PrimaryKey + "_" + _commission_person.PrimaryKey;
+				if (  Request.Form.HasProperty( _score_field_form_name ) && Request.Form.GetProperty( _score_field_form_name ) != "" )
+					_commission_person.score = Real( Request.Form.GetProperty( _score_field_form_name ) );
+				if (  Request.Form.HasProperty( _comment_field_form_name ) )
+					_commission_person.comment = DecodeCharset(Request.Form.GetProperty( _comment_field_form_name ), 'utf-8' );
+			}
+			commission_persons_num = ArrayCount( fldTask.commission_persons );
+			if ( commission_persons_num != 0 )
+				fldTask.score = Real( StrReal( ArraySum( fldTask.commission_persons, 'score' )/Real( commission_persons_num ), 2 ) );
+		}
+		docCareerReserve.Save();
+		Response.Write(EncodeCharset(fnTaskString(Request.Form.task_id), 'utf-8' ));
+		
+	}
+	catch(ex)
+	{
+		Response.Write(EncodeCharset('err: '+ex, 'utf-8' ));
+	}
+}	
+else if ( Request.Form.command == 'delete_event' )
+{
+	try
+	{
+		docCareerReserve.TopElem.tasks.DeleteChildByKey(Request.Form.task_id);	
+		docCareerReserve.Save();
+		Response.Write(EncodeCharset('&nbsp;', 'utf-8' ));
+	}
+	catch(ex)
+	{
+		Response.Write(EncodeCharset('err: '+ex, 'utf-8' ));
+	}
+}		
+else if ( Request.Form.command == 'save' )
+{
+	try
+	{
+		if ( Request.Form.HasProperty("start_date") && Request.Form.GetProperty("start_date") != "" )
+			docCareerReserve.TopElem.start_date = Date( Request.Form.GetProperty("start_date") );
+	}
+	catch(err)
+	{
+	}
+	try
+	{
+		if ( Request.Form.HasProperty("plan_readiness_date") && Request.Form.GetProperty("plan_readiness_date") != "" )
+			docCareerReserve.TopElem.plan_readiness_date = Date( Request.Form.GetProperty("plan_readiness_date") );
+	}
+	catch(err)
+	{
+	}
+	try
+	{
+		if ( Request.Form.HasProperty("finish_date") && Request.Form.GetProperty("finish_date") != "" )
+			docCareerReserve.TopElem.finish_date = Date( Request.Form.GetProperty("finish_date") );
+	}
+	catch(err)
+	{
+	}
+	
+	try
+	{
+		if ( Request.Form.HasProperty("readiness_percent"))
+			docCareerReserve.TopElem.readiness_percent = Int( Request.Form.GetProperty("readiness_percent") );
+	}
+	catch(err)
+	{
+	}
+	
+	if ( Request.Form.HasProperty("status") )
+		docCareerReserve.TopElem.status = Request.Form.status;
+	if ( Request.Form.HasProperty("tutor_general_comment") )
+		docCareerReserve.TopElem.comment = Request.Form.tutor_general_comment;
+	
+	docCareerReserve.Save();
+	Response.Redirect( 'view_doc.html?mode=career_reserve&object_id=' + Request.Form.career_reserve_id + '&doc_id=' + Request.Form.doc_id +'&tab='+_selectedTab);
+	
+}				
+else if ( Request.Form.command == 'add_event' )
+{
+	_child = docCareerReserve.TopElem.tasks.AddChild();
+	_child.tutor_id = curUserID;
+	_child.name = Request.Form.new_name;
+	_child.status = Request.Form.new_status;
+	_child.desc = Request.Form.new_desc;
+	_child.type = Request.Form.new_type;
+	switch ( Request.Form.new_type )
+	{
+		case 'learning':
+			_child.object_type = 'course';
+			_child.object_id = Request.Form.new_course_id;
+			fldLearning = tools.activate_course_to_person( docCareerReserve.TopElem.person_id, _child.object_id );
+			try
+			{	
+				_child.active_learning_id = fldLearning.TopElem.Doc.DocID;
+			}
+			catch (err)
+			{
+				_child.active_learning_id = fldLearning ;
+			}
+			break;
+		case 'test_learning':
+			_child.object_type = 'assessment';
+			_child.object_id = Request.Form.new_test_id;
+			fldTestLearning = tools.activate_test_to_person( docCareerReserve.TopElem.person_id, _child.object_id );
+			try
+			{	
+				_child.active_test_learning_id = fldTestLearning.TopElem.Doc.DocID;
+			}
+			catch (err)
+			{
+				_child.active_test_learning_id = fldTestLearning ;
+			}
+			
+			break;
+		case 'document_learning':
+			_child.object_type = 'document';
+			_child.type_document = Request.Form.new_doc_type;
+			if ( Request.Form.new_doc_type == 'portal_doc' )
+			{
+				_child.object_id = Request.Form.new_doc_id;
+			}
+			else 
+				_child.link_document = Request.Form.new_doc_url;
+			break;
+		case 'education_method':
+			_child.object_type = 'education_method';
+			_child.object_id = Request.Form.new_edu_method_id;
+			break;				
+	}
+	docCareerReserve.Save();
+	Response.Redirect( 'view_doc.html?mode=career_reserve&object_id=' + Request.Form.career_reserve_id + '&doc_id=' + Request.Form.doc_id +'&tab='+_selectedTab);
+}
+else
+{
+	if (Request.Form.HasProperty("send_type"))
+	{
+		if ( Request.Form.HasProperty("task_id"))
+		{
+			Response.Write(EncodeCharset(fnTaskString(Request.Form.task_id), 'utf-8' ));
+		}
+		else
+		{
+			Response.Write(EncodeCharset('err: Unknown command', 'utf-8' ));
+		}
+	}
+	else
+	{
+		Response.Redirect( 'view_doc.html?mode=career_reserve&object_id=' + Request.Form.career_reserve_id + '&doc_id=' + Request.Form.doc_id +'&tab='+_selectedTab);
+	}
+}
+%>

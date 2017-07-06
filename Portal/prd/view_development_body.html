@@ -1,0 +1,1232 @@
+<%
+_cancel = false;
+try
+{
+	curPAID = Int(Request.QueryString.pa_id);
+	curPA = OpenDoc( UrlFromDocID( curPAID ) ).TopElem;
+}
+catch(_vot_zaraza_)
+{
+	Response.Write("<center><b>" + tools.get_web_str("vrb_no_pa_text") + "</b></center>");
+	//Cancel();
+	_cancel = true;
+}
+
+if (!_cancel)
+{
+	try
+	{
+		if (StrContains(_PRIVATE_PAS , curPAID) == false)
+			throw "Kuda lezesh, gad!";
+	}
+	catch(_gik_)
+	{
+		Response.Write("<center><b>" + tools.get_web_str("vrb_message1") + "</b></center>");
+		//Cancel();
+		_cancel = true;
+	}
+}
+if (!_cancel)
+{
+	is_post = "";
+	try
+	{
+		is_post = Request.QueryString.is_post;
+	}
+	catch(_zapadlo_)
+	{}
+%>
+	<TABLE width="100%" border="0" cellspacing="0" cellpadding="0">
+		<TR>
+			<TD width="100%" align="center">
+				<TABLE width="100%" border="0" cellspacing="0" cellpadding="3">
+				<TR>
+					<TD align="center">
+						<FONT class=""><B><%=tools_web.get_web_str("c_development_plan")%></B></FONT>
+					</TD>
+					<TD width="19"><IMG src="pics/1blank.gif" width="19" height="8"></TD>
+				</TR>
+				</TABLE>
+			</TD>
+		</TR>
+		</TABLE>
+<TABLE width="100%" border="0" cellspacing="0" cellpadding="0">
+<TR>
+	<TD valign="top" width=100%>
+<%
+	try
+	{
+		_use_plan = curAssessmentAppraise.flag_use_plan;
+		_temp_assessment_plan = ArrayFirstElem(XQuery("for $assessment_plan in assessment_plans where $assessment_plan/assessment_appraise_id = " + curAssessmentAppraiseID +" and $assessment_plan/person_id = " + curPA.person_id + " return $assessment_plan"));
+
+		if (_use_plan)
+		{
+			curAssessmentPlanID = _temp_assessment_plan.id;
+			curAssessmentPlan = OpenDoc( UrlFromDocID( curAssessmentPlanID ) ).TopElem;	
+		}
+		else
+		{
+			curAssessmentPlanID = curPAID;
+			curAssessmentPlan = curPA;
+		}
+	}
+	catch(_oblom_)
+	{
+		Response.Write(alert("Assessment plan not found..."));
+		//Cancel();
+		_cancel = true;
+	}
+}
+
+if (!_cancel)
+{
+	Server.Execute( "view_assessment_access_variables.html" );
+	
+	_manager_show_columns = tools_ass.get_assessment_parameter(curAssessmentAppraise, STATUS, "manager_marks_column");
+	
+	SUPPLEMENTARY_INDEXER = 0;
+	
+	try
+	{
+		_custom_fields = ArraySelect(tools.get_custom_template( "development_plan", Int(Request.QueryString.pa_id), curPA ).fields, "sheet_id.HasValue == false");
+	}
+	catch ( _e_ )
+	{
+		_custom_fields = Array();
+	}
+
+	Server.Execute("view_assessment_header.html");
+	WF_FORM_TOP = "top";
+	Server.Execute("view_assessment_workflow_buttons.html");
+
+	if (is_post == "1")  //is_pos  start
+	{
+		if ( Request.QueryString.HasProperty("wfbutt"))
+			_wfbutt = Request.QueryString.GetProperty("wfbutt")
+		else
+			_wfbutt = undefined;
+		
+		try
+		{
+			_save_message = Session.assessment_save_msg;
+			Session.assessment_save_msg = "";
+			if (_save_message == "" || _save_message == null || _save_message == undefined)
+				throw "bez_slov";
+		}
+		catch(_bez_slov_)
+		{
+			_save_message = "";
+		}
+		
+		if (_wfbutt == undefined || _save_message != "")
+		{
+%>
+<p>
+<center><b><%=(_save_message != "" ? HtmlEncode(_save_message) : tools.get_web_str("c_form_save"))%></b></center>
+</p>
+<%
+		}
+		
+		
+		if( _use_plan && (_wfbutt == curAssessmentPlan.workflow_state || _wfbutt == undefined))
+		{
+			_href=null;
+			if (IS_DONE == false)
+			for (_temp_pa in _temp_pas)
+			{	
+			if (Int(Request.QueryString.pa_id) != _temp_pa.id)
+				if (!_temp_pa.is_done) 
+					{ 
+					
+					_href = "view_doc.html?mode=assessment_appraise&doc_id=" + curDocID +"&pa_id="+_temp_pa.id + "&assessment_appraise_id=" + curAssessmentAppraiseID + "&assessment_appraise_type=" + _temp_pa.assessment_appraise_type;
+					
+					break;
+					}
+			}		
+			
+			if (_href == null && curAssessmentPlan.status == curPA.status && (!curAssessmentPlan.is_done) )
+			{		
+				_href = "view_doc.html?mode=assessment_appraise&doc_id=" + curDocID +"&pa_id="+ curAssessmentPlanID + "&assessment_appraise_id=" + curAssessmentAppraiseID + "&assessment_appraise_type=result";			
+			}	
+			
+			if (_href != null)
+			{
+%>		
+	<center><a class="asLink" href="<%=_href%>"><%=tools.get_web_str("ass_go_to_next_form")%> &raquo;</a></center>
+<%		
+			}
+
+		}
+
+	//Cancel();
+	_cancel = true;
+	}
+}
+
+if (!_cancel) // _cancel start
+{
+
+	_hide_fields = tools_ass.get_workflow_state_parameter(_curState, "hide_fields");
+	if (_hide_fields == undefined)
+		_hide_fields = Array();
+	else
+		_hide_fields = String(_hide_fields).split(",");
+	_what2submit_hide = (ArrayOptFind(_hide_fields, "This == 'development_submit_script'") != undefined);
+	_form_hide = (ArrayOptFind(_hide_fields, "This == 'development_form'") != undefined);
+	
+	_hide_competence = (ArrayOptFind(_hide_fields, "This == 'development_competences'") != undefined);
+	_hide_indicator = (ArrayOptFind(_hide_fields, "This == 'development_indicators'") != undefined);
+	_hide_plain = (ArrayOptFind(_hide_fields, "This == 'development_plains'") != undefined);
+	
+	if (!_form_hide)
+	{
+		_hide_edu = (ArrayOptFind(_hide_fields, "This == 'development_education_methods'") != undefined);
+		_hide_dev = (ArrayOptFind(_hide_fields, "This == 'development_development_methods'") != undefined);
+		_hide_task = (ArrayOptFind(_hide_fields, "This == 'development_tasks'") != undefined);
+	}
+	else
+	{
+		_hide_edu = false;
+		_hide_dev = false;
+		_hide_task= false;
+	}
+	try
+	{
+		fldAssessmentPart = curAssessmentAppraise.participants.GetChildByKey(curPA.status).assessment_appraise_types.GetChildByKey(curPA.assessment_appraise_type);
+	}
+	catch(_hui_)
+	{
+		fldAssessmentPart = null;
+	}
+	if (fldAssessmentPart != null)
+	{
+		_ubound = (fldAssessmentPart.flag_03.HasValue ? fldAssessmentPart.flag_03.Value : undefined);
+		sDevelopmentMethodStyle = fldAssessmentPart.flag_02.Value;
+		sDevelopmentInitData = fldAssessmentPart.flag_04;
+		iCompInitData = (fldAssessmentPart.flag_05.HasValue ? fldAssessmentPart.flag_05.Value : 0);
+		sCompInitData = fldAssessmentPart.flag_07.Value;
+		bIndicatorsInside = fldAssessmentPart.flag_01.Value;
+		if (bIndicatorsInside)
+			bCompetencesHasData = fldAssessmentPart.flag_06.Value;
+		
+	}
+	else
+	{
+		sCompInitData = "";
+		sDevelopmentInitData = "";
+		iCompInitData = 0;
+		sDevelopmentMethodStyle = "basic";
+		_ubound = undefined;
+		bIndicatorsInside = false;
+	}
+	
+	// ------------ WORKFLOW-FIELDS -------------------
+	var workflow_fields = Array();
+	var wfid = 0;
+	for (_wf_group in curWorkflow.field_groups)
+	{
+		if (_wf_group.read_conditions.condition_eval_str == "" || OptEval( _wf_group.read_conditions.condition_eval_str) == true)
+		{
+			_field_group = ArraySelect( curWorkflow.workflow_fields, "field_group_id == " + CodeLiteral(_wf_group.PrimaryKey));
+		
+			if (ArrayCount(_field_group) > 0)
+			{
+				if (_wf_group.write_conditions.condition_eval_str == "" || OptEval( _wf_group.write_conditions.condition_eval_str)==true)
+					_use_dirty_fingers = true;
+				else
+					_use_dirty_fingers = false;
+			
+				for (_fg in _field_group)
+				{
+					workflow_fields[wfid] = new Object;
+					workflow_fields[wfid].field = _fg;
+					workflow_fields[wfid].is_modify = _use_dirty_fingers;
+					workflow_fields[wfid].index = wfid;
+					wfid = wfid + 1;
+				}
+			}
+		}
+	}
+
+	function drill_select(_DRILL_PACK, _E_NODE, _E_PACK, _E_IDX)
+	{
+		try
+		{
+			if (_E_IDX == ArrayCount(_E_PACK) - 1)
+			{
+				_DRILL_PACK[ArrayCount(_DRILL_PACK)] = eval((_E_NODE != null ? "_E_NODE" : "") + _E_PACK[_E_IDX]);
+			}
+			else
+			{
+				_e_new = eval((_E_NODE != null ? "_E_NODE" : "") + _E_PACK[_E_IDX]);
+				for (_e_new_item in _e_new)
+				{
+					_DRILL_PACK = drill_select(_DRILL_PACK, _e_new_item, _E_PACK, _E_IDX + 1);
+				}
+			}
+		}
+		catch(_mrmr_)
+		{}
+		return _DRILL_PACK;
+	}
+	if (IS_MODIFY)
+	{
+%>
+<script type="text/javascript" src="/scripts/jqueryui/jquery.ui.core.js"></script>
+<link rel="stylesheet" href="/scripts/jqueryui/themes/base/jquery.ui.all.css"/>
+<script src="/scripts/jqueryui/jquery.ui.datepicker.js"></script>
+<%
+	}
+%>
+<script language="javascript">
+var strAttr='status:no;dialogWidth:780px;dialogHeight:550px;help:no;resizable:1';
+
+function checkkey(srcobj, e, flag_flat)
+{
+	if (!e) var e = window.event;
+	var keycode = parseInt(e.keyCode ? e.keyCode : e.which);
+	if ((keycode<48 || keycode>57) && keycode!=46) return false;
+	if (keycode==46) 
+	{
+		if( (!flag_flat) || srcobj.value.indexOf('.') >= 0) return false;
+	}
+	return true;
+}
+
+function inserRowV2(sRootType,sId, sSetValuesQueryString)
+{
+	function gVal(sVal)
+	{
+		var sRetVal = oValues[sVal];
+		if (sRetVal != undefined || sRetVal != null)
+		{
+			if (sRetVal.indexOf("[uri]") == 0)
+				sRetVal = decodeURI(sRetVal.slice(5));
+			return unescape(sRetVal);
+		}
+		else
+			return "";
+	}
+	var oValues = new Object;
+	var aValuesArray = sSetValuesQueryString.split("&");
+	var i, sTemp,bShowCore = true;
+	for (i in aValuesArray)
+	{
+		sTemp = aValuesArray[i];
+		oValues[sTemp.substring(0, sTemp.indexOf("="))] = sTemp.substring(sTemp.indexOf("=") + 1);
+	}
+<%
+	if (bIndicatorsInside)
+	{
+%>
+	if (sRootType == "indicator")
+	{
+		var sPapaCompId = gVal("competence_id");
+		if (sPapaCompId == "") return;
+		var jTrOfParentCompo = $("#tr_" + sPapaCompId);
+		if (jTrOfParentCompo.length == 0) return;
+	}
+<%
+	}
+%>
+	var bSimple = false;
+	if (sRootType != "competence" && sRootType != "indicator")
+		bSimple = true;
+	if (sId == null || sId == undefined)
+	{
+		if (sRootType == "competence" || sRootType == "indicator") return false;
+		sRootType = "basic";
+		sId = parseInt($("#simple_elems_count").val());
+	}
+	var jParentTr = $(document.createElement("tr")).attr({"id":"tr_"+sId, "align":"center"});
+	var jCurTD = $(document.createElement("td")).css("background-color","silver");
+	if (bSimple<%=(IS_MODIFY ? "":"&&false")%>)
+		jCurTD.append($(document.createElement("textarea")).attr({"id":"name_" + sId,"name":"name_" + sId}).css({"width": "100%", "height":"100px"}).val(gVal("name"))).append($(document.createElement("input")).attr({"type":"button", "parent_id":sId}).val("<%=HtmlEncode(tools.get_web_str("c_delete"))%>").click(function(){$("#tr_" + this.getAttribute("parent_id")).remove();}).addClass("inputButton").hover(function() {$(this).addClass("inputButtonOver")}, function() {$(this).removeClass("inputButtonOver")}));
+	else
+		jCurTD.html(gVal("name"));
+	jCurTD.append($(document.createElement("input")).attr({"type": "hidden", "id":"elemtype_" + sId, "name":"elemtype_" + sId}).val(sRootType));
+	<%
+		if (bIndicatorsInside)
+		{
+	%>
+		if (sRootType == "indicator")
+		{
+			jParentTr.append(jCurTD).attr("competence_id", sPapaCompId);
+			var jTdPapaComp = jTrOfParentCompo.children("td:first");
+			jTdPapaComp.attr("rowspan", (parseInt(jTdPapaComp.attr("rowspan")) + 1));
+			jTrOfParentCompo.after(jParentTr);
+			
+			var jInputPapaCompList = $("#comp_" + sPapaCompId + "_indies_list");
+			var sListPapaComp = jInputPapaCompList.val();
+			if (sListPapaComp.indexOf(sId) < 0)
+				sListPapaComp += (sListPapaComp != ""?";":"") + sId;
+			jInputPapaCompList.val(sListPapaComp);
+		}
+		else if (sRootType == "competence")
+		{
+			var _subTD = $(document.createElement("td")).css("background-color","silver").append($(document.createElement("input")).attr({"type": "hidden", "id":"comp_" + sId + "_indies_list", "name":"comp_" + sId + "_indies_list"}));
+	<%
+			if (!bCompetencesHasData)
+			{
+				Response.Write("bShowCore = false; _subTD.attr('colspan'," +(1 + (_hide_task ? 0 : 1) + (_hide_edu ? 0 : 1) + (sDevelopmentMethodStyle == "none" || _hide_dev ? 0: 1) + wfid)+ ");");
+			}
+			if (IS_MODIFY && _hide_indicator == false)
+			{
+	%>
+			_subTD.attr("align","left").append($(document.createElement("input")).attr({"type":"button", "parent_id":sId}).val("<%=tools_web.get_web_str("vdb_select_indicators")%>").click(function(){addNewElem('indicator', this.getAttribute("parent_id"));}).addClass("inputButton").hover(function() {$(this).addClass("inputButtonOver")}, function() {$(this).removeClass("inputButtonOver")}));
+	<%
+			}
+	%>
+			jParentTr.append(jCurTD.attr("rowspan", 1)).append(_subTD);
+			$("#userbodytable").append(jParentTr);
+		}
+		else
+		{
+			jParentTr.append(jCurTD.attr("colspan", 2));
+			$("#userbodytable").append(jParentTr);
+		}
+	<%
+		}
+		else
+		{
+	%>
+		jParentTr.append(jCurTD);
+		$("#userbodytable").append(jParentTr);
+	<%
+		}
+	%>
+	
+	if (bShowCore)
+	{
+		jCurTD = $(document.createElement("td")).css({"display": "<%=(sDevelopmentMethodStyle == "none" || _hide_dev ? "none": "")%>","background-color": "white"}).attr("align", "left");
+
+		var aDevMethods = new Array();
+<%
+	switch (sDevelopmentMethodStyle)
+	{
+		case "basic":
+			for (_catDevMethod in development_methods)
+			{
+				Response.Write('aDevMethods.push({"id": "'+_catDevMethod.PrimaryKey+'", "name": "' +UrlEncode(EncodeCharset(tools_web.get_cur_lng_name(_catDevMethod.name, curLng.short_id), "utf-8"))+ '"});');
+			}
+			break;
+		case "competence":
+		case "fx":
+%>
+			$.ajax({
+				url: "development_process.html",
+				async: false,
+				data: "mode=get_development_method_list&type=<%=sDevelopmentMethodStyle%>&competence_id="+sId+"&assessment_appraise_id=<%=curAssessmentAppraiseID%>&pa_id=<%=curPAID%>&formula=<%=UrlEncode(sDevelopmentInitData)%>&is_simple=" + (bSimple ? "1" : "0"),
+				type: "post",
+				dataType: "xml",
+				success: function(oXml){
+						$(oXml).find("development_methods").find("development_method").each(function(){
+							var tempObject = new Object;
+							tempObject.id = $(this).attr("id");
+							tempObject.name = $(this).attr("name");
+							aDevMethods.push(tempObject);
+						})
+					}
+				});
+<%
+			break;
+	}
+	if (IS_MODIFY)
+	{
+%>
+		var iAttrCnt = 0;
+		var jNewCheckBox;
+		for (i in aDevMethods)
+		{
+			sTemp = gVal("attr_" + aDevMethods[i].id);
+			var jNewCheckBox = $(document.createElement("input")).attr({"type": "checkbox", "id":"attr_" + sId + iAttrCnt, "name":"attr_" + sId + iAttrCnt}).val(aDevMethods[i].id);
+			jCurTD.append(jNewCheckBox).append($(document.createElement("label")).attr("for", "attr_" + sId + iAttrCnt).html(decodeURI(aDevMethods[i].name))).append(document.createElement("br"));
+			iAttrCnt++;
+			
+			if (sTemp == "1")
+				jNewCheckBox.attr('checked', true);
+		}
+		
+		jCurTD.append($(document.createElement("input")).attr({"type": "hidden", "id":"attrcount_" + sId, "name":"attrcount_" + sId}).val(iAttrCnt));
+	
+<%
+	}
+	else
+	{
+%>
+		aDevMethods = gVal("attrlist_" + sId).split(";")
+		for (i in aDevMethods)
+		{
+			sTemp = gVal("attrname_" + aDevMethods[i]);
+			if (sTemp != "")
+			jCurTD.append("&bull;" + sTemp).append(document.createElement("br"));
+		}
+<%
+	}
+%>
+		jCurTD.appendTo(jParentTr);
+		var coursesDiv = $(document.createElement("div")).attr("id","coursediv_" + sId);
+<%
+	if (!_hide_edu)
+	{
+%>
+		jCurTD = $(document.createElement("td")).css("background-color", "white").append(coursesDiv);
+		if (!bSimple)
+		{
+<%
+		if (IS_MODIFY)
+		{
+%>
+			jCurTD.append($(document.createElement("input")).attr({"type":"button","id":"btncoursesel" + sId, "parent_id":sId}).val("<%=HtmlEncode(tools.get_web_str("c_courses"))%>").click(handleEduButtonV2).addClass("inputButton").hover(function() {$(this).addClass("inputButtonOver")}, function() {$(this).removeClass("inputButtonOver")})).append($(document.createElement("input")).attr({"type": "hidden", "id":"edumethlist_" + sId, "name":"edumethlist_" + sId}));
+<%
+		}
+%>
+			jCurTD.append(document.createElement("br")).append(document.createElement("br"));
+		}	
+		jCurTD.append($(document.createElement("label")).attr("for","desc_" + sId).html("<%=HtmlEncode(tools_web.get_web_str("verb_comment"))%>")).append($(document.createElement("textarea")).css("width","100%").attr({"id":"desc_" + sId,"name":"desc_" + sId, "rows":"3", "readonly": <%=(IS_MODIFY ? "false":"true")%>}).val(gVal("desc"))).appendTo(jParentTr);
+		
+<%
+	}
+	if (!_hide_task)
+	{
+%>
+		
+		jCurTD = $(document.createElement("td")).attr("align", "left").css({"vertical-align":"top","padding":"1px","background-color": "white"});
+		// .css("background-color", "white");
+		
+		jCurTD.append($(document.createElement("div")).css({"padding":"0px","background-color": "gray"}).append(
+		
+			$(document.createElement("table")).css("width","100%").attr({"cellspacing":"1", "cellpadding": "5"})
+			
+			/*
+			
+			.append(
+			
+				$(document.createElement("tr")).append(
+					$(document.createElement("td")).css("background-color", "silver").html("<%=HtmlEncode(tools_web.get_web_str("vdb_aim_task"))%>")
+				).append(
+					$(document.createElement("td")).css("background-color", "silver").html("<%=HtmlEncode(tools_web.get_web_str("vdb_aim_date"))%>")
+				).append(
+					$(document.createElement("td")).css("background-color", "silver").html("<%=HtmlEncode(tools_web.get_web_str("vdb_aim_value"))%>")
+				).append(
+					$(document.createElement("td")).css("background-color", "silver").html("<%=HtmlEncode(tools_web.get_web_str("vdb_aim_comment"))%>")
+				)
+<%
+				if (IS_MODIFY)
+				{
+%>
+				.append(
+					$(document.createElement("td")).css("background-color", "silver")
+				)
+<%
+				}
+%>
+			)
+			*/
+			.append($(document.createElement("tbody")).attr("id", "aimrecycle" + sId))
+		
+		)).append($(document.createElement("input")).attr({"type":"hidden", "id":"aimcounter" + sId, "name":"aimcounter" + sId}).val(0));
+<%
+		if (IS_MODIFY)
+		{
+%>		
+		jCurTD.append($(document.createElement("input")).attr({"type":"button", "parent_id":sId}).val("<%=tools_web.get_web_str("veb_add")%>").click(function(){addAiming(this.getAttribute("parent_id"), true);}).addClass("inputButton").hover(function() {$(this).addClass("inputButtonOver")}, function() {$(this).removeClass("inputButtonOver")}).css("margin-top","2px"));
+<%
+		}
+%>		
+		jCurTD.appendTo(jParentTr);
+<%
+	}
+%>
+		var jRespExtra,_extra_identifier;
+<%
+	//----------- WORKFLOW-FIELDS ---------------- //
+	for (_wf in workflow_fields)
+	{
+		_extra_identifier = "extra_" + _wf.field.name + "_";
+%>
+		_extra_identifier = "<%=_extra_identifier%>";
+		sTemp = gVal(_extra_identifier + sId);
+<%
+		if (_wf.is_modify)
+		{
+				switch (_wf.field.type.Value)
+				{
+					case "string":
+%>
+			jRespExtra = $(document.createElement("input")).attr({"type":"text","id":"value_" + _extra_identifier + sId,"name":"value_" + _extra_identifier + sId}).css("width", "100%").addClass("inputEdit").val(sTemp);
+<%
+						break;
+					case "integer":
+					case "real":
+%>
+			jRespExtra = $(document.createElement("input")).attr({"type":"text","id":"value_" + _extra_identifier + sId,"name":"value_" + _extra_identifier + sId}).css("width", "60px").addClass("inputEdit").keypress(function(){return checkkey(this,event, <%=(_wf.field.type.Value == "integer"?"true":"false")%>);}).blur(function(){var _value = parseInt(this.value); if(this.value != '' && isNaN(_value)) {alert('Invalid number'); this.value=0;}}).val(sTemp);
+<%
+						break;
+					case "date":
+%>
+			jRespExtra = $(document.createElement("input")).attr({"type":"text","id":"value_" + _extra_identifier + sId,"name":"value_" + _extra_identifier + sId, "readonly": true}).css("width", "100px").val(sTemp);
+<%
+					if (IS_MODIFY)
+					{
+%>
+			jRespExtra.datepicker({changeMonth:true,changeYear:true,showOn:"button",buttonImage:"pics/calendar.gif",buttonImageOnly:false,dateFormat:"dd.mm.yy",showAnim: ""});
+<%
+					}
+					else
+					{
+%>
+			jRespExtra.addClass("inputEdit");
+<%
+					}
+					break;
+					case "bool":
+%>
+			jRespExtra = $(document.createElement("input")).attr({"type":"checkbox","id":"value_" + _extra_identifier + sId,"name":"value_" + _extra_identifier + sId, "checked":(sTemp=="1"? true: false)}).css("width", "15px")).click(function(){if (this.checked) this.value=1; else this.value=0;});
+<%
+						break;
+					case "combo":
+%>
+			jRespExtra = $(document.createElement("select")).attr({"id":"value_" + _extra_identifier + sId,"name":"value_" + _extra_identifier + sId}).append(document.createElement("option"))
+<%
+						for (_ent in _wf.field.entries)
+						{
+							_reload_val = HtmlEncode(_ent.value);
+							if (StrBegins(_reload_val , "@"))
+							{
+								_reload_val = String(_reload_val).slice(1);
+								_reload_val =_reload_val.split("[]");
+								
+								_drill_response = drill_select(Array(), null, _reload_val, 0);
+								for (_dr in _drill_response)
+								{
+%>
+									.append($(document.createElement("option")).attr("value", "<%=HtmlEncode(_dr)%>").text("<%=HtmlEncode(_dr)%>"))
+<%
+								}
+							}
+							else
+							{
+%>
+								.append($(document.createElement("option")).attr("value", "<%=HtmlEncode(_reload_val)%>").text("<%=HtmlEncode(_reload_val)%>"))
+<%
+							}
+						}
+%>
+				;
+				jRespExtra.val(sTemp);
+<%
+						break;
+					default:
+%>
+			jRespExtra = $(document.createElement("textarea")).attr({"id":"value_" + _extra_identifier + sId,"name":"value_" + _extra_identifier + sId}).css("width", "100%").addClass("commonTextarea").css("width","100%").val(sTemp);
+<%
+						break;
+				}
+		}
+		else
+		{
+%>
+			jRespExtra = $(document.createElement("span")).html(sTemp).append($(document.createElement("input")).attr({"type":"hidden","id":"value_" + _extra_identifier + sId,"name":"value_" + _extra_identifier + sId}));
+<%
+		}	
+%>
+		jCurTD = $(document.createElement("td")).attr({"align":"center","valign":"top","id":"td_" + _extra_identifier + sId,"name":"td_" + _extra_identifier + sId}).css("background-color","white").append(jRespExtra).appendTo(jParentTr);
+<%
+	}
+	if (!_hide_edu)
+	{
+%>
+		var aSetEdumeths = gVal("edumeths").split(";");
+		for (i = 0; i < aSetEdumeths.length; i++)
+			if (aSetEdumeths[i] != "")
+				addEduMethod2List(sId, aSetEdumeths[i], gVal("edumeth_"+aSetEdumeths[i]));
+<%
+	}
+	if (!_hide_task)
+	{
+%>
+		var iAimsCount = parseInt(gVal("aimscount"));
+		if (!isNaN(iAimsCount) && iAimsCount > 0)
+		for (i = 0; i < iAimsCount; i++)
+			addAiming(sId, <%=IS_MODIFY%>, gVal("aimtask" + i), gVal("aimtdate" + i), gVal("aimvalue" + i), gVal("aimcomment" + i));
+<%
+	}
+%>
+	}
+	
+	var jSourceElem = null;
+	if (sRootType == "competence" || sRootType == "indicator")
+	{
+		jSourceElem = $("#"+sRootType+"_list");
+		sTemp = jSourceElem.val();
+		if (sTemp.indexOf(sId) < 0) sTemp += (sTemp != "" ? ";" : "") + sId;
+		jSourceElem.val(sTemp);
+	}
+	else
+	{
+		jSourceElem = $("#simple_elems_count");
+		sTemp = jSourceElem.val();
+		if (parseInt(sTemp) < parseInt(sId))
+			sTemp = sId;
+		jSourceElem.val(parseInt(sTemp) + 1);
+	}
+}
+<%
+	if (!_hide_edu)
+	{
+%>
+function handleEduButtonV2(e)
+{
+	if (!e) var e = window.event;
+	var srcobj = e.target || e.srcElement;
+	
+	var _compId = srcobj.getAttribute("parent_id");
+	var _sEduMethIDs = "";
+	$.ajax({
+		url: "development_process.html",
+		async: false,
+		data: "mode=get_edu_method_list&competence_id="+_compId,
+		type: "post",
+		dataType: "xml",
+		success: function(oXml){
+				$(oXml).find("education_methods").find("education_method").each(function(){
+					_sEduMethIDs += (_sEduMethIDs != "" ? ";":"") + $(this).attr("id");
+				})
+			}
+	});
+	
+	if (_sEduMethIDs == "")
+	{
+		window.alert("<%=HtmlEncode(tools_web.get_web_str("ass_asessment_by_competence_no_corr_edu_program"))%>");
+	}
+	else
+	{
+		var oPars=new Object(); oPars.check_access = true;
+		oPars.display_object_ids = _sEduMethIDs;
+		oPars.selected_object_ids = $("#edumethlist_" + _compId).val();
+		oPars.can_be_empty = true;
+		oPars.disp_filter = false;
+		xShowModalDialog('dlg_select.html?doc_id=<%=curDocID%>&catalog_name=education_method&multi_select=1&rand='+Math.random(), oPars, strAttr);
+		if (!oPars.handle ) return false;
+		$("#edumethlist_" + _compId).val("");
+		$("#coursediv_" + _compId).empty();
+		for (var _i = 0; _i < oPars.elemArray.length; _i++)
+			addEduMethod2List(_compId, oPars.elemArray[_i], oPars.elemNamesArray[_i]);
+	}
+}
+function addEduMethod2List(_sCompId, _sId, _sName)
+{
+	var _sListVal = $("#edumethlist_" + _sCompId).val();
+	$("#coursediv_" + _sCompId).append($(document.createElement("input")).css("width", "100%").addClass("inputEdit").val(_sName).attr("readonly", true)).append(document.createElement("br"));
+	_sListVal += (_sListVal != "" ? ";":"") + _sId;
+	$("#edumethlist_" + _sCompId).val(_sListVal);
+}
+<%
+	}
+	if (!_hide_task)
+	{
+%>
+function addAiming(_sId, _bIsModify, _sTask, _sDate, _sValue, _sComment)
+{
+	var _jtBody = $("#aimrecycle" + _sId); if (_jtBody.length == 0) return;
+	var _jInputCounter = $("#aimcounter" + _sId); if (_jInputCounter.length == 0) return;
+	var _iIdx = parseInt(_jInputCounter.val());
+	var _jNewRow = $(document.createElement("tr")).attr("id", "aim" + _sId + "" + _iIdx).appendTo(_jtBody);
+	_jInputCounter.val(_iIdx+1);
+		
+	$(document.createElement("td")).css("background-color", "white").appendTo(_jtBody).append(
+		$(document.createElement("table")).attr("width","100%").append(
+			$(document.createElement("tr")).append(
+				$(document.createElement("td")).css("width", "50%").html("<%=HtmlEncode(tools_web.get_web_str("vdb_aim_task"))%>")
+			).append(
+				$(document.createElement("td")).css({"width": "50%", "text-align":"right"}).append(
+					(_bIsModify ? $(document.createElement("input")).attr({"type":"button", "parent_id":"aim" + _sId + "" + _iIdx}).val("<%="X"%>").click(function(){$("#"+this.getAttribute("parent_id")).remove();}).addClass("inputButton").hover(function() {$(this).addClass("inputButtonOver")}, function() {$(this).removeClass("inputButtonOver")}).width(20): "&nbsp;")
+				)
+			)
+		).append(
+			$(document.createElement("tr")).append(
+				$(document.createElement("td")).attr("colspan", 2).append(
+					(_bIsModify ? $(document.createElement("textarea")).attr({"id":"aim" +_sId+ "task" + _iIdx,"name":"aim" +_sId+ "task" + _iIdx}).css("width","100%").addClass("inputEdit").val((_sTask?_sTask:"")) : (_sTask ? _sTask:""))
+				)
+			)
+		).append(
+			$(document.createElement("tr")).append(
+				$(document.createElement("td")).html("<%=HtmlEncode(tools_web.get_web_str("vdb_aim_date"))%>")
+			).append(
+				$(document.createElement("td")).html("<%=HtmlEncode(tools_web.get_web_str("vdb_aim_value"))%>")
+			)
+		).append(
+			$(document.createElement("tr")).append(
+				$(document.createElement("td")).append(
+					(_bIsModify ? $(document.createElement("input")).attr({"type":"text","id":"aim" +_sId+ "tdate" + _iIdx,"name":"aim" +_sId+ "tdate" + _iIdx, "readonly": false}).css("width", "100%").val((_sDate?_sDate:"")).datepicker({changeMonth:true,changeYear:true,dateFormat:"dd.mm.yy",showAnim:""}) : (_sDate?_sDate:""))
+				)
+			).append(
+				$(document.createElement("td")).append(
+					(_bIsModify ? $(document.createElement("input")).attr({"type":"text","id":"aim" +_sId+ "value" + _iIdx,"name":"aim" +_sId+ "value" + _iIdx}).css("width", "100%").addClass("inputEdit").val((_sValue?_sValue:"")):(_sValue?_sValue:""))
+				)
+			)
+		).append(
+			$(document.createElement("tr")).append(
+				$(document.createElement("td")).attr("colspan", 2).html("<%=HtmlEncode(tools_web.get_web_str("vdb_aim_comment"))%>")
+			)
+		).append(
+			$(document.createElement("tr")).append(
+				$(document.createElement("td")).attr("colspan", 2).append(
+					(_bIsModify ? $(document.createElement("textarea")).attr({"id":"aim" +_sId+ "comment" + _iIdx,"name":"aim" +_sId+ "comment" + _iIdx}).css("width", "100%").addClass("inputEdit").val((_sComment?_sComment:"")):(_sComment?_sComment:""))
+				)
+			)
+		)
+	).appendTo(_jNewRow);
+	
+	
+	/*
+	if (_bIsModify)
+	{
+		$(document.createElement("td")).css("background-color", "white").append($(document.createElement("textarea")).attr({"id":"aim" +_sId+ "task" + _iIdx,"name":"aim" +_sId+ "task" + _iIdx}).css("width","100%").addClass("inputEdit").val((_sTask?_sTask:""))).appendTo(_jNewRow);
+		$(document.createElement("td")).css("background-color", "white").append($(document.createElement("input")).attr({"type":"text","id":"aim" +_sId+ "tdate" + _iIdx,"name":"aim" +_sId+ "tdate" + _iIdx, "readonly": false}).css("width", "100%").val((_sDate?_sDate:"")).datepicker({changeMonth:true,changeYear:true,dateFormat:"dd.mm.yy",showAnim:""})).appendTo(_jNewRow);
+		
+		$(document.createElement("td")).css("background-color", "white").append($(document.createElement("input")).attr({"type":"text","id":"aim" +_sId+ "value" + _iIdx,"name":"aim" +_sId+ "value" + _iIdx}).css("width", "100%").addClass("inputEdit").val((_sValue?_sValue:""))).appendTo(_jNewRow);
+		$(document.createElement("td")).css("background-color", "white").append($(document.createElement("textarea")).attr({"id":"aim" +_sId+ "comment" + _iIdx,"name":"aim" +_sId+ "comment" + _iIdx}).css("width", "100%").addClass("inputEdit").val((_sComment?_sComment:""))).appendTo(_jNewRow);
+		
+		$(document.createElement("td")).css("background-color", "white").width(20).append($(document.createElement("input")).attr({"type":"button", "parent_id":"aim" + _sId + "" + _iIdx}).val("<%="X"%>").click(function(){$("#"+this.getAttribute("parent_id")).remove();}).addClass("inputButton").hover(function() {$(this).addClass("inputButtonOver")}, function() {$(this).removeClass("inputButtonOver")}).width(20)).appendTo(_jNewRow);
+	}
+	else
+		_jNewRow.append($(document.createElement("td")).css("background-color", "white").html(_sTask ? _sTask:"")).append($(document.createElement("td")).css("background-color", "white").html(_sDate?_sDate:"")).append($(document.createElement("td")).css("background-color", "white").html(_sValue?_sValue:"")).append($(document.createElement("td")).css("background-color", "white").html(_sComment?_sComment:""));
+	*/
+}
+<%
+	}
+%>
+function addNewElem(sRootType, sParentID)
+{
+	if (sRootType == "competence" || sRootType == "indicator")
+	{
+		var oPars=new Object(); oPars.check_access = true;
+		var _jListElem = $("#"+sRootType+"_list");
+		var _aListValues = _jListElem.val().split(";");
+		oPars.selected_object_ids = _jListElem.val();
+		oPars.can_be_empty = true;
+<%
+		if (bIndicatorsInside)
+		{
+%>
+		if (sRootType == "indicator")
+		{
+			var _jParentCompEggsList = $("#comp_" + sParentID + "_indies_list");
+			var _sParentCompEggsList = _jParentCompEggsList.val();
+			oPars.selected_object_ids = _sParentCompEggsList;
+			oPars.xquery_qual = "$elem/competence_id = " + sParentID;
+			var iDeadCount = 0;
+		}
+<%
+		}
+%>
+		xShowModalDialog('dlg_select.html?doc_id=<%=curDocID%>&catalog_name=' +sRootType+ '&multi_select=1&rand='+Math.random(), oPars, strAttr);
+		if (!oPars.handle) return;
+		
+		var i=0, jTrDeadOne, sHSuffix="";
+		while (i<_aListValues.length)
+		{
+			if (oPars.selected_object_ids.indexOf(_aListValues[i]) < 0)
+			{
+<%
+		if (bIndicatorsInside)
+		{
+%>
+				jTrDeadOne = $("#tr_"+_aListValues[i]);
+				if (sRootType == "competence")
+					jTrDeadOne.nextAll("[competence_id='"+_aListValues[i]+"']").remove();
+				else if (sRootType == "indicator")
+				{
+					if (_sParentCompEggsList.indexOf(_aListValues[i]) < 0)
+					{
+						i++;
+						continue;
+					}
+					iDeadCount++;
+				}
+<%
+		}
+		else
+		{
+%>
+				jTrDeadOne = $("#tr_"+_aListValues[i]);
+<%
+		}
+%>
+				jTrDeadOne.remove();
+				_aListValues.splice(i,1);
+			}
+			else
+				i++;
+		}
+<%
+		if (bIndicatorsInside)
+		{
+%>
+		if (sRootType == "indicator")
+		{
+			if (iDeadCount > 0)
+			{
+				var jTdSpanner = $("#tr_" + sParentID).children("td:first");
+				jTdSpanner.attr("rowspan", parseInt(jTdSpanner.attr("rowspan")) - iDeadCount);
+			}
+			_jParentCompEggsList.val(oPars.selected_object_ids);
+			sHSuffix = "&competence_id=" + sParentID;
+		}
+		_jListElem.val(_aListValues.join(";"));
+<%
+		}
+		else
+		{
+%>
+		_jListElem.val(oPars.selected_object_ids);
+<%
+		}
+%>
+		
+		for (i=0; i<oPars.elemArray[i];i++)
+		if ($.inArray(oPars.elemArray[i], _aListValues) < 0)
+		{
+			inserRowV2(sRootType,oPars.elemArray[i], "name="+escape(oPars.elemNamesArray[i]) + sHSuffix);
+		}
+	}
+	else
+		inserRowV2(sRootType,null, "");
+}
+//------------------------------------------------------------------------
+<%
+if (!_what2submit_hide)
+{
+%>
+function whatToSubmit()
+{
+<%
+	if (curAssessmentAppraise.is_comment_required)
+	{
+%>
+		if (document.all.comment && document.all.comment.tagName.toLowerCase() == "textarea")
+			if (document.all.comment.value == "")
+			{
+				window.alert("<%=HtmlEncode(tools.get_web_str("ass_message_please_fill_in_comment"))%>");
+				return false;
+			}
+<%
+	}
+%>
+	var censor=$('#isflawed').get(0);
+
+	var _i,_iSimpleCount = parseInt($("#simple_elems_count").val());
+	
+	for (_i=0;_i<_iSimpleCount;_i++)
+	{
+		if ($("#name_" + _i).length > 0 && $("#name_" + _i).val() == "")
+			censor.value = "1";
+	}
+	
+	var n = 0;
+	var stqObj;
+	if (censor.value == "")
+	while (document.all["stq_id_" + n] != undefined)
+	{
+		stqObj = $("#supplementary_table input[name='stq_requered_" + n+"']");
+		if (stqObj.val() == "1")
+		{
+			stqObj = $("#supplementary_table [name='stq_mark_"+n+"']");
+			if (stqObj.length > 0)
+			{
+				if (stqObj.val() == "")
+				{
+					censor.value = "1";
+					break;
+				}
+			}
+			else
+			{
+				stqObj = $("#supplementary_table input[parent_id='stq_mark_" + n+"']");
+				if (stqObj.length > 0)
+				{
+					if (stqObj.filter(":checked").length == 0)
+					{
+						censor.value = "1";
+						break;
+					}
+				}
+			}
+		}
+		n++;
+	}	
+
+	if (censor.value!="") window.alert("<%=HtmlEncode(tools_web.get_web_str("vrb_message2"))%>");
+	return true;
+}
+<%
+	}
+%>
+</script>
+
+<form action="development_save.html" name="f_switch" id="f_switch" method="POST">
+	<input type="hidden" name="doc_id" value="<%=curDocID%>"/>
+	<input type="hidden" name="assessment_appraise_id" value="<%=curAssessmentAppraiseID%>"/>
+	<input type="hidden" name="is_post" value="1"/>
+	<input type="hidden" name="pa_id" value="<%=Request.QueryString.pa_id%>"/>
+	<input type="hidden" name="isflawed" id="isflawed" value=""/>
+	<input type="hidden" name="assessment_appraise_type" value="<%=Request.QueryString.assessment_appraise_type%>"/>
+<%
+	if (_cur_assessment_appraise_type != undefined)
+	{
+		try
+		{
+			Response.Write(tools_web.insert_custom_code(_cur_assessment_appraise_type.custom_web_template_id, null,true,false));
+		}
+		catch(_oi_)
+		{}
+		
+		if(_cur_assessment_appraise_type.custom_post_web_template_id.HasValue)
+		{
+%>
+			<input type="hidden" name="custom_post_web_template_id" value="<%=_cur_assessment_appraise_type.custom_post_web_template_id%>"/>
+<%
+		}
+	}
+	
+	if (!_form_hide)
+	{
+		if (!curPA.flag_is_processed && iCompInitData > 0)
+		{
+			switch (iCompInitData)
+			{
+				case 1:
+				case 2:
+					__teTempPA = ArrayOptFirstElem(XQuery("for $elem in pas where $elem/person_id = " + curPA.person_id + " and $elem/assessment_appraise_id = " + curAssessmentAppraiseID + " and $elem/status = " + XQueryLiteral(sCompInitData) + " and $elem/assessment_appraise_type = 'competence_appraisal' return $elem"));
+					if (__teTempPA != undefined)
+					{
+						__teTempPA = OpenDoc(UrlFromDocID(__teTempPA.PrimaryKey)).TopElem;
+						for (__fldTempCompetence in __teTempPA.competences)
+						{
+							if (iCompInitData == 1 || (__fldTempCompetence.plan_value.HasValue && __fldTempCompetence.mark_value.HasValue && __fldTempCompetence.plan_value.Value > __fldTempCompetence.mark_value.Value))
+							curPA.competences.ObtainChildByKey(__fldTempCompetence.PrimaryKey);
+							for (__fldTempIndicator in __fldTempCompetence.indicators)
+							if (iCompInitData == 1 || (__fldTempIndicator.plan_value.HasValue && __fldTempIndicator.mark_value.HasValue && __fldTempIndicator.plan_value.Value > __fldTempIndicator.mark_value.Value))
+								curPA.indicators.ObtainChildByKey(__fldTempIndicator.PrimaryKey);
+						}
+					}
+					break;
+				case 3:
+					__teTempPA = ArrayOptFirstElem(XQuery("for $elem in development_plans where $elem/person_id = " + curPA.person_id + " and $elem/assessment_appraise_id = " + curAssessmentAppraiseID + " and $elem/status = " + XQueryLiteral(sCompInitData) + " return $elem"));
+					if (__teTempPA != undefined)
+					{
+						__teTempPA = OpenDoc(UrlFromDocID(__teTempPA.PrimaryKey)).TopElem;
+						curPA.competences.AssignElem(__teTempPA.competences);
+						curPA.indicators.AssignElem(__teTempPA.indicators);
+						curPA.plaindevelopments.AssignElem(__teTempPA.plaindevelopments);
+					}
+					break;
+				case 4:
+					ASSESSMENT_ID = curAssessmentAppraiseID;
+					PA_ID = curPAID;
+					OptEval(sCompInitData);
+					break;
+			}
+		}
+%>
+<script language="javascript">
+<!--
+$(document).ready(function(){
+<%
+function initSavedData(listSomeElemsPARAM, sTypePARAM)
+{
+		var __fldSomeElem, __catObject,__sAttrs,__fldDevMethod,__xarrEduMethods, __fldEduMeth,__iObjPrimaryKey,__sExtraFlds, __fldCurWFFld, __fldAimElem, __iSimple = 0;
+		for (__fldSomeElem in listSomeElemsPARAM)
+		{
+			__iObjPrimaryKey = OptInt(__fldSomeElem.PrimaryKey);
+			if (__iObjPrimaryKey != undefined)
+				__catObject = __fldSomeElem.PrimaryKey.OptForeignElem;
+			
+			if (__iObjPrimaryKey == undefined || __catObject != undefined)
+			{
+				if (__iObjPrimaryKey == undefined)
+					__sAttrs = "name=[uri]"+UrlEncode(EncodeCharset(__fldSomeElem.name.Value, "utf-8"));
+				else
+					__sAttrs = "name=[uri]"+UrlEncode(EncodeCharset(tools_web.get_cur_lng_name(__catObject.name.Value, curLng.short_id), "utf-8"));
+				
+				if (sTypePARAM == "indicator")
+					__sAttrs += "&competence_id=" + __catObject.competence_id.Value;
+				
+				if (IS_MODIFY)
+				{
+					for (__fldDevMethod in __fldSomeElem.development_methods)
+						__sAttrs += "&attr_" + __fldDevMethod.PrimaryKey + "=1";
+				}
+				else
+				{
+					for (__fldDevMethod in __fldSomeElem.development_methods)
+					{
+						_catDevMethod = __fldDevMethod.PrimaryKey.OptForeignElem;
+						if (_catDevMethod != undefined)
+							__sAttrs += "&attrname_" + __fldDevMethod.PrimaryKey + "=[uri]" + UrlEncode(EncodeCharset(tools_web.get_cur_lng_name(_catDevMethod.name.Value, curLng.short_id), "utf-8"));
+					}
+					__sAttrs += "&attrlist_" + (__iObjPrimaryKey != undefined ? __fldSomeElem.PrimaryKey:__iSimple) + "=" + ArrayMerge(__fldSomeElem.development_methods, "This.PrimaryKey", ";");
+				}
+				if (!_hide_edu && __fldSomeElem.ChildExists("education_methods"))
+				{
+					__xarrEduMethods = QueryCatalogByKeys("education_methods","id", ArrayExtract(__fldSomeElem.education_methods, "PrimaryKey"));
+					
+					for (__fldEduMeth in __xarrEduMethods)
+					{
+						__sAttrs += "&edumeth_" + __fldEduMeth.PrimaryKey + "=[uri]" + UrlEncode(EncodeCharset(__fldEduMeth.name.Value, "utf-8"));
+					}
+					if (ArrayOptFirstElem(__xarrEduMethods) != undefined)
+						__sAttrs += "&edumeths=" + ArrayMerge(__xarrEduMethods, "This.PrimaryKey", ";");
+				}
+				if (__fldSomeElem.comment.HasValue)
+					__sAttrs += "&desc=[uri]" + __fldSomeElem.comment.Value;
+				
+				if (!_hide_task && __fldSomeElem.aims.ChildNum > 0)
+				{
+					__sAttrs += "&aimscount=" + __fldSomeElem.aims.ChildNum;
+					for (__fldAimElem in __fldSomeElem.aims)
+					{
+						if (__fldAimElem.task.HasValue)
+						__sAttrs += "&aimtask" +__fldAimElem.ChildIndex+ "=[uri]" + UrlEncode(EncodeCharset(__fldAimElem.task.Value, "utf-8"));
+						if (__fldAimElem.target_date.HasValue)
+						__sAttrs += "&aimtdate" +__fldAimElem.ChildIndex+ "=[uri]" + UrlEncode(DateNewTime(__fldAimElem.target_date.Value));
+						if (__fldAimElem.value.HasValue)
+						__sAttrs += "&aimvalue" +__fldAimElem.ChildIndex+ "=[uri]" + UrlEncode(EncodeCharset(__fldAimElem.value.Value, "utf-8"));
+						if (__fldAimElem.comment.HasValue)
+						__sAttrs += "&aimcomment" +__fldAimElem.ChildIndex+ "=[uri]" + UrlEncode(EncodeCharset(__fldAimElem.comment.Value, "utf-8"));
+					}
+				}
+				for (__fldCurWFFld in __fldSomeElem.workflow_fields)
+				{
+					__sExtraFlds= "extra_" + __fldCurWFFld.name + "_" + (__iObjPrimaryKey != undefined ? __fldSomeElem.PrimaryKey : __iSimple);
+					__sAttrs += "&" + __sExtraFlds + "=[uri]" + UrlEncode(EncodeCharset(__fldCurWFFld.value.Value, "utf-8"));
+				}
+				Response.Write("inserRowV2('"+sTypePARAM+"','" +(__iObjPrimaryKey != undefined ? __fldSomeElem.PrimaryKey : __iSimple)+ "', '"+__sAttrs+"');");
+				__iSimple++;
+			}
+		}
+}
+if (!_hide_competence) initSavedData(curPA.competences, "competence");
+if (!_hide_indicator) initSavedData(curPA.indicators, "indicator");
+if (!_hide_plain) initSavedData(curPA.plaindevelopments, "basic");
+%>
+var jSecretDiv = ("#secretArea");
+<%
+wfid = 0;
+for (__fldCurWFFld in workflow_fields)
+if (__fldCurWFFld.is_modify)
+{
+	Response.Write("$(document.createElement('input')).attr({'id':'wf_field_info_"+wfid+"','name':'wf_field_info_"+wfid+"','type':'hidden'}).val('"+__fldCurWFFld.field.name.Value+"$$$$"+__fldCurWFFld.field.field_group_id+"$$$$"+__fldCurWFFld.field.type+"$$$$"+UrlEncode(__fldCurWFFld.field.title.Value)+"').appendTo(jSecretDiv);");
+	wfid++;
+}
+Response.Write("$(document.createElement('input')).attr({'id':'wf_field_count','name':'wf_field_count','type':'hidden'}).val("+wfid+").appendTo(jSecretDiv);");
+%>
+});
+-->
+</script>
+<table width="100%" bgcolor="gray" cellpadding="0" cellspacing="0" border="0"><tr><td>
+<TABLE id="usertable" cellpadding="5" cellspacing="1" width="100%">
+<tr id="tr_zero000" align="center">
+		<th bgcolor="silver" width="150px"><%=tools_web.get_web_str("ass_competences")%></td>
+		<%
+			if (bIndicatorsInside)
+			{
+		%>
+		<th bgcolor="silver" width="150px"><%=tools_web.get_web_str("ass_indicators")%></td>
+		<%
+			}
+		%>
+		<th bgcolor="silver" style="display: <%=(sDevelopmentMethodStyle == "none" || _hide_dev ? "none": "inline")%>"><%=tools_web.get_web_str("vdb_development_method")%></td>
+		<%
+			if (!_hide_edu)
+			{
+		%>
+		<th bgcolor="silver" width="300px"><%=tools_web.get_web_str("vdb_edu_method")%></td>
+		<%
+			}
+			if (!_hide_task)
+			{
+		%>
+		<th bgcolor="silver" width="400px"><%=tools_web.get_web_str("vdb_aims")%></td>
+<%
+			}
+	for (_wf in workflow_fields)
+	{
+%>
+		<th bgcolor="silver" width="80px" align="center"><%=HtmlEncode(tools_web.get_cur_lng_name(_wf.field.title, curLng.short_id))%></td>
+<%
+	}
+%>
+</tr>
+<TBODY id="userbodytable">
+</TBODY>
+</TABLE>
+</td></tr></table>
+<input type="hidden" name="simple_elems_count" id="simple_elems_count" value="0"/>
+<input type="hidden" name="competence_list" id="competence_list" value=""/>
+<input type="hidden" name="indicator_list" id="indicator_list" value=""/>
+<%	
+	if (IS_MODIFY)
+	{
+%>
+<p>
+<b><%=tools_web.get_web_str("c_choose")%>...</b>
+<BR/>
+<%
+		if (!_hide_competence)
+		{
+%>
+<input type="button" value="<%=tools_web.get_web_str("ass_competence")%>" onclick="return addNewElem('competence');" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';">
+<%
+		}
+		if (!bIndicatorsInside && !_hide_indicator)
+		{
+%>
+<input type="button" value="<%=tools_web.get_web_str("ass_indicator")%>" onclick="return addNewElem('indicator');" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';">
+<%
+		}
+		if (!_hide_plain)
+		{
+%>
+<input type="button" value="<%=tools_web.get_web_str("c_value")%>" onclick="return addNewElem('basic');" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';">
+</p>
+<%
+		}
+	}
+}
+
+	Server.Execute("view_supplementary_questions.html");
+%>
+	<hr/>
+<%
+	Server.Execute("view_assessment_comment.html");
+%>
+<table width=100% cellspacing=5>
+<tr>
+<td align="center">
+<div name="secretArea" id="secretArea">
+<%
+if (IS_MODIFY)
+{
+%>
+<center><input type=submit Name="Submit" onClick='<%if(!_what2submit_hide){%>return whatToSubmit();<%}%>' value="<%=tools_web.get_web_str("c_save")%>" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"></center>
+<%
+}
+%>
+
+</div>
+</td>
+</tr>
+</table>
+</form>
+
+<%
+		 WF_FORM_TOP = "bottom";
+		Server.Execute("view_assessment_workflow_buttons.html");
+	} // _cancel end
+%>
+	</TD>
+</TR>
+</TABLE>

@@ -1,0 +1,19 @@
+<%
+Server.Execute( "include/sid_access_init.html" );
+
+if ( ArrayOptFirstElem( XQuery( "for $elem in subscriptions where $elem/person_id = " + curUserID + " and $elem/document_id = " + Request.Query.document_id + " return $elem" ) ) == undefined )
+{
+	docSubscription = OpenNewDoc( 'x-local://wtv/wtv_subscription.xmd' );
+	docSubscription.TopElem.document_id = Int( Request.Query.document_id );
+	docSubscription.TopElem.person_id = curUserID;
+	tools.common_filling( 'collaborator', docSubscription.TopElem, curUserID, curUser );
+	docSubscription.TopElem.include_subdocs = Request.Query.HasProperty( 'include_subdocs' ) || Request.Query.HasProperty( Request.Query.document_id );
+	if ( Request.Query.HasProperty( 'subscription_type' ) )
+		docSubscription.TopElem.type = Request.Query.subscription_type;
+	docSubscription.BindToDb(DefaultDb);
+	docSubscription.Save();
+}
+
+if ( ! Request.Query.HasProperty( 'ajax' ) || Request.Query.ajax == '0' )
+	Response.Redirect( "view_doc.html?mode=subscriptions&doc_code=subscriptions&mine=1" );
+%>

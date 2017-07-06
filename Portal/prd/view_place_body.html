@@ -1,0 +1,7 @@
+<table width="100%"  border="0" cellspacing="0" cellpadding="0" class="tableBorder" align="center">
+	<tr>
+		<TD WIDTH="200" ALIGN="RIGHT" VALIGN="top"><%=tools.get_web_str('c_desc')%>:</TD>		
+		<TD STYLE="font-weight:normal"><%=tools_web.get_web_desc( curObject.desc, UrlFromDocID( curObjectID ), 'place.desc' )%></TD>
+	</tr>
+</table>
+<%Server.Execute( "view_files.html" )%>

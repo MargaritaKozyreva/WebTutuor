@@ -1,0 +1,4726 @@
+<%
+_cancel = false;
+try
+{
+	curPAID = Int(Request.QueryString.pa_id);
+	curPA = OpenDoc( UrlFromDocID( curPAID ) ).TopElem;
+}
+catch(_vot_zaraza_)
+{
+	Response.Write('<center><b>' + tools.get_web_str("vrb_no_pa_text") + '</b></center>');
+	//Cancel();
+	_cancel = true;
+}
+
+if (!_cancel)
+{
+	if (Request.QueryString.HasProperty("is_post"))
+		is_post = Request.QueryString.is_post;
+	else
+		is_post = '';
+
+	try
+	{
+		if ( is_post != "1" && StrContains(_PRIVATE_PAS , curPAID) == false)
+			throw 'Kuda lezesh, gad!';
+	}
+	catch(_gik_)
+	{
+		Response.Write('<center><b>' + tools.get_web_str("vrb_message1") + '</b></center>');
+		_cancel = true;
+	}
+}
+
+if (!_cancel)
+{
+
+	IS_HUMAN = !curPA.flag_appraise_department;
+
+
+	try
+	{
+		if (PLAN != 1 ) PLAN = 0;
+	}
+	catch(_esche_zapadlo_)
+	{
+		PLAN = 0;
+	}
+
+
+
+	_self_pa = null;
+	_manager_pa = null;
+
+	try
+	{
+		if (curPA.status == 'manager' || curPA.status == 'interview')
+		{
+			_temp_self_pa = ArrayFirstElem(XQuery( 'for $pa in pas where $pa/assessment_appraise_id = ' + curAssessmentAppraiseID + (IS_HUMAN ? ' and $pa/person_id = ' + curPA.person_id : ' and $pa/department_id = ' + curPA.department_id) + ' and $pa/status = \'self\' and $pa/assessment_appraise_type = \'' + curPA.assessment_appraise_type + '\' return $pa' ));
+
+			_self_pa = OpenDoc( UrlFromDocID( _temp_self_pa.id ) ).TopElem;
+
+			if (curPA.status == 'interview')
+			{
+				_temp_manager_pa = ArrayFirstElem(XQuery( 'for $pa in pas where $pa/assessment_appraise_id = ' + curAssessmentAppraiseID + (IS_HUMAN ? ' and $pa/person_id = ' + curPA.person_id : ' and $pa/department_id = ' + curPA.department_id) + ' and $pa/status = \'manager\' and $pa/assessment_appraise_type = \'' + curPA.assessment_appraise_type + '\' return $pa' ));
+
+			_manager_pa = OpenDoc( UrlFromDocID( _temp_manager_pa .id ) ).TopElem;
+			}
+		
+		
+		}
+	}
+	catch(_uuuublin_)
+	{
+		//alert(_uuuublin_);
+	}
+
+
+	try
+	{
+
+	_use_plan = curAssessmentAppraise.flag_use_plan;
+
+	_temp_assessment_plan = ArrayFirstElem(XQuery( 'for $assessment_plan in assessment_plans where $assessment_plan/assessment_appraise_id = ' + curAssessmentAppraiseID +(IS_HUMAN ? ' and $assessment_plan/person_id = ' + curPA.person_id : ' and $assessment_plan/department_id = ' + curPA.department_id) + ' return $assessment_plan' ));
+
+		if (_use_plan)
+		{
+			curAssessmentPlanID = _temp_assessment_plan.id;
+			curAssessmentPlan = OpenDoc( UrlFromDocID( curAssessmentPlanID ) ).TopElem;	
+		}
+		else
+		{
+			//_temp_assessment_plan = ArrayFirstElem(XQuery( 'for $pa in pas where $pa/assessment_appraise_id = ' + curAssessmentAppraiseID + (IS_HUMAN ? ' and $pa/person_id = ' + curPA.person_id : ' and $pa/department_id = ' + curPA.department_id) +' and $pa/expert_person_id = ' + curPA.expert_person_id + ' and $pa/status = \'' +curPA.status+ '\' return $pa' ));
+
+			curAssessmentPlanID = curPAID;
+			curAssessmentPlan = curPA;
+		}
+
+
+
+
+	}
+	catch(_oblom_)
+	{
+		Response.Write(alert("Assessment plan not found..."));
+		//Cancel();
+		_cancel = true;
+	}
+
+}
+
+if (!_cancel)
+{
+	Server.Execute( "view_assessment_access_variables.html" );
+
+
+	_manager_show_columns = tools_ass.get_assessment_parameter(curAssessmentAppraise, STATUS, 'manager_marks_column');
+
+	_kpi_show = tools_ass.get_assessment_parameter(curAssessmentAppraise, STATUS, 'KPIshow');
+	_proj_show = tools_ass.get_assessment_parameter(curAssessmentAppraise, STATUS, 'Projshow');
+		
+	_show_n = tools_ass.get_assessment_parameter(curAssessmentAppraise, STATUS, 'Nchecked');
+
+	_add_kpi = tools_ass.get_assessment_parameter(curAssessmentAppraise, STATUS, 'KPIButtonchecked');
+	_create_kpi = tools_ass.get_assessment_parameter(curAssessmentAppraise, STATUS, 'KPIButtonCreate');
+	_del_kpi = tools_ass.get_assessment_parameter(curAssessmentAppraise, STATUS, 'KPIButtoncheckDelete');
+	_add_proj = tools_ass.get_assessment_parameter(curAssessmentAppraise, STATUS, 'ProjButtonchecked');
+	_del_proj = tools_ass.get_assessment_parameter(curAssessmentAppraise, STATUS, 'ProjButtoncheckDelete');
+	_add_standard_proj = tools_ass.get_assessment_parameter(curAssessmentAppraise, STATUS, 'ProjButtonStandardchecked');
+	_del_standard_proj = tools_ass.get_assessment_parameter(curAssessmentAppraise, STATUS, 'ProjButtonStandardDelete');
+	_create_standard_proj = tools_ass.get_assessment_parameter(curAssessmentAppraise, STATUS, 'ProjButtonStandardCreate');
+
+	_type_title = tools.get_web_str("vkb_work_assessment");
+
+	SUPPLEMENTARY_INDEXER = 0;
+
+	if (_cur_assessment_appraise_type != undefined)
+	{
+		_extended_fields = _cur_assessment_appraise_type.flag_01;
+		_project_type = _cur_assessment_appraise_type.flag_02;
+		_sub_formula = _cur_assessment_appraise_type.sub_formula;
+		_min = _cur_assessment_appraise_type.flag_03;
+		_max = _cur_assessment_appraise_type.flag_05;
+		if (!_min.HasValue)
+			_min = 0;
+		if (!_max.HasValue)
+			_max = 0;
+			
+		_at_least_1_project = _cur_assessment_appraise_type.flag_06;
+		
+		if (_cur_assessment_appraise_type.type_title.HasValue)
+			_type_title = _cur_assessment_appraise_type.type_title;
+	}
+	else
+	{
+		_extended_fields = false;
+		_project_type = 'basic';
+		_sub_formula = 'FACT / PLAN' ;
+		_min = 0;
+		_max = 5;
+		
+		_at_least_1_project = false;
+	}
+
+
+%>
+<TABLE width="100%" border="0" cellspacing="0" cellpadding="0">
+	<TR>
+		<TD width="100%" align="center">
+			<TABLE width="100%" border="0" cellspacing="0" cellpadding="3">
+			<TR>
+				<TD align="center">
+					<FONT class=""><B><%=tools_web.get_cur_lng_name(_type_title, curLng.short_id)%></B></FONT>
+				</TD>					
+			</TR>
+			</TABLE>
+		</TD>
+	</TR>
+</TABLE>
+<TABLE width="100%" border="0" cellspacing="0" cellpadding="0">
+<TR>
+	<TD valign="top" width=100%>
+<%
+	if (PLAN != 1)
+		_plan_prefix = "appraisal_";
+	else
+		_plan_prefix = "plan_";
+
+	if (_kpi_show)
+	{
+		_kpi_show = tools_ass.get_workflow_state_parameter(_curState, _plan_prefix + "kpi_show");
+		_kpi_show = (_kpi_show == undefined || _kpi_show == "1");
+	}
+	if (_proj_show)
+	{
+		_proj_show = tools_ass.get_workflow_state_parameter(_curState, _plan_prefix + "project_show");
+		_proj_show = (_proj_show == undefined || _proj_show == "1");
+	}
+
+	_hide_fields = tools_ass.get_workflow_state_parameter(_curState, "hide_fields");
+	if (_hide_fields == undefined)
+	{
+		_hide_fields = Array();
+	_plan_hide = "";
+	_fact_hide = "";
+	_mark_hide = "";
+	_weight_hide = "";
+		
+		_submit_script_hide = false;
+	}
+	else
+	{
+		_hide_fields = String(_hide_fields).split(",");
+				
+		if (ArrayOptFind(_hide_fields, "This == _plan_prefix + 'project_plan'") != undefined)
+			_plan_hide = "none";
+		else
+		_plan_hide = "";
+		
+		if (ArrayOptFind(_hide_fields, "This == _plan_prefix + 'project_fact'") != undefined)
+			_fact_hide = "none";
+		else
+		_fact_hide = "";
+			
+		if (ArrayOptFind(_hide_fields, "This == _plan_prefix + 'project_mark'") != undefined)
+			_mark_hide = "none";
+		else
+		_mark_hide = "";
+			
+		if (ArrayOptFind(_hide_fields, "This == _plan_prefix + 'project_weight'") != undefined)
+			_weight_hide = "none";
+		else
+		_weight_hide = "";
+		
+		if (ArrayOptFind(_hide_fields, "This == _plan_prefix + 'kpi_add'") != undefined)
+			_add_kpi = false;
+		if (ArrayOptFind(_hide_fields, "This == _plan_prefix + 'kpi_delete'") != undefined)
+			_del_kpi = false;
+		if (ArrayOptFind(_hide_fields, "This == _plan_prefix + 'project_add'") != undefined)
+			_add_proj = false;
+		if (ArrayOptFind(_hide_fields, "This == _plan_prefix + 'project_delete'") != undefined)
+			_del_proj = false;	
+		if (ArrayOptFind(_hide_fields, "This == _plan_prefix + 'create_kpi'") != undefined)
+			_create_kpi = false;
+		if (ArrayOptFind(_hide_fields, "This == _plan_prefix + 'add_standard_proj'") != undefined)
+			_add_standard_proj = false;
+		if (ArrayOptFind(_hide_fields, "This == _plan_prefix + 'del_standard_proj'") != undefined)
+			_del_standard_proj = false;
+		if (ArrayOptFind(_hide_fields, "This == _plan_prefix + 'create_standard_proj'") != undefined)
+			_create_standard_proj = false;	
+
+		_submit_script_hide = (ArrayOptFind(_hide_fields, "This == _plan_prefix + 'submit_script'") != undefined);
+	}
+
+
+	_lock_fields = tools_ass.get_workflow_state_parameter(_curState, "lock_fields");
+	if (_lock_fields == undefined)
+	{
+		_lock_fields = Array();
+		_name_lock = false;
+		_plan_lock = false;
+		_fact_lock = false;
+		_mark_lock = false;
+		_weight_lock = false;
+	}
+	else
+	{
+		_lock_fields = String(_lock_fields).split(",");
+				
+		if (PLAN != 1)
+			_plan_prefix = "appraisal_";
+		else
+			_plan_prefix = "plan_";
+			
+			_name_lock = (ArrayOptFind(_lock_fields, "This == _plan_prefix + 'project_name'") != undefined);
+			_plan_lock = (ArrayOptFind(_lock_fields, "This == _plan_prefix + 'project_plan'") != undefined);
+			_fact_lock = (ArrayOptFind(_lock_fields, "This == _plan_prefix + 'project_fact'") != undefined);	
+			_mark_lock = (ArrayOptFind(_lock_fields, "This == _plan_prefix + 'project_mark'") != undefined);
+			_weight_lock = (ArrayOptFind(_lock_fields, "This == _plan_prefix + 'project_weight'") != undefined);
+	}
+
+	_flex_weights = tools_ass.get_workflow_state_parameter(_curState, "flex_weights");
+
+	_pwb = tools_ass.get_workflow_state_parameter(_curState, "project_weight_boundary");
+	if (_pwb != undefined)
+	{
+		try
+		{
+			_pwb = String(_pwb).split("-");
+			_pwb[0] = Int(_pwb[0]);
+			_pwb[1] = Int(_pwb[1]);
+		}
+		catch(_err_)
+		{
+			Response.Write("BAD WORKFLOW PARAMETER: project_weight_boundary\n\n" + _err_);
+			//Cancel();
+			_cancel = true;
+		}
+	}
+
+}
+
+if (!_cancel)
+{
+chech_resp=false;
+_chech_resp = tools_ass.get_workflow_state_parameter(_curState, "chech_resp");
+try
+{
+	chech_resp = eval(_chech_resp);
+}
+catch(_wow_)
+{
+	chech_resp = false;
+}
+if (chech_resp==undefined)
+{
+	chech_resp = false
+}
+isRespPerson=false;
+resp_str='';
+if (chech_resp)
+{
+	fldCustomExp=CUSTOM_EXPERTS.GetOptChildByKey(curPersonID);
+	if (fldCustomExp!= undefined)
+	{
+		isRespPerson=fldCustomExp.responsible;	
+	}
+	//Response.Write(isRespPerson+'<br/>')
+	//resp_str='';
+	resp_str=' and (@user_is_responsible_person=1)';
+}
+// ------------ WORKFLOW-FIELDS -------------------
+var workflow_fields = Array();
+var wfid = 0;
+for (_wf_group in curWorkflow.field_groups)
+{
+	if ( _wf_group.read_conditions.condition_eval_str == '' || eval( _wf_group.read_conditions.condition_eval_str) )
+	{
+		_field_group = ArraySelect( curWorkflow.workflow_fields, "field_group_id == _wf_group.PrimaryKey");
+		if (ArrayCount(_field_group) > 0)
+		{
+			if ( _wf_group.write_conditions.condition_eval_str == '' || eval( _wf_group.write_conditions.condition_eval_str) )
+				_use_dirty_fingers = true;
+			else
+				_use_dirty_fingers = false;
+		
+			for (_fg in _field_group)
+			{
+				workflow_fields[wfid] = new Object;
+				workflow_fields[wfid].field = _fg;
+				workflow_fields[wfid].is_modify = _use_dirty_fingers;
+				workflow_fields[wfid].index = wfid;
+				wfid = wfid + 1;
+			}
+		}
+	}
+}
+
+function drill_select(_DRILL_PACK, _E_NODE, _E_PACK, _E_IDX)
+{
+	try
+    {
+        if (_E_IDX == ArrayCount(_E_PACK) - 1)
+        {
+            _DRILL_PACK[ArrayCount(_DRILL_PACK)] = eval( (_E_NODE != null ? '_E_NODE' : '') + _E_PACK[_E_IDX]);
+        }
+        else
+        {
+            _e_new = eval((_E_NODE != null ? '_E_NODE' : '') + _E_PACK[_E_IDX]);
+            for (_e_new_item in _e_new)
+            {
+                _DRILL_PACK = drill_select(_DRILL_PACK, _e_new_item, _E_PACK, _E_IDX + 1);
+            }
+        }
+    }
+    catch(_mrmr_)
+    {}
+	return _DRILL_PACK;
+}
+// ------------ -------- -------------------
+
+
+
+
+
+
+	if (ArrayCount(workflow_fields) > 0)
+	{
+
+	if (curHostSettings.default_portal_type == "sharepoint")
+	{
+%>
+<script language="javascript">
+<!--
+	var imgDir = '<%=curHostSettings.proxy_prefix%>/scripts/calendar/';
+-->
+</script>
+<%
+	}
+%>
+<script src="<%=(curHostSettings.default_portal_type == "sharepoint" ? curHostSettings.proxy_prefix + '/': "")%>scripts/calendar/calendar.js"></script>
+<%
+	}
+%>
+
+<script language="JavaScript">
+		<!--
+		function checkkey(srcobj, keycode)
+		{			
+			if ((keycode<48 || keycode>57)& keycode!=46) return false;			
+			if (keycode==46) if(srcobj.value.indexOf('.') >= 0) return false;	
+			return true;
+		}
+		
+		function checkkeyInt()
+		{			
+			var srcobj = event.srcElement;
+			var keycode=event.keyCode;
+			if ((keycode<48 || keycode>57)) return false;						
+			return true;
+		}
+		
+		function checkval(source, min, max)
+		{
+			if (source.value!="")
+			{
+				var fNewVal = parseFloat(source.value);
+				if (!isNaN(fNewVal))
+				{
+					source.value=fNewVal;
+					if (max!="") if (fNewVal>parseFloat(max)) source.value=max;				
+					if (min!="") if (fNewVal<parseFloat(min)) source.value=min;							
+				}
+				else
+					source.value = "";
+			}
+		}
+
+		function formulate(_kpi_id,_p_field,_f_field,_w_field, res_field)
+		{
+			var _plan = document.getElementById(_p_field);
+			var _fact = document.getElementById(_f_field);
+			var _weight = document.getElementById(_w_field);
+			var _res = document.getElementById(res_field);
+			//alert("plan="+_p_field+" fact="+_f_field+" res="+res_field+" _w_field="+_w_field)
+			if (!_res)
+			{
+				return;
+			}
+			
+			try
+			{
+				try
+				{
+					var _formula = xkpis.selectSingleNode(".//kpi[@id='"+_kpi_id+"']/formula").text;
+				}
+				catch (ex)
+				{
+					var _formula = xkpis.selectSingleNode(".//project[@id='"+_kpi_id+"']/formula").text;
+				}
+				
+				var PLAN = _plan.value;
+				var FACT = _fact.value;
+				var WEIGHT = _weight.value;
+				_res.value = eval(_formula);
+				_res.innerHTML=_res.value.toFixed(2);
+			}
+			catch(_oops_)
+			{
+				//alert(_oops_)
+			}
+		}
+
+		function check_swear_calc(source, companion_name, min, max, nominator, dest_name)
+		{
+		//alert("source="+source+" companion_name="+companion_name+" nominator="+nominator+" dest_name="+dest_name)
+		if (source.value!="")
+			{
+				source.value=parseFloat(source.value);
+				if (max!="") if (parseFloat(source.value)>parseFloat(max)) alert("<%=tools.get_web_str("vkb_message1")%>");
+				if (min!="") if (parseFloat(source.value)<parseFloat(min)) alert("<%=tools.get_web_str("vkb_message2")%>");
+				if (document.all[companion_name] && document.all[dest_name])
+				{
+					if (document.all[companion_name].value != "")
+					{
+						if  ((nominator == 1 && parseFloat(document.all[companion_name].value) > 0 ) || (nominator==0 && parseFloat(source.value) > 0)   )	
+						{
+							if (nominator == 1)
+							var TO_4TO_OCTALOCb = parseFloat(source.value) / parseFloat(document.all[companion_name].value);
+							else
+							var TO_4TO_OCTALOCb = parseFloat(document.all[companion_name].value) / parseFloat(source.value);
+
+							//TO_4TO_OCTALOCb=TO_4TO_OCTALOCb.toFixed(4);
+							//alert(TO_4TO_OCTALOCb);
+							//alert((source.value) +";"+ (document.all[companion_name].value));
+							
+							TO_4TO_OCTALOCb=(TO_4TO_OCTALOCb*100);							
+							TO_4TO_OCTALOCb=TO_4TO_OCTALOCb.toFixed(2);
+							document.all[dest_name].value=TO_4TO_OCTALOCb;
+
+							try{document.all[dest_name].innerHTML=TO_4TO_OCTALOCb + "%";} catch(X){};
+							
+							
+						}
+						else document.all[dest_name].value="";
+					
+					}
+				}
+			
+			}
+		}
+	
+
+function kpiForceSum100(Eq)
+{
+		//var xselnodes=xkpis.selectNodes(".//kpi[@selected='1'<%=resp_str%>]");
+var xselnodes=xkpis.selectNodes(".//kpi[@selected='1']");
+if (xselnodes.length==0) return false;
+
+var sum=0;
+var count=xselnodes.length;
+var temp="";
+var currid="";
+
+	for (i=0; i<count; i++)
+{
+	currid=xselnodes[i].getAttribute("id");
+	temp=document.all['STNeedWeight_'+currid].value;
+	if (temp=="") {temp="0";document.all['STNeedWeight_'+currid].value="0";}
+	sum=sum+parseFloat(temp);
+	temp="";
+}
+
+if (sum>0 & Eq!=1)
+{
+	scale=100.0/sum;
+	sum=0.0;
+	for (i=0; i<count; i++)
+	{
+		currid=xselnodes[i].getAttribute("id");
+		document.all['STNeedWeight_'+currid].value=(parseFloat(document.all['STNeedWeight_'+currid].value) * scale).toFixed(2);
+		sum=sum+parseFloat(document.all['STNeedWeight_'+currid].value);
+	}
+}
+else
+{
+	scale=100.0/count;
+	sum=0;
+	for (i=0; i<count; i++)
+	{
+		currid=xselnodes[i].getAttribute("id");
+		document.all['STNeedWeight_'+currid].value=parseFloat(scale).toFixed(2);
+		sum=sum+parseFloat(document.all['STNeedWeight_'+currid].value);
+	}
+
+
+}
+document.all['STNeedWeight_'+xselnodes[0].getAttribute("id")].value=(parseFloat(document.all['STNeedWeight_'+xselnodes[0].getAttribute("id")].value) + 100.0 - sum).toFixed(2);
+
+
+}
+//----------------------------
+
+function projForceSum100(Eq)
+{
+	
+var sum=0;
+var count=0;
+var temp="";
+var currid="";
+
+var maxspace=parseInt(document.all['maxspaceWeHave0'].value);
+
+var i=0;
+	//while (document.all["STNeedWeightEx_"+ i])
+for (i=0; i<maxspace; i++)
+{
+if(document.all["STNeedWeightEx_"+ i])
+	{
+	temp=document.all["STNeedWeightEx_"+ i].value;
+	if (temp=="") {temp="0";document.all["STNeedWeightEx_"+ i].value="0";}
+	sum=sum+parseFloat(temp);
+	temp="";
+	count++;
+	}
+	//i++;
+}
+//count=i;
+
+if (sum>0 && Eq!=1)
+{
+	scale=100.0/sum;
+	sum=0;
+	//for (i=0; i<count; i++)
+	for (i=0; i<maxspace; i++)
+	{		
+		if(document.all["STNeedWeightEx_"+ i])
+		{
+		document.all["STNeedWeightEx_"+ i].value=parseFloat(parseFloat(document.all["STNeedWeightEx_"+ i].value) * scale).toFixed(2);
+		sum=sum+parseFloat(document.all["STNeedWeightEx_"+ i].value);
+		}
+	}
+}
+else
+{
+	scale=100.0/count;
+	sum=0;
+	//for (i=0; i<count; i++)
+	for (i=0; i<maxspace; i++)
+	{	
+	if(document.all["STNeedWeightEx_"+ i])
+		{
+		document.all["STNeedWeightEx_"+ i].value=parseFloat(scale).toFixed(2);
+		sum=sum+parseFloat(document.all["STNeedWeightEx_"+ i].value);
+		}
+	}
+
+
+}
+
+if (document.all["STNeedWeightEx_"+ 0]) document.all["STNeedWeightEx_"+ 0].value=(parseFloat(document.all["STNeedWeightEx_"+ 0].value) + 100-sum).toFixed(2);
+
+
+}
+
+
+//----------------------------
+
+function random_string(_digit_num)
+{
+		_arr = 'qwertyuiopasdfghjklzxcvbnm1234567890';
+		_len = 35;
+		
+		_str = '';		
+		for ( local_i = 0; local_i < _digit_num; local_i++ )
+		{
+			_ind = (Math.random()*_len).toFixed(0) ;			
+			_str = _str + (_arr.substr( _ind, 1 ));
+		}		
+		return _str;
+}	
+
+//------------------------------------------------------------------------------------------------------------
+
+function eval_formula(_N)
+{
+	<%
+		if (PLAN == 1)
+			Response.Write("return");
+	%>
+
+	var PLAN = parseFloat(document.getElementById("STCompExDesc_" + _N).value);
+	var FACT = parseFloat(document.getElementById("STCompExFact_" + _N).value);
+	var WEIGHT = parseFloat(document.getElementById("STNeedWeightEx_" + _N).value);
+	
+	<%
+		if (_extended_fields)
+		{
+	%>
+		var THRESHOLD = parseFloat(document.getElementById("STCompExThreshold_" + _N).value);
+		var CHALLENGE = parseFloat(document.getElementById("STCompExChallenge_" + _N).value);
+	<%
+		}
+	%>
+	
+	var _formula = "<%=(Trim(_sub_formula) != "" ? _sub_formula : "FACT / PLAN" )%>";
+	
+	try
+	{
+		var _value = eval(_formula);
+	}
+	catch(_ne_poperlo_)
+	{
+		var _value = NaN;
+	}
+	
+	if (isNaN(_value))
+		_value = '';
+	else
+		_value = _value.toFixed(2);
+	
+	var _element = document.getElementById("STRatingEx_" + _N);
+	_element.value = _value;
+	if (_element.tagName.toUpperCase() == "LABEL")
+		_element.innerHTML = _value;
+	
+	<%
+		if (_extended_fields)
+		{
+	%>
+			if ( !(isNaN(WEIGHT) || _value == '') )
+			{
+				_element = document.getElementById("STCompExWeightedMark_" + _N);
+				_element.value = (WEIGHT * _value).toFixed(2);
+				if (_element.tagName.toUpperCase() == "LABEL")
+					_element.innerHTML = (WEIGHT * _value / 100.0).toFixed(2);
+			}
+	<%
+		}
+	%>
+	
+	
+}
+
+//------------------------------------------------------------------------------------------------------------
+
+function weighted_quantity_calculation(_N)
+{
+
+	<%
+		if (PLAN == 1)
+			Response.Write("return");
+	%>
+
+	var WEIGHT = parseFloat(document.getElementById("STNeedWeightEx_" + _N).value);
+	var _cur_elem = document.getElementById("STRatingEx_" + _N)	
+
+	try
+	{
+		_value=_cur_elem.options[_cur_elem.selectedIndex].text
+	}
+	catch(ex)
+	{
+		_value=_cur_elem.value;
+	}
+	<%
+		if (_extended_fields)
+		{
+	%>
+			if ( !(isNaN(WEIGHT) || _value == '') )
+			{
+				try
+				{
+					_element = document.getElementById("STCompExWeightedMark_" + _N);
+					_element.value = (WEIGHT * _value).toFixed(2);
+					if (_element.tagName.toUpperCase() == "LABEL")
+						_element.innerHTML = (WEIGHT * _value / 100.0).toFixed(2);
+				}
+				catch(ex)
+				{
+				}
+			}
+	<%
+		}
+	%>
+	
+	
+}
+
+//-------------------------------------------------------------------------------------------
+
+
+<%
+	_weighted_result = tools_ass.get_workflow_state_parameter(_curState, "weighted_result");
+	if (_weighted_result == undefined)
+		_weighted_result = "1";
+	
+	if (_kpi_show)
+	{
+%>
+
+
+function getMBO()
+{
+	//var kpiall=xkpis.selectNodes('.//kpi[@selected=1<%=resp_str%>]');
+	var kpiall=xkpis.selectNodes('.//kpi[@selected=1]');
+	//alert(xkpis.xml)
+	
+	var weight = 0;
+	var mark = 0;
+	var kpiunid ="";
+	var mbo=0.0;
+	var obj = null;
+	for (i=0; i < kpiall.length; i++)
+	{
+		//if (kpiall[i].getAttribute('type') == "auto" || kpiall[i].getAttribute('type') == "input")
+		{
+			kpiunid=kpiall[i].getAttribute('id');
+			obj = null;
+			weight = 0;
+			mark = 0;
+			obj = document.all['STRating_'+kpiunid];
+			
+			if (obj)
+			{
+				if (kpiall[i].getAttribute('type') == "scale")
+				{
+					var mrk_node=kpiall[i].selectSingleNode('//mark[@id="' + obj.value + '"]');
+					if (mrk_node)
+					{
+						mark = parseFloat(mrk_node.getAttribute("percent"));
+						if (isNaN(mark))
+							mark = 0;
+					}
+					else
+						mark = 0;
+					
+				}
+				else
+				{
+					 mark = parseFloat(obj.value);
+				}
+			}
+			else
+			{
+				mark = 0;
+			}			
+			if (isNaN(mark)) mark = 0;
+			obj = null;
+			obj = document.all['STNeedWeight_'+kpiunid];
+			if (obj) weight = parseFloat(obj.value); else weight = 0;
+			if (isNaN(weight)) weight = 0; else weight = weight/100;
+			
+			mbo+= mark <%=(_weighted_result == "1" ? "* weight" : "")%>;
+		
+		}
+	
+	}			
+	
+	return mbo;
+}
+
+//--------------------------------------------
+function getWeight()
+{
+	//var kpiall=xkpis.selectNodes('.//kpi[@selected=1<%=resp_str%>]');
+	var kpiall=xkpis.selectNodes('.//kpi[@selected=1]');
+	var weight = 0;
+	var w = 0;
+	var obj = null;
+	for (var i=0; i < kpiall.length; i++)
+	{
+		kpiunid=kpiall[i].getAttribute('id');
+		obj = null;		
+		obj = document.all['STNeedWeight_'+kpiunid];
+		w = 0;		
+		if (obj) w = parseFloat(obj.value); else w = 0;
+		if (!isNaN(w)) weight += w;
+		
+	}
+	return weight;
+}
+
+<%
+	}
+	
+	if (_proj_show)
+	{
+%>
+
+function getProjectRating()
+{
+	if (document.all['maxspaceWeHave0'])
+	{
+		var maxspace = parseInt(document.all['maxspaceWeHave0'].value); 
+		if (isNaN(maxspace)) maxspace = 0;
+	}
+	else
+	{
+		var maxspace = 0;
+	}
+	
+	var obj;
+	var mark = 0.0;
+	var weight = 0.0;
+	var _result = 0.0;
+	for (var i=0; i < maxspace; i++)
+	{	
+		weight = 0;
+		obj = document.all['STRatingEx_'+i];
+		mark = parseFloat(obj.value);
+		if (isNaN(mark))
+			mark = 0.0;
+		else
+		{
+			obj = document.all['STNeedWeightEx_' + i];
+			if (obj) weight = parseFloat(obj.value);
+			if (isNaN(weight)) weight = 0.0; else weight = weight/100.0;
+		}
+		_result += mark <%=(_weighted_result == "1" ? "* weight" : "")%>;
+	}
+	
+	return _result;
+}
+
+//--------------------------------------------
+function getProjectWeight()
+{
+	var weight = 0;
+	var w = 0;
+	var obj = null;
+	
+	if (document.all['maxspaceWeHave0'])
+	{
+		var maxspace = parseInt(document.all['maxspaceWeHave0'].value); 
+		if (isNaN(maxspace)) maxspace = 0;
+	}
+	else
+	{
+		var maxspace = 0;
+	}
+	
+	for (var i=0; i < maxspace; i++)
+	{
+		obj = document.all['STNeedWeightEx_'+i];
+		w = 0;
+		if (obj) w = parseFloat(obj.value); else w = 0;
+		if (!isNaN(w)) weight += w;
+		
+	}
+	return weight;
+}
+
+<%
+	}
+%>
+///--------------------------------------------------------------------------------------------
+
+try
+{
+//	var xpisXmlText = XMLHTTP_Load("kpis_weblist.xml");
+	var xkpis = CreateDOMDocument();
+	xkpis.async = false;
+	xkpis.load("kpis_weblist.xml?proc_id=<%=curAssessmentAppraiseID%>");
+/*
+	var xkpis = new ActiveXObject("Msxml.DOMDocument");
+	xkpis.async = false;
+	xkpis.load("kpis_weblist.xml?proc_id=<%=curAssessmentAppraiseID%>");
+	xkpis.setProperty("SelectionLanguage","XPath");
+*/
+
+}
+catch(x)
+{
+	alert(x.description);
+}
+
+<%
+	if (_kpi_show)
+	{
+%>
+///---------------------------------------------------------------------
+
+function manageKpiS(flag)
+{
+
+
+node_prefix='kpi';
+
+		var parobj=new Object();
+		parobj.xlist=xkpis;
+		parobj.showAll=1;
+		parobj.is_kpi=true;
+		parobj.assessment_id='<%=curAssessmentAppraiseID%>';
+		parobj.allow_delete=<%=_del_kpi%>;
+		parobj.allow_create=<%=_create_kpi%>;
+		var strAttr="status:no;dialogWidth:780px;dialogHeight:580px;help:no;modal=yes";
+		xShowModalDialog("dlg_kpis.html?r=" + Math.random(), parobj, strAttr);
+		xkpis=parobj.xlist;
+		
+
+	if(parobj.handle) 
+{
+ var tobj=document.getElementById("userbodytable");
+
+
+for (u=tobj.rows.length-1;u>=0;u--)
+{
+var ccid=tobj.rows[u].getAttribute("id");
+
+
+
+if (ccid)
+   {
+	ccid=ccid.substring(3,ccid.length);
+	
+	var disclose=parobj.xlist.selectSingleNode(".//"+node_prefix+"[@id='"+ccid+"']");
+
+		if (disclose)
+			{
+				var s=disclose.getAttribute("selected");
+				 if(!s) s=0;
+				if (s != 1)
+				{
+					tobj.deleteRow(u);
+				}
+			}
+   }
+}
+
+
+if (document.getElementById('sMBO')) document.getElementById('sMBO').innerHTML="";
+if (document.getElementById('sWEIGHT')) document.getElementById('sWEIGHT').innerHTML="";
+
+ //var xselnodes=parobj.xlist.selectNodes(".//kpi[@selected='1'<%=resp_str%>]");
+var xselnodes=parobj.xlist.selectNodes(".//"+node_prefix+"[@selected='1']");
+ for(i=0;i<xselnodes.length;i++)
+ {
+
+ var comp=document.getElementById("kpiname_"+xselnodes[i].getAttribute("id"));
+ if(!comp) 
+	{
+var marks=xkpis.selectNodes(".//"+node_prefix+"[@id='"+xselnodes[i].getAttribute("id")+"']/mark");
+
+var kptp=xselnodes[i].getAttribute("type");
+
+var rankdescr ="";
+
+var v_from=xselnodes[i].getAttribute("from");
+var v_to=xselnodes[i].getAttribute("to");
+
+var _formulation = xselnodes[i].selectSingleNode(".//formula").text;
+
+
+		if (kptp=="auto")
+		{
+			rankdescr="<%=tools.get_web_str("vkb_automatic_calculation_of_mark")%>";
+		}
+		else if (kptp=="scale")
+		{	rankdescr="<%=tools.get_web_str("vkb_enter_estimation")%>";
+		}
+		else if(kptp=="input")
+		{
+			var hint_1st_part="";					
+			var hint_2nd_part="";
+			var hint_3rd_part="";
+			if (v_from!="")
+			{
+				hint_2nd_part=" <%=tools_web.get_web_str("vppb_from")%> " + v_from;
+				if (hint_1st_part=="") hint_1st_part=", <%=tools.get_web_str("vkb_range_of_values")%>"
+			}
+
+			if (v_to!="")
+			{
+				hint_3rd_part=" <%=tools_web.get_web_str("vppb_to")%> " + v_to;
+				if (hint_1st_part=="") hint_1st_part=", <%=tools.get_web_str("vkb_range_of_values")%>"
+			}
+
+
+			rankdescr="<%=tools.get_web_str("vkb_message3")%> " + hint_1st_part + hint_2nd_part + hint_3rd_part;
+		
+		}
+
+  var trow=document.createElement("TR");
+ trow.setAttribute("id","tr_"+xselnodes[i].getAttribute("id"));
+ var tinsrow=tobj.insertAdjacentElement('beforeEnd',trow);
+ var tcol1=document.createElement("TD");
+//tcol1.setAttribute("width","120");
+tcol1.setAttribute("title",rankdescr);
+tcol1.bgColor='silver';
+tcol1.className="tableRowEven";
+ var tinscol1=trow.insertAdjacentElement('beforeEnd',tcol1);
+ 
+
+var tcol2=document.createElement("TD");
+tcol2.setAttribute("width","220px");
+tcol2.align="center";
+tcol2.bgColor='white';
+tcol2.style.display = "<%=_plan_hide%>";
+var tinscol2=trow.insertAdjacentElement('beforeEnd',tcol2);
+
+
+<%
+			 if (PLAN != 1)
+			 {
+%>
+
+ var tcol3=document.createElement("TD");
+tcol3.setAttribute("width","220px");
+tcol3.align="center";
+tcol3.bgColor='white';
+tcol3.style.display = "<%=_fact_hide%>";
+ var tinscol3=trow.insertAdjacentElement('beforeEnd',tcol3);
+
+
+
+<%
+if (_manager_show_columns)
+{
+	if (curPA.status == 'manager' || curPA.status == 'interview')
+	{
+%>
+	var tcol5add=document.createElement("TD");
+tcol5add.align="center";
+tcol5add.bgColor='white';
+tcol5add.setAttribute("width","20");
+
+var tinscol5add=trow.insertAdjacentElement('beforeEnd',tcol5add);
+<%
+	}
+
+	if (curPA.status == 'interview')
+	{
+%>
+	var tcol5add2=document.createElement("TD");
+	tcol5add2.align="center";
+	tcol5add2.bgColor='white';
+
+	tcol5add2.setAttribute("width","20");
+	
+	var tinscol5add2=trow.insertAdjacentElement('beforeEnd',tcol5add2);
+
+<%
+	}
+}
+%>
+
+
+
+
+
+var calcspan=1;
+
+var tcol5=document.createElement("TD");
+tcol5.align="center";
+tcol5.valign="middle";
+tcol5.bgColor='white';
+tcol5.setAttribute("width","50");
+
+if (kptp=="auto") tcol5.colSpan=calcspan;
+
+tcol5.style.display = "<%=_mark_hide%>";
+
+var tinscol5=trow.insertAdjacentElement('beforeEnd',tcol5);
+
+<%
+ 			}
+%>
+
+
+
+var tcol6=document.createElement("TD");
+tcol6.align="center";
+tcol6.bgColor='white';
+tcol6.setAttribute("width","50");
+tcol6.style.display = "<%=_weight_hide%>";
+var tinscol6=trow.insertAdjacentElement('beforeEnd',tcol6);
+
+<%
+		//----------- WORKFLOW-FIELDS ---------------- //
+			for (_wf in workflow_fields)
+			{
+				_extra_identifier = "extra_" + _wf.field.name + "$";
+%>
+	var tcol_extra=document.createElement("TD");
+	tcol_extra.bgColor='white';
+	tcol_extra.align="center";
+	tcol_extra.setAttribute("id","td_<%=(_extra_identifier)%>"+xselnodes[i].getAttribute("id"));
+	tcol_extra.setAttribute("name","td_<%=(_extra_identifier)%>"+xselnodes[i].getAttribute("id"));
+
+	var tinput_extra_ident = document.createElement("INPUT");
+	tinput_extra_ident.setAttribute("id","i_name_<%=(_extra_identifier)%>"+xselnodes[i].getAttribute("id"));
+	tinput_extra_ident.setAttribute("name","i_name_<%=(_extra_identifier)%>"+xselnodes[i].getAttribute("id"));
+	tinput_extra_ident.type="hidden";
+	tinput_extra_ident.value="<%=(_wf.field.name)%>";
+	tcol_extra.insertAdjacentElement('beforeEnd',tinput_extra_ident);
+	
+	var _RESP_VAL = "";
+	var _extra_identifier = "<%=_extra_identifier%>";
+<%
+		if (_wf.is_modify)
+		{
+				switch (_wf.field.type)
+				{
+					case "string":
+%>
+			_RESP_VAL = '<input TYPE="text" style="width: 300px" class="inputEdit" id="i_value_' + _extra_identifier + xselnodes[i].getAttribute("id") + '" name="i_value_' + _extra_identifier + xselnodes[i].getAttribute("id") + '"/>';
+<%
+						break;
+					case "integer":
+%>
+			_RESP_VAL = '<input TYPE="text" style="width: 60px" class="inputEdit" id="i_value_' + _extra_identifier + xselnodes[i].getAttribute("id") + '" name="i_value_' + _extra_identifier + xselnodes[i].getAttribute("id") + '" onKeyPress="return checkkeyInt();"/>';
+<%
+						break;
+					case "real":
+%>
+			_RESP_VAL = '<input TYPE="text" style="width: 60px" class="inputEdit" id="i_value_' + _extra_identifier + xselnodes[i].getAttribute("id") + '" name="i_value_' + _extra_identifier + xselnodes[i].getAttribute("id") + '" onKeyPress="return checkkey(this,window.event.keyCode);"/>';
+<%
+						break;
+					case "date":
+%>
+			_RESP_VAL = '<input type="text" style="width: 70px" id="i_value_' + _extra_identifier + xselnodes[i].getAttribute("id") + '" name="i_value_' + _extra_identifier + xselnodes[i].getAttribute("id") + '" class="inputEdit" readonly><a class="asLink" href="#"  tn="i_value_' + _extra_identifier + xselnodes[i].getAttribute("id") + '" onclick="var h=0; var offP = this.offsetParent; while(offP.id != \'main_block\' && offP.tagName.toUpperCase()!=\'BODY\') {h+=offP.offsetTop; offP = offP.offsetParent;} ; showCalendar(this, document.getElementById(\'i_value_' + _extra_identifier + xselnodes[i].getAttribute("id") + '\'), \'dd.mm.yyyy\',\'ru\',1, null, h + 40); return false;" id="cal' + _extra_identifier + xselnodes[i].getAttribute("id") + '" name="cal' + _extra_identifier + xselnodes[i].getAttribute("id") + '"><img src="<%=(curHostSettings.default_portal_type == "sharepoint" ? curHostSettings.proxy_prefix : "")%>/scripts/calendar/calendar.gif" width="24" height="22" border="0" align="absmiddle" /></a>';
+<%
+						break;
+					case "bool":
+%>
+			_RESP_VAL = '<input type="checkbox" style="width: 15px" id="i_value_' + _extra_identifier + xselnodes[i].getAttribute("id") + '" name="i_value_' + _extra_identifier + xselnodes[i].getAttribute("id") + '" onclick="if (this.checked) this.value=1; else this.value=0;" />';
+<%
+						break;
+					case "combo":
+%>
+			_RESP_VAL = '<select id="i_value_' + _extra_identifier + xselnodes[i].getAttribute("id") + '" name="i_value_' + _extra_identifier + xselnodes[i].getAttribute("id") + '"><option value="">&nbsp;</option>';
+<%
+						for (_ent in _wf.field.entries)
+						{
+							_reload_val = HtmlEncode(_ent.value);
+							if (StrBegins(_reload_val , "@"))
+							{
+								_reload_val = String(_reload_val).slice(1);
+								_reload_val =_reload_val.split("[]");
+								
+								_drill_response = drill_select(Array(), null, _reload_val, 0);
+								for (_dr in _drill_response)
+								{
+%>
+										_RESP_VAL = _RESP_VAL + '<option value="<%=HtmlEncode(_dr)%>"><%=HtmlEncode(_dr)%></option>';
+<%
+								}
+							}
+							else
+							{
+%>
+								_RESP_VAL = _RESP_VAL + '<option value="<%=_reload_val%>"><%=_reload_val%></option>';
+<%
+							}
+						}
+%>
+				_RESP_VAL = _RESP_VAL + '</select>';
+<%
+						break;
+					default:
+%>
+			_RESP_VAL = '<textarea id="i_value_' + _extra_identifier + xselnodes[i].getAttribute("id") + '" name="i_value_' + _extra_identifier +  xselnodes[i].getAttribute("id") + '" class="commonTextarea" rows="5" style="width: 90%"></textarea>';
+<%
+						break;
+				}
+		}
+		else
+		{
+%>
+			_RESP_VAL = '<input TYPE="hidden" id="i_value_' + _extra_identifier + xselnodes[i].getAttribute("id") + '" name="i_value_' + _extra_identifier + xselnodes[i].getAttribute("id") + '" />&nbsp;';
+<%
+		}
+%>
+			tcol_extra.insertAdjacentHTML("beforeEnd",_RESP_VAL);
+			tcol_extra=trow.insertAdjacentElement('beforeEnd',tcol_extra);
+
+<%
+			}
+			//----------- -------- ---------------- //
+%>
+
+
+
+
+var tinput1=document.createElement("span");
+tinput1.setAttribute("type","text");
+
+tinput1.setAttribute("title",rankdescr);
+
+tinput1.setAttribute("id","kpiname_"+xselnodes[i].getAttribute("id"));
+tinput1.innerHTML=xselnodes[i].getAttribute("name");
+tinput1=tcol1.insertAdjacentElement('beforeEnd',tinput1);
+
+
+tcol1.insertAdjacentHTML("beforeEnd","<input type='hidden' name='kpi_unid_"+xselnodes[i].getAttribute("id")+"' value='"+xselnodes[i].getAttribute("id")+"'/>");
+tcol1.insertAdjacentHTML("beforeEnd","<input type='hidden' name='kpi_type_"+xselnodes[i].getAttribute("id")+"' value='"+kptp+"'/>");
+
+
+if (kptp=="auto")
+{
+	if (_formulation != "")
+		tinscol2.insertAdjacentHTML("beforeEnd","<input type='text' id='STCompDesc_"+xselnodes[i].getAttribute('id')+"' name='STCompDesc_"+xselnodes[i].getAttribute('id')+"' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='formulate(\""+xselnodes[i].getAttribute('id')+"\",\"STCompDesc_"+xselnodes[i].getAttribute('id')+"\",\"STCompFact_"+xselnodes[i].getAttribute('id')+"\",\"STNeedWeight_"+xselnodes[i].getAttribute('id')+"\", \"STRating_"+xselnodes[i].getAttribute('id')+"\")' value='' class='inputEdit' <%=(_plan_lock ? "readonly style='background-color: lightgrey'" : "")%>/>");
+	else
+		tinscol2.insertAdjacentHTML("beforeEnd","<input type='text' id='STCompDesc_"+xselnodes[i].getAttribute('id')+"' name='STCompDesc_"+xselnodes[i].getAttribute('id')+"' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='check_swear_calc(this,\"STCompFact_"+xselnodes[i].getAttribute('id')+"\",\""+v_from+"\",\""+v_to+"\",0,\"STRating_"+xselnodes[i].getAttribute('id')+"\");' value='' class='inputEdit' <%=(_plan_lock ? "readonly style='background-color: lightgrey'" : "")%>/>");
+}
+else
+{
+var tinput2=document.createElement("TEXTAREA");
+tinput2.setAttribute("cols","25");
+if (kptp=="scale") tinput2.setAttribute("rows","5"); else if (kptp=="input") tinput2.setAttribute("rows","1");
+tinput2.setAttribute("name","STCompDesc_"+xselnodes[i].getAttribute("id"));
+tinput2.setAttribute("id","STCompDesc_"+xselnodes[i].getAttribute("id"));
+tinput2.readOnly = <%=(_plan_lock)%>;
+if (tinput2.readOnly) tinput2.style.backgroundColor = 'lightgrey';
+tinput2=tinscol2.insertAdjacentElement("beforeEnd",tinput2);
+
+}
+
+// check_swear_calc(source, companion_name, min, max, nominator, dest_name)
+
+<%
+			 if (PLAN != 1)
+			 {
+%>
+
+if (kptp=="auto")
+{
+	if (_formulation != "")
+		tinscol3.insertAdjacentHTML("beforeEnd","<input type='text' id='STCompFact_"+xselnodes[i].getAttribute('id')+"' name='STCompFact_"+xselnodes[i].getAttribute('id')+"' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='formulate(\""+xselnodes[i].getAttribute('id')+"\",\"STCompDesc_"+xselnodes[i].getAttribute('id')+"\",\"STCompFact_"+xselnodes[i].getAttribute('id')+"\",\"STNeedWeight_"+xselnodes[i].getAttribute('id')+"\", \"STRating_"+xselnodes[i].getAttribute('id')+"\")' value='' class='inputEdit' <%=(_fact_lock ? "readonly style='background-color: lightgrey'" : "")%>/>");
+	else
+		tinscol3.insertAdjacentHTML("beforeEnd","<input type='text' id='STCompFact_"+xselnodes[i].getAttribute('id')+"' name='STCompFact_"+xselnodes[i].getAttribute('id')+"' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='check_swear_calc(this,\"STCompDesc_"+xselnodes[i].getAttribute('id')+"\",\""+v_from+"\",\""+v_to+"\",1,\"STRating_"+xselnodes[i].getAttribute('id')+"\");' value='' class='inputEdit' <%=(_fact_lock ? "readonly style='background-color: lightgrey'" : "")%>/>");
+
+}
+else
+{
+var tinput3=document.createElement("TEXTAREA");
+tinput3.setAttribute("cols","25");
+if (kptp=="scale") tinput3.setAttribute("rows","5"); else if (kptp=="input") tinput3.setAttribute("rows","1");
+tinput3.setAttribute("name","STCompFact_"+xselnodes[i].getAttribute("id"));
+tinput3.setAttribute("id","STCompFact_"+xselnodes[i].getAttribute("id"));
+tinput3.readOnly = <%=(_fact_lock)%>;
+if (tinput3.readOnly) tinput3.style.backgroundColor = "lightgrey";
+tinput3=tinscol3.insertAdjacentElement("beforeEnd",tinput3);
+}
+
+<%
+	if (_mark_lock)
+	{
+%>
+		tcol5.insertAdjacentHTML("beforeEnd","<label id='STRating_"+xselnodes[i].getAttribute('id')+"' name='STRating_"+xselnodes[i].getAttribute('id')+"'  value=''></label>");
+<%
+	}
+	else
+	{
+%>
+if ( kptp=="scale")
+{
+
+var tinput5=document.createElement("SELECT");
+ var ioption=document.createElement("OPTION");
+ 
+ioption.setAttribute("value","");
+ ioption.text=' '; 
+tinput5.add(ioption);
+
+<%
+if(_show_n)
+{
+%>
+ var ioption=document.createElement("OPTION");
+ioption.setAttribute("value","N");
+ ioption.text=' N ';
+tinput5.add(ioption);
+<%
+}
+%>
+
+	for (k=0;k<marks.length;k++)
+{
+ var ioption=document.createElement("OPTION");
+ ioption.setAttribute("value",marks[k].getAttribute("id"));
+ ioption.text=' '+marks[k].getAttribute("name")+' ';
+tinput5.add(ioption);
+}
+tinput5.setAttribute("id","STRating_"+xselnodes[i].getAttribute("id"));
+tinput5.setAttribute("name","STRating_"+xselnodes[i].getAttribute("id"));
+if (tinput5.options.length>0)
+		{
+		tinput5=tcol5.insertAdjacentElement("beforeEnd",tinput5);
+		}
+
+tinput5.value="";
+}
+else if (kptp=="input")
+{
+
+
+tcol5.insertAdjacentHTML("beforeEnd","<input type='text' id='STRating_"+xselnodes[i].getAttribute('id')+"' name='STRating_"+xselnodes[i].getAttribute('id')+"' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='checkval(this,\""+v_from+"\",\""+v_to+"\");' align='center' value='' style='width: 30px' class='inputEdit'/>");
+
+}
+else if (kptp=="auto")
+{
+tcol5.insertAdjacentHTML("beforeEnd","<label id='STRating_"+xselnodes[i].getAttribute('id')+"' name='STRating_"+xselnodes[i].getAttribute('id')+"'  value=''></label>");
+}
+
+
+<%
+	}
+
+ 			}
+%>
+
+
+
+if (kptp=="auto" && _formulation != "")
+		tcol6.insertAdjacentHTML("beforeEnd","<input type='text' id='STNeedWeight_"+xselnodes[i].getAttribute('id')+"' name='STNeedWeight_"+xselnodes[i].getAttribute('id')+"' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='checkval(this,0,100); formulate(\""+xselnodes[i].getAttribute('id')+"\",\"STCompDesc_"+xselnodes[i].getAttribute('id')+"\",\"STCompFact_"+xselnodes[i].getAttribute('id')+"\",\"STNeedWeight_"+xselnodes[i].getAttribute('id')+"\", \"STRating_"+xselnodes[i].getAttribute('id')+"\");' value='0' style='width: 30px' class='inputEdit' <%=(_weight_lock ? "readonly style='background-color: lightgrey'" : "")%>/>");
+else
+	tcol6.insertAdjacentHTML("beforeEnd","<input type='text' id='STNeedWeight_"+xselnodes[i].getAttribute('id')+"' name='STNeedWeight_"+xselnodes[i].getAttribute('id')+"' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='checkval(this,0,100);' value='0' style='width: 30px' class='inputEdit' <%=(_weight_lock ? "readonly style='background-color: lightgrey'" : "")%>/>");
+
+	
+}
+}
+
+
+
+
+
+
+}
+}
+
+//-------------------------------------------------------------------------------
+<%
+	}
+	if (_proj_show)
+	{
+%>
+function addSTDproj()
+{
+	var node_prefix='project';
+	var parobj=new Object();
+	parobj.xlist=xkpis;
+	parobj.showAll=1;
+	parobj.is_kpi=false;
+	parobj.assessment_id='<%=curAssessmentAppraiseID%>';	
+	parobj.allow_delete=<%=_del_standard_proj%>;
+	parobj.allow_create=<%=_create_standard_proj%>;
+	var strAttr="status:no;dialogWidth:780px;dialogHeight:580px;help:no;modal=yes";
+	showModalDialog("dlg_kpis.html", parobj, strAttr);
+	xkpis=parobj.xlist;
+	
+	if(parobj.handle)
+	{
+		var tobj=document.all.prbodytable;	
+		var n=parseInt(document.all['maxspaceWeHave0'].value);
+		
+		for (u=tobj.rows.length-1;u>=0;u--)
+		{
+			var ccid=tobj.rows[u].getAttribute("std_proj_id");
+
+			if (ccid)
+			   {
+					ccid=ccid.substring(String("std_proj_id_").length,ccid.length);
+					var disclose=parobj.xlist.selectSingleNode(".//"+node_prefix+"[@id='"+ccid+"']");
+			
+					if (disclose)
+					{
+						var s=disclose.getAttribute("selected");
+						if(!s) 
+						{
+							s=0;
+						}
+						if (s != 1)
+						{
+							tobj.deleteRow(u);
+						}
+					}
+			   }
+		}
+		
+		var xselnodes=parobj.xlist.selectNodes(".//"+node_prefix+"[@selected='1']");
+		for(i=0;i<xselnodes.length;i++)
+ 		{
+
+ 			var comp=document.all["std_proj_id_"+xselnodes[i].getAttribute("id")];
+			//alert(comp)
+			if(!comp) 
+			{
+				var marks=xkpis.selectNodes(".//"+node_prefix+"[@id='"+xselnodes[i].getAttribute("id")+"']/mark");
+
+				var kptp=xselnodes[i].getAttribute("type");
+				
+				var rankdescr ="";
+				
+				var v_from=xselnodes[i].getAttribute("from");
+				var v_to=xselnodes[i].getAttribute("to");
+				
+				var _formulation = xselnodes[i].selectSingleNode(".//formula").text;
+				
+				if (kptp=="auto")
+				{
+					rankdescr="<%=tools.get_web_str("vkb_automatic_calculation_of_mark")%>";
+				}
+				else if (kptp=="scale")
+				{	rankdescr="<%=tools.get_web_str("vkb_enter_estimation")%>";
+				}
+				else if(kptp=="input")
+				{
+					var hint_1st_part="";					
+					var hint_2nd_part="";
+					var hint_3rd_part="";
+					if (v_from!="")
+					{
+						hint_2nd_part=" <%=tools_web.get_web_str("vppb_from")%> " + v_from;
+						if (hint_1st_part=="") hint_1st_part=", <%=tools.get_web_str("vkb_range_of_values")%>"
+					}
+		
+					if (v_to!="")
+					{
+						hint_3rd_part=" <%=tools_web.get_web_str("vppb_to")%> " + v_to;
+						if (hint_1st_part=="") hint_1st_part=", <%=tools.get_web_str("vkb_range_of_values")%>"
+					}
+		
+		
+					rankdescr="<%=tools.get_web_str("vkb_message3")%> " + hint_1st_part + hint_2nd_part + hint_3rd_part;
+				
+				}
+				
+				 var trow=document.createElement("TR");
+				 trow.setAttribute("id","line"+n);
+				 trow.setAttribute("std_proj_id",xselnodes[i].getAttribute("id"));
+ //trow.setAttribute("id","tr_"+xselnodes[i].getAttribute("id"));
+ 				 var tinsrow=tobj.insertAdjacentElement('beforeEnd',trow);
+				 var tcol1=document.createElement("TD");
+//tcol1.setAttribute("width","120");
+				tcol1.setAttribute("title",rankdescr);
+				tcol1.bgColor='silver';
+				tcol1.className="tableRowEven";
+ 				var tinscol1=trow.insertAdjacentElement('beforeEnd',tcol1);
+				var _wstr='';
+<%
+				if (_extended_fields)
+				{
+%>
+					_wstr="weighted_quantity_calculation("+n+")";
+					var tcol2pre=document.createElement("TD");
+					tcol2pre.bgColor='white';
+					tcol2pre.align="center";
+					var tinscol2pre=trow.insertAdjacentElement('beforeEnd',tcol2pre);
+<%
+				}
+%>
+
+				
+				var tcol2=document.createElement("TD");
+				tcol2.bgColor='white';
+				tcol2.align="center";
+				tcol2.style.display = "<%=_plan_hide%>";
+				var tinscol2=trow.insertAdjacentElement('beforeEnd',tcol2);
+				
+<%
+				if (_extended_fields)
+				{
+%>
+					var tcol2post=document.createElement("TD");
+					tcol2post.bgColor='white';
+					tcol2post.align="center";
+					var tinscol2post=trow.insertAdjacentElement('beforeEnd',tcol2post);
+<%
+				}
+%>
+
+
+
+
+<%
+				 if (PLAN != 1)
+			 	{
+%>
+
+					var tcol3=document.createElement("TD");
+					tcol3.bgColor='white';
+					tcol3.style.display = "<%=_fact_hide%>";
+					tcol3.align="center";
+					var tinscol3=trow.insertAdjacentElement('beforeEnd',tcol3);
+					
+					 
+					 
+					var tcol5=document.createElement("TD");
+					tcol5.bgColor='white';
+					tcol5.align="center";
+					tcol5.style.display = "<%=_mark_hide%>";
+					var tinscol5=trow.insertAdjacentElement('beforeEnd',tcol5);
+
+<%
+ 				}
+%>
+				var tcol6=document.createElement("TD");
+				tcol6.bgColor='white';
+				tcol6.align="center";
+				tcol6.style.display = "<%=_weight_hide%>";
+				var tinscol6=trow.insertAdjacentElement('beforeEnd',tcol6);
+<%
+		if (_extended_fields && PLAN != 1)
+		{
+%>
+
+
+	var tcol6x=document.createElement("TD");
+	tcol6x.bgColor='white';
+	tcol6x.align="center";
+	var tinscol6x=trow.insertAdjacentElement('beforeEnd',tcol6x);
+
+
+	var tlabel6x=document.createElement("label");
+	tlabel6x.setAttribute("name","STCompExWeightedMark_"+n);
+	tlabel6x.setAttribute("id","STCompExWeightedMark_"+n);
+	tlabel6x.innerHTML = "";
+	tlabel6x=tinscol6x.insertAdjacentElement("beforeEnd",tlabel6x);
+
+<%
+		}
+		//----------- WORKFLOW-FIELDS ---------------- //
+				for (_wf in workflow_fields)
+				{
+					_extra_identifier = "extra_" + _wf.field.name + "$";
+%>
+	var tcol_extra=document.createElement("TD");
+	tcol_extra.bgColor='white';
+	tcol_extra.align="center";
+/*	tcol_extra.setAttribute("id","td_<%=(_extra_identifier)%>"+xselnodes[i].getAttribute("id"));
+	tcol_extra.setAttribute("name","td_<%=(_extra_identifier)%>"+xselnodes[i].getAttribute("id"));*/
+	
+	tcol_extra.setAttribute("id","td_<%=(_extra_identifier)%>"+n);
+	tcol_extra.setAttribute("name","td_<%=(_extra_identifier)%>"+n);
+
+	var tinput_extra_ident = document.createElement("INPUT");
+	tinput_extra_ident.setAttribute("id","i_name_<%=(_extra_identifier)%>"+n);
+	tinput_extra_ident.setAttribute("name","i_name_<%=(_extra_identifier)%>"+n);
+	tinput_extra_ident.type="hidden";
+	tinput_extra_ident.value="<%=(_wf.field.name)%>";
+	tcol_extra.insertAdjacentElement('beforeEnd',tinput_extra_ident);
+	
+	var _RESP_VAL = "";
+	var _extra_identifier = "<%=_extra_identifier%>";
+<%
+		if (_wf.is_modify)
+		{
+				switch (_wf.field.type)
+				{
+					case "string":
+%>
+			_RESP_VAL = '<input TYPE="text" style="width: 300px" class="inputEdit" id="i_value_' + _extra_identifier + n + '" name="i_value_' + _extra_identifier + n + '"/>';
+<%
+						break;
+					case "integer":
+%>
+			_RESP_VAL = '<input TYPE="text" style="width: 60px" class="inputEdit" id="i_value_' + _extra_identifier + n + '" name="i_value_' + _extra_identifier + n + '" onKeyPress="return checkkeyInt();"/>';
+<%
+						break;
+					case "real":
+%>
+			_RESP_VAL = '<input TYPE="text" style="width: 60px" class="inputEdit" id="i_value_' + _extra_identifier + n + '" name="i_value_' + _extra_identifier + n + '" onKeyPress="return checkkey(this,window.event.keyCode);"/>';
+<%
+						break;
+					case "date":
+%>
+			_RESP_VAL = '<input type="text" style="width: 70px" id="i_value_' + _extra_identifier + n + '" name="i_value_' + _extra_identifier + n + '" class="inputEdit" readonly><a class="asLink" href="#"  tn="i_value_' + _extra_identifier + n + '" onclick="var h=0; var offP = this.offsetParent; while(offP.id != \'main_block\' && offP.tagName.toUpperCase()!=\'BODY\') {h+=offP.offsetTop; offP = offP.offsetParent;} ; showCalendar(this, document.getElementById(\'i_value_' + _extra_identifier + n + '\'), \'dd.mm.yyyy\',\'ru\',1, null, h + 40); return false;" id="cal' + _extra_identifier + n + '" name="cal' + _extra_identifier + n + '"><img src="<%=(curHostSettings.default_portal_type == "sharepoint" ? curHostSettings.proxy_prefix : "")%>/scripts/calendar/calendar.gif" width="24" height="22" border="0" align="absmiddle" /></a>';
+<%
+						break;
+					case "bool":
+%>
+			_RESP_VAL = '<input type="checkbox" style="width: 15px" id="i_value_' + _extra_identifier + n + '" name="i_value_' + _extra_identifier + n + '" onclick="if (this.checked) this.value=1; else this.value=0;" />';
+<%
+						break;
+					case "combo":
+%>
+			_RESP_VAL = '<select id="i_value_' + _extra_identifier + n + '" name="i_value_' + _extra_identifier + n + '"><option value="">&nbsp;</option>';
+<%
+						for (_ent in _wf.field.entries)
+						{
+							_reload_val = HtmlEncode(_ent.value);
+							if (StrBegins(_reload_val , "@"))
+							{
+								_reload_val = String(_reload_val).slice(1);
+								_reload_val =_reload_val.split("[]");
+								
+								_drill_response = drill_select(Array(), null, _reload_val, 0);
+								for (_dr in _drill_response)
+								{
+%>
+										_RESP_VAL = _RESP_VAL + '<option value="<%=HtmlEncode(_dr)%>"><%=HtmlEncode(_dr)%></option>';
+<%
+								}
+							}
+							else
+							{
+%>
+								_RESP_VAL = _RESP_VAL + '<option value="<%=_reload_val%>"><%=_reload_val%></option>';
+<%
+							}
+						}
+%>
+				_RESP_VAL = _RESP_VAL + '</select>';
+<%
+						break;
+					default:
+%>
+			_RESP_VAL = '<textarea id="i_value_' + _extra_identifier + n + '" name="i_value_' + _extra_identifier +  n + '" class="commonTextarea" rows="5" style="width: 90%"></textarea>';
+<%
+						break;
+				}
+		}
+		else
+		{
+%>
+			_RESP_VAL = '<input TYPE="hidden" id="i_value_' + _extra_identifier + n + '" name="i_value_' + _extra_identifier + n + '" />&nbsp;';
+<%
+		}
+%>
+			tcol_extra.insertAdjacentHTML("beforeEnd",_RESP_VAL);
+			tcol_extra=trow.insertAdjacentElement('beforeEnd',tcol_extra);
+
+<%
+			}
+			//----------- -------- ---------------- //
+
+		
+		if (_del_proj)
+		{
+%>
+
+			 var tcol7=document.createElement("TD");
+			tcol7.bgColor='white';
+			tcol7.align='center';
+			 var tinscol7=trow.insertAdjacentElement('beforeEnd',tcol7);
+
+<%
+		}
+%>	
+			var tinput1=document.createElement("span");
+			tinput1.setAttribute("type","text");
+			
+			tinput1.setAttribute("title",rankdescr);
+			tinput1.setAttribute("id","std_proj_id_"+xselnodes[i].getAttribute("id"));
+			tinput1.innerHTML=xselnodes[i].getAttribute("name");
+			tinput1=tcol1.insertAdjacentElement('beforeEnd',tinput1);
+			_param=xselnodes[i].getAttribute("id")
+			_param_name=xselnodes[i].getAttribute("name");
+			tcol1.insertAdjacentHTML("beforeEnd","<input type='hidden' name='STCompIDEx_"+n+"' value='"+(random_string(5))+"'/>");
+			tcol1.insertAdjacentHTML("beforeEnd","<input type='hidden' name='STCompNameEx_"+n+"' value='"+_param_name+"'/>");
+			tcol1.insertAdjacentHTML("beforeEnd","<input type='hidden' name='kpi_type_"+_param+"' value='"+kptp+"'/>");	
+			tcol1.insertAdjacentHTML("beforeEnd","<input type='hidden' name='standard_project_id_"+n+"' value='"+_param+"'/>");	
+			tcol1.insertAdjacentHTML("beforeEnd","<input type='hidden' name='STCompExVisible_"+n+"' value='1'/>");
+			
+			if (kptp=="auto")
+			{
+				if (_formulation != "")
+					tinscol2.insertAdjacentHTML("beforeEnd","<input type='text' id='STCompExDesc_"+n+"' name='STCompExDesc_"+n+"' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='formulate(\""+xselnodes[i].getAttribute('id')+"\",\"STCompExDesc_"+n+"\",\"STCompExFact_"+n+"\",\"STNeedWeightEx_"+n+"\", \"STRatingEx_"+n+"\");"+_wstr+"' value='' class='inputEdit' <%=(_plan_lock ? "readonly style='background-color: lightgrey'" : "")%>/>");
+				else
+					tinscol2.insertAdjacentHTML("beforeEnd","<input type='text' id='STCompExDesc_"+n+"' name='STCompExDesc_"+n+"' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='check_swear_calc(this,\"STCompExFact_"+n+"\",\""+v_from+"\",\""+v_to+"\",0,\"STRatingEx_"+n+"\");"+_wstr+"' value='' class='inputEdit' <%=(_plan_lock ? "readonly style='background-color: lightgrey'" : "")%>/>");
+			}
+			else
+			{
+				var tinput2=document.createElement("TEXTAREA");
+				tinput2.setAttribute("cols","25");
+				if (kptp=="scale") tinput2.setAttribute("rows","5"); else if (kptp=="input") tinput2.setAttribute("rows","1");
+				tinput2.setAttribute("name","STCompExDesc_"+n);
+				tinput2.setAttribute("id","STCompExDesc_"+n);
+				tinput2.readOnly = <%=(_plan_lock)%>;
+				if (tinput2.readOnly) tinput2.style.backgroundColor = 'lightgrey';
+				tinput2=tinscol2.insertAdjacentElement("beforeEnd",tinput2);
+			
+			}
+
+<%
+			 if (PLAN != 1)
+			 {
+%>
+
+				if (kptp=="auto")
+				{ 
+					
+					if (_formulation != "")
+					{
+						tinscol3.insertAdjacentHTML("beforeEnd","<input type='text' id='STCompExFact_"+n+"' name='STCompExFact_"+n+"' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='formulate(\""+xselnodes[i].getAttribute('id')+"\",\"STCompExDesc_"+n+"\",\"STCompExFact_"+n+"\",\"STNeedWeightEx_"+n+"\", \"STRatingEx_"+n+"\");"+_wstr+"' value='' class='inputEdit' <%=(_fact_lock ? "readonly style='background-color: lightgrey'" : "")%>/>");
+					}
+					else
+					{
+						tinscol3.insertAdjacentHTML("beforeEnd","<input type='text' id='STCompExFact_"+n+"' name='STCompExFact_"+n+"' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='check_swear_calc(this,\"STCompExFact_"+n+"\",\""+v_from+"\",\""+v_to+"\",1,\"STRatingEx_"+n+"\");"+_wstr+"' value='' class='inputEdit' <%=(_fact_lock ? "readonly style='background-color: lightgrey'" : "")%>/>");
+						//alert("STCompExFact_"+n+" "+document.all['STCompExFact_'+n].value)
+						//alert(document.all['STCompExFact_'+n].length)
+					}
+						
+				
+				}
+				else
+				{
+					var tinput3=document.createElement("TEXTAREA");
+					tinput3.setAttribute("cols","25");
+					if (kptp=="scale") tinput3.setAttribute("rows","5"); else if (kptp=="input") tinput3.setAttribute("rows","1");
+					tinput3.setAttribute("name","STCompExFact_"+n);
+					tinput3.setAttribute("id","STCompExFact_"+n);
+					tinput3.readOnly = <%=(_fact_lock)%>;
+					if (tinput3.readOnly) tinput3.style.backgroundColor = "lightgrey";
+					tinput3=tinscol3.insertAdjacentElement("beforeEnd",tinput3);
+				}
+
+<%
+	if (_mark_lock)
+	{
+%>
+		tcol5.insertAdjacentHTML("beforeEnd","<label id='STRatingEx_"+n+"' name='STRatingEx_"+n+"'  value=''></label>");
+<%
+	}
+	else
+	{
+%>
+if ( kptp=="scale")
+{
+
+var tinput5=document.createElement("SELECT");
+ var ioption=document.createElement("OPTION");
+ 
+ioption.setAttribute("value","");
+ ioption.text=' '; 
+tinput5.add(ioption);
+
+<%
+if(_show_n)
+{
+%>
+ var ioption=document.createElement("OPTION");
+ioption.setAttribute("value","N");
+ ioption.text=' N ';
+tinput5.add(ioption);
+<%
+}
+%>
+
+	for (k=0;k<marks.length;k++)
+{
+ var ioption=document.createElement("OPTION");
+ ioption.setAttribute("value",marks[k].getAttribute("id"));
+ ioption.text=' '+marks[k].getAttribute("name")+' ';
+tinput5.add(ioption);
+}
+tinput5.setAttribute("id","STRatingEx_"+n);
+tinput5.setAttribute("name","STRatingEx_"+n);
+if (tinput5.options.length>0)
+		{
+		tinput5=tcol5.insertAdjacentElement("beforeEnd",tinput5);
+		}
+
+tinput5.value="";
+}
+else if (kptp=="input")
+{
+
+
+tcol5.insertAdjacentHTML("beforeEnd","<input type='text' id='STRatingEx_"+n+"' name='STRatingEx_"+n+"' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='checkval(this,\""+v_from+"\",\""+v_to+"\");"+_wstr+"' align='center' value='' style='width: 30px' class='inputEdit'/>");
+
+}
+else if (kptp=="auto")
+{
+tcol5.insertAdjacentHTML("beforeEnd","<label id='STRatingEx_"+n+"' name='STRatingEx_"+n+"'  value=''></label>");
+}
+
+
+<%
+	}
+
+ 			}
+%>
+
+
+
+if (kptp=="auto" && _formulation != "")
+		tcol6.insertAdjacentHTML("beforeEnd","<input type='text' id='STNeedWeightEx_"+n+"' name='STNeedWeightEx_"+n+"' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='checkval(this,0,100); formulate(\""+xselnodes[i].getAttribute('id')+"\",\"STCompExDesc_"+n+"\",\"STCompExFact_"+n+"\",\"STNeedWeightEx_"+n+"\", \"STRatingEx_"+n+"\");"+_wstr+"' value='0' style='width: 30px' class='inputEdit' <%=(_weight_lock ? "readonly style='background-color: lightgrey'" : "")%>/>");
+else
+	tcol6.insertAdjacentHTML("beforeEnd","<input type='text' id='STNeedWeightEx_"+n+"' name='STNeedWeightEx_"+n+"' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='checkval(this,0,100);"+_wstr+"' value='0' style='width: 30px' class='inputEdit' <%=(_weight_lock ? "readonly style='background-color: lightgrey'" : "")%>/>");		
+			
+			
+			
+				
+			n=n+1	
+			}
+			//alert(i);
+			
+		}
+		document.all['maxspaceWeHave0'].value=n;
+	}
+
+
+
+return true;
+}
+
+function addFreeproj()
+{
+var n=parseInt(document.all['maxspaceWeHave0'].value);
+
+var tobj=document.all.prbodytable;
+ var trow=document.createElement("TR");
+ trow.setAttribute("id","line"+n);
+ var tinsrow=tobj.insertAdjacentElement('beforeEnd',trow);
+ var tcol1=document.createElement("TD");
+tcol1.bgColor='white';
+tcol1.setAttribute("title","");
+
+
+var tinscol1=trow.insertAdjacentElement('beforeEnd',tcol1);
+
+<%
+		if (_extended_fields)
+		{
+%>
+			var tcol2pre=document.createElement("TD");
+			tcol2pre.bgColor='white';
+			tcol2pre.align="center";
+			var tinscol2pre=trow.insertAdjacentElement('beforeEnd',tcol2pre);
+
+
+<%
+		}
+%>
+
+
+var tcol2=document.createElement("TD");
+tcol2.bgColor='white';
+tcol2.align="center";
+tcol2.style.display = "<%=_plan_hide%>";
+var tinscol2=trow.insertAdjacentElement('beforeEnd',tcol2);
+
+
+<%
+		if (_extended_fields)
+		{
+%>
+			var tcol2post=document.createElement("TD");
+			tcol2post.bgColor='white';
+			tcol2post.align="center";
+			var tinscol2post=trow.insertAdjacentElement('beforeEnd',tcol2post);
+<%
+		}
+%>
+
+
+
+
+<%
+			 if (PLAN != 1)
+			 {
+%>
+
+var tcol3=document.createElement("TD");
+tcol3.bgColor='white';
+tcol3.style.display = "<%=_fact_hide%>";
+tcol3.align="center";
+var tinscol3=trow.insertAdjacentElement('beforeEnd',tcol3);
+<%
+if (_manager_show_columns)
+{
+	if (curPA.status == "manager" || curPA.status == "interview")
+	{
+%>
+	tcol3=document.createElement("TD");
+	tcol3.bgColor="white";
+	trow.insertAdjacentElement("beforeEnd",tcol3);
+<%
+	}
+	if (curPA.status == "interview")
+	{
+%>
+	tcol3=document.createElement("TD");
+	tcol3.bgColor="white";
+	trow.insertAdjacentElement("beforeEnd",tcol3);
+<%	
+	}
+}
+%>
+var tcol5=document.createElement("TD");
+tcol5.bgColor='white';
+tcol5.align="center";
+tcol5.style.display = "<%=_mark_hide%>";
+var tinscol5=trow.insertAdjacentElement('beforeEnd',tcol5);
+
+<%
+ 			}
+%>
+	
+
+var tcol6=document.createElement("TD");
+tcol6.bgColor='white';
+tcol6.align="center";
+tcol6.style.display = "<%=_weight_hide%>";
+var tinscol6=trow.insertAdjacentElement('beforeEnd',tcol6);
+
+
+
+
+<%
+		if (_extended_fields && PLAN != 1)
+		{
+%>
+
+
+	var tcol6x=document.createElement("TD");
+	tcol6x.bgColor='white';
+	tcol6x.align="center";
+	var tinscol6x=trow.insertAdjacentElement('beforeEnd',tcol6x);
+
+
+<%
+		}
+
+		
+		
+		
+		
+
+
+		//----------- WORKFLOW-FIELDS ---------------- //
+			for (_wf in workflow_fields)
+			{
+				_extra_identifier = "extra_" + _wf.field.name + "$";
+%>
+	var tcol_extra=document.createElement("TD");
+	tcol_extra.bgColor='white';
+	tcol_extra.align="center";
+	tcol_extra.setAttribute("id","td_<%=(_extra_identifier)%>"+n);
+	tcol_extra.setAttribute("name","td_<%=(_extra_identifier)%>"+n);
+
+	var tinput_extra_ident = document.createElement("INPUT");
+	tinput_extra_ident.setAttribute("id","i_name_<%=(_extra_identifier)%>"+n);
+	tinput_extra_ident.setAttribute("name","i_name_<%=(_extra_identifier)%>"+n);
+	tinput_extra_ident.type="hidden";
+	tinput_extra_ident.value="<%=(_wf.field.name)%>";
+	tcol_extra.insertAdjacentElement('beforeEnd',tinput_extra_ident);
+	
+	var _RESP_VAL = "";
+	var _extra_identifier = "<%=_extra_identifier%>";
+<%
+		if (_wf.is_modify)
+		{
+				switch (_wf.field.type)
+				{
+					case "string":
+%>
+			_RESP_VAL = '<input TYPE="text" style="width: 300px" class="inputEdit" id="i_value_' + _extra_identifier + n + '" name="i_value_' + _extra_identifier + n + '"/>';
+<%
+						break;
+					case "integer":
+%>
+			_RESP_VAL = '<input TYPE="text" style="width: 60px" class="inputEdit" id="i_value_' + _extra_identifier + n + '" name="i_value_' + _extra_identifier + n + '" onKeyPress="return checkkeyInt();"/>';
+<%
+						break;
+					case "real":
+%>
+			_RESP_VAL = '<input TYPE="text" style="width: 60px" class="inputEdit" id="i_value_' + _extra_identifier + n + '" name="i_value_' + _extra_identifier + n + '" onKeyPress="return checkkey(this,window.event.keyCode);"/>';
+<%
+						break;
+					case "date":
+%>
+			_RESP_VAL = '<input type="text" style="width: 70px" id="i_value_' + _extra_identifier + n + '" name="i_value_' + _extra_identifier + n + '" class="inputEdit" readonly><a class="asLink" href="#"  tn="i_value_' + _extra_identifier + n + '" onclick="var h=0; var offP = this.offsetParent; while(offP.id != \'main_block\' && offP.tagName.toUpperCase()!=\'BODY\') {h+=offP.offsetTop; offP = offP.offsetParent;} ; showCalendar(this, document.getElementById(\'i_value_' + _extra_identifier + n + '\'), \'dd.mm.yyyy\',\'ru\',1, null, h + 40); return false;" id="cal' + _extra_identifier + n + '" name="cal' + _extra_identifier + n + '"><img src="<%=(curHostSettings.default_portal_type == "sharepoint" ? curHostSettings.proxy_prefix : "")%>/scripts/calendar/calendar.gif" width="24" height="22" border="0" align="absmiddle" /></a>';
+<%
+						break;
+					case "bool":
+%>
+			_RESP_VAL = '<input type="checkbox" style="width: 15px" id="i_value_' + _extra_identifier + n + '" name="i_value_' + _extra_identifier + n + '" onclick="if (this.checked) this.value=1; else this.value=0;" />';
+<%
+						break;
+					case "combo":
+%>
+			_RESP_VAL = '<select id="i_value_' + _extra_identifier + n + '" name="i_value_' + _extra_identifier + n + '"><option value="">&nbsp;</option>';
+<%
+						for (_ent in _wf.field.entries)
+						{
+							_reload_val = HtmlEncode(_ent.value);
+							if (StrBegins(_reload_val , "@"))
+							{
+								_reload_val = String(_reload_val).slice(1);
+								_reload_val =_reload_val.split("[]");
+								
+								_drill_response = drill_select(Array(), null, _reload_val, 0);
+								for (_dr in _drill_response)
+								{
+%>
+										_RESP_VAL = _RESP_VAL + '<option value="<%=HtmlEncode(_dr)%>"><%=HtmlEncode(_dr)%></option>';
+<%
+								}
+							}
+							else
+							{
+%>
+								_RESP_VAL = _RESP_VAL + '<option value="<%=_reload_val%>"><%=_reload_val%></option>';
+<%
+							}
+						}
+%>
+				_RESP_VAL = _RESP_VAL + '</select>';
+<%
+						break;
+					default:
+%>
+			_RESP_VAL = '<textarea id="i_value_' + _extra_identifier + n + '" name="i_value_' + _extra_identifier +  n + '" class="commonTextarea" rows="5" style="width: 90%"></textarea>';
+<%
+						break;
+				}
+		}
+		else
+		{
+%>
+			_RESP_VAL = '<input TYPE="hidden" id="i_value_' + _extra_identifier + n + '" name="i_value_' + _extra_identifier + n + '" />&nbsp;';
+<%
+		}
+%>
+			tcol_extra.insertAdjacentHTML("beforeEnd",_RESP_VAL);
+			tcol_extra=trow.insertAdjacentElement('beforeEnd',tcol_extra);
+
+<%
+			}
+			//----------- -------- ---------------- //
+
+
+
+
+
+		
+		
+		
+		
+		
+if (_del_proj)
+{
+%>
+
+ var tcol7=document.createElement("TD");
+tcol7.bgColor='white';
+tcol7.align='center';
+ var tinscol7=trow.insertAdjacentElement('beforeEnd',tcol7);
+
+<%
+}
+%>
+
+
+var tinput1=document.createElement("input");
+tinput1.setAttribute("type","hidden");
+tinput1.setAttribute("name","STCompIDEx_"+n);
+tinput1.setAttribute("id","STCompIDEx_"+n);
+tinput1.setAttribute("value",(random_string(5)));
+tinput1=tinscol1.insertAdjacentElement("beforeEnd",tinput1);
+
+var tinput1=document.createElement("TEXTAREA");
+tinput1.setAttribute("rows","5");
+tinput1.style.width = "100%"
+tinput1.setAttribute("title","");
+tinput1.style.backgroundColor="whitesmoke";
+tinput1.setAttribute("name","STCompNameEx_"+n);
+tinput1.setAttribute("id","STCompNameEx_"+n);
+tinput1=tinscol1.insertAdjacentElement("beforeEnd",tinput1);
+
+var tinput1=document.createElement("input");
+tinput1.setAttribute("type","hidden");
+tinput1.setAttribute("name","STCompExVisible_"+n);
+tinput1.setAttribute("id","STCompExVisible_"+n);
+tinput1.setAttribute("value","1");
+tinput1=tinscol1.insertAdjacentElement("beforeEnd",tinput1);
+
+
+<%
+		if (_extended_fields)
+		{
+			if (_project_type == 'auto')
+			{
+%>
+
+				tinput2pre=tinscol2pre.insertAdjacentHTML("beforeEnd","<input type='text' class='inputEdit' id='STCompExThreshold_"+n+"' name='STCompExThreshold_"+n+"' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='eval_formula(" +n+ ");' value='' style='width: 90%'>");
+
+				tinput2post=tinscol2post.insertAdjacentHTML("beforeEnd","<input type='text' class='inputEdit' id='STCompExChallenge_"+n+"' name='STCompExChallenge_"+n+"' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='eval_formula(" +n+ ");' value='' style='width: 90%'>");
+
+
+<%
+			}
+			else
+			{
+
+%>
+
+				var tinput2pre=document.createElement("TEXTAREA");
+				tinput2pre.setAttribute("rows","5");
+				tinput2pre.style.width="90%";
+				tinput2pre.setAttribute("name","STCompExThreshold_"+n);
+				tinput2pre.setAttribute("id","STCompExThreshold_"+n);
+				tinput2pre=tinscol2pre.insertAdjacentElement("beforeEnd",tinput2pre);
+
+
+				var tinput2post=document.createElement("TEXTAREA");
+				tinput2post.setAttribute("rows","5");
+				tinput2post.style.width="90%";
+				tinput2post.setAttribute("name","STCompExChallenge_"+n);
+				tinput2post.setAttribute("id","STCompExChallenge_"+n);
+				tinput2post=tinscol2post.insertAdjacentElement("beforeEnd",tinput2post);
+				
+				
+
+<%
+			}
+			
+			
+			if (PLAN != 1)
+			{		
+%>
+				var tlabel6x=document.createElement("label");
+				tlabel6x.setAttribute("name","STCompExWeightedMark_"+n);
+				tlabel6x.setAttribute("id","STCompExWeightedMark_"+n);
+				tlabel6x.innerHTML = "";
+				tlabel6x=tinscol6x.insertAdjacentElement("beforeEnd",tlabel6x);
+<%
+			}
+			
+			
+			
+	}
+
+
+
+	
+	if (_project_type == 'auto')
+	{
+%>
+
+tinput2=tinscol2.insertAdjacentHTML("beforeEnd","<input type='text' class='inputEdit' id='STCompExDesc_"+n+"' name='STCompExDesc_"+n+"' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='eval_formula(" +n+ ");' value='' style='width: 90%; <%=(_plan_lock ? "background-color: lightgrey;" : "")%>' <%=(_plan_lock ? "readonly" : "")%>/>");
+
+<%
+	}
+	else
+	{
+%>
+
+			var tinput2=document.createElement("TEXTAREA");
+			tinput2.setAttribute("rows","5");
+			tinput2.style.width="90%";
+			tinput2.setAttribute("name","STCompExDesc_"+n);
+			tinput2.setAttribute("id","STCompExDesc_"+n);
+			tinput2.readOnly = <%=_weight_lock%>;
+			if (tinput2.readOnly) tinput2.style.backgroundColor = "lightgrey";
+			tinput2=tinscol2.insertAdjacentElement("beforeEnd",tinput2);
+
+
+<%
+	}
+
+	if (PLAN != 1)
+	{
+
+	if (_ALLOW_MARK_MODIFY)
+	{ 
+
+		if (_project_type == 'auto')
+		{
+%>
+
+			tinput3=tinscol3.insertAdjacentHTML("beforeEnd","<input class='inputEdit' type='text' id='STCompExFact_"+n+"' name='STCompExFact_"+n+"' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='eval_formula( " +n+ " );' value='' style='width: 90%; <%=(_fact_lock ? "background-color: lightgrey;" : "")%>' <%=(_fact_lock ? "readonly" : "")%>/>");
+
+<%
+		}
+		else
+		{
+%>
+			var tinput3=document.createElement("TEXTAREA");
+			tinput3.style.width="90%";
+			tinput3.setAttribute("rows","5");
+			tinput3.setAttribute("name","STCompExFact_"+n);
+			tinput3.setAttribute("id","STCompExFact_"+n);
+			tinput3.readOnly = <%=(_fact_lock)%>;
+			if (tinput3.readOnly) tinput3.style.backgroundColor = "lightgrey";
+			tinput3=tinscol3.insertAdjacentElement("beforeEnd",tinput3);
+<%
+		}
+%>
+
+
+
+<%
+		if (_project_type == 'auto')
+		{
+%>
+		var tinput5=document.createElement("LABEL");
+		tinput5.setAttribute("name","STRatingEx_"+n);
+		tinput5.setAttribute("id","STRatingEx_"+n);
+		tinput5.value="";
+		tinput5=tcol5.insertAdjacentElement("beforeEnd",tinput5);
+<%
+		}
+		else if (_project_type == 'handinput' || _mark_lock)
+		{
+%>
+			tinscol5.insertAdjacentHTML("beforeEnd","<input class='inputEdit' type='text' id='STRatingEx_"+n+"' name='STRatingEx_"+n+"' onKeyPress='return checkkey(this,window.event.keyCode);' value='' style='width: 50px; <%=(_mark_lock ? "background-color: lightgrey;" : "")%>' <%=(_mark_lock ? "readonly" : "")%>/>");
+<%
+		}
+		else
+		{
+%>
+
+	
+	var tinput5=document.createElement("SELECT");
+	tinput5.setAttribute("id","STRatingEx_"+n);
+	tinput5.setAttribute("name","STRatingEx_"+n);
+	
+	var ioption=document.createElement("OPTION");
+	ioption.setAttribute("value","");
+	ioption.text='';
+	tinput5.options.add(ioption);
+	
+	<%
+			if(_show_n)
+			{
+	%>
+	 var ioption=document.createElement("OPTION");
+	 ioption.setAttribute("value","N");
+	 ioption.text='N'; 
+	tinput5.options.add(ioption);
+	<%
+			}
+	%>
+	
+	for( x= <%=_min%>;	x<= <%=_max%>;x++)
+	{
+		var ioption=document.createElement("OPTION");
+		ioption.setAttribute("value",x);
+		ioption.text=" "+x+" ";
+		tinput5.options.add(ioption);
+	}
+
+	tinput5=tcol5.insertAdjacentElement("beforeEnd",tinput5);
+	tinput5.value="";
+
+<%
+		}
+		
+		
+	}
+	else
+	{
+%>
+			var tinput3=document.createElement("input");
+			tinput3.setAttribute("type","hidden");
+			tinput3.setAttribute("name","STCompExFact_"+n);
+			tinput3.setAttribute("id","STCompExFact_"+n);
+			tinput3.readOnly = <%=(_fact_lock)%>; 
+			tinput3=tinscol3.insertAdjacentElement("beforeEnd",tinput3);
+			
+			var tinput5=document.createElement("input");
+			tinput5.setAttribute("type","hidden");
+			tinput5.setAttribute("name","STRatingEx_"+n);
+			tinput5.setAttribute("id","STRatingEx_"+n);
+			tinput3.readOnly = <%=(_mark_lock)%>; 
+			tinput5=tinscol5.insertAdjacentElement("beforeEnd",tinput5);
+<%
+	}
+	}
+%>
+	
+
+
+tcol6.insertAdjacentHTML("beforeEnd","<input type='text' class='inputEdit' id='STNeedWeightEx_"+n+"' name='STNeedWeightEx_"+n+"' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='checkval(this,0,100); eval_formula( "+n+" );' value='0' style='width: 30px' <%=(_weight_lock ? "readonly" : "")%>/>");
+
+<%
+if (_del_proj)
+{
+%>
+tbut6=document.createElement("INPUT");
+tbut6.setAttribute("type","button");
+tbut6.setAttribute("linecorr",n);
+tbut6.setAttribute("id","removeProjButton"+n);
+tbut6.setAttribute("value","<%=tools_web.get_web_str("c_delete")%>");
+tbut6.style.fontSize="10px";
+tbut6.style.width="50px";
+tbut6.className = "inputButton";
+//tbut6.attachEvent("onclick", delFreeproj);
+$(tbut6).click(function () { 
+      delFreeproj(tbut6); 
+    });
+tbut6=tinscol7.insertAdjacentElement("beforeEnd",tbut6);
+<%
+}
+%>
+
+document.all['maxspaceWeHave0'].value=(n+1);
+
+return true;
+}
+
+
+function delFreeproj(srcElement)
+{
+
+	var tobj=document.all.prbodytable;
+	var isender=srcElement;
+	
+	tobj.deleteRow(isender.parentNode.parentNode.rowIndex);
+	
+	return true;
+}
+<%
+	}
+	
+	if (!_submit_script_hide)
+	{
+%>
+
+//-------------------------------------------------------------------------------
+var KPI_AVG_RESULT = true;
+function whatToSubmit()
+{
+
+<%
+	if (curAssessmentAppraise.is_comment_required)
+	{
+%>
+		if (document.all.comment && document.all.comment.tagName.toLowerCase() == "textarea")
+			if (document.all.comment.value == "")
+			{
+				window.alert("<%=HtmlEncode(tools.get_web_str("ass_message_please_fill_in_comment"))%>");
+				return false;
+			}
+<%
+	}
+%>
+
+var mbo=0.0;
+var tobj=document.all['secretArea']; 
+var censor=document.all['isflawed'];
+
+var kpiname="";
+var kpiunid="";
+var kpitype="";
+var compdesc="";
+var compfact="";
+var rating=0;
+var rank_choice="";
+var weight=0;
+
+var kpis_all="";
+var kpisunid_all="";
+var kpirate_all="";
+var kpiratesmarks_all="";
+var kpires_all="";
+var kpifacts_all="";
+var kpidescs_all="";
+var kpiweights_all="";
+var kpiprohibits_all="";
+
+var kpivisible_all="";
+
+var kpi_all_wfinfo="";
+var kpi_all_wfvalues="";
+
+var tvar01=0.0, mbocount=0;
+
+var field_id="IDs";
+var field_desc="Plans";
+var field_facts="Facts";
+var field_rates="Rates";
+var field_ratesmarks="RatesMarks";
+var field_results="Percents";
+var field_weights="Weights";
+var percentcorr;
+
+var hidin=null;
+var hidinins=null;
+
+var _delim = "";
+
+<%
+if (_kpi_show)
+{
+%>
+//var kpiall=xkpis.selectNodes('.//kpi[@selected=1<%=resp_str%>]');
+var kpiall=xkpis.selectNodes('.//kpi[@selected=1]');
+if (kpiall.length == 0)
+{
+	censor.value='1';
+}
+<%
+}
+else
+{
+%>
+var kpiall = new Array();
+<%
+}
+%>
+	for (i=0; i < kpiall.length ; i++)
+	{
+		kpiunid=null;
+		kpiunid=kpiall[i].getAttribute('id');
+		is_visible=parseInt(kpiall[i].getAttribute('visible'));
+		//alert(is_visible)
+		if (kpiunid)
+		{		
+			
+			kpitype=document.all['kpi_type_' + kpiunid].value;
+			
+			if (kpisunid_all != "")
+				_delim = "^";
+		
+			kpisunid_all+= _delim + kpiunid;
+			
+			kpivisible_all+= _delim + is_visible;
+			
+			kpidescs_all+= _delim + document.all['STCompDesc_'+kpiunid].value;
+			
+			if (<%=(_plan_hide != "none" && !_plan_lock)%> && document.all['STCompDesc_'+kpiunid].value=="" && is_visible==1) censor.value='1';
+				
+				
+<%
+			 if (PLAN != 1)
+			 {
+%>
+			kpifacts_all+= _delim+document.all['STCompFact_'+kpiunid].value;
+		
+			if (<%=(_fact_hide != "none" && !_fact_lock)%> && document.all['STCompFact_'+kpiunid].value=="" && is_visible==1) censor.value='1';
+		
+			var proh1="";
+			if (document.all['ProhibitFlag_'+kpiunid]) proh1=document.all['ProhibitFlag_'+kpiunid].value;
+		
+		
+			kpiprohibits_all+= _delim+proh1;
+			
+			if (kpitype=="scale")
+			{	
+		
+				if (<%=(_mark_hide != "none" && !_mark_lock)%> && document.all['STRating_'+kpiunid].value=="" && is_visible==1) censor.value='1';
+				kpirate_all+= _delim + document.all['STRating_'+kpiunid].value;
+				
+				percentcorr = kpiall[i].selectSingleNode(".//mark[@id='" +document.all['STRating_'+kpiunid].value+ "']");
+				//kpires_all+=(percentcorr/100)+"^";
+			
+				if (percentcorr != null)
+				{
+					percentcorr = parseInt(percentcorr.getAttribute("percent"));
+					if (!isNaN(percentcorr))
+					{
+						rating=percentcorr/100.0;
+						mbocount++;
+					}
+				}
+			}
+			else if (kpitype=="input")
+			{
+			kpirate_all+= _delim + document.all['STRating_'+kpiunid].value;
+			 kpiratesmarks_all+=_delim;
+			if (<%=(_mark_hide != "none" && !_mark_lock)%> && document.all['STRating_'+kpiunid].value=="" && is_visible==1) censor.value='1';
+			if (document.all['STRating_'+kpiunid].value=="") rating=0; else {rating=parseFloat(document.all['STRating_'+kpiunid].value); mbocount++;}
+			 kpires_all+= _delim + rating;
+			}
+			else if (kpitype=="auto")
+			{
+			kpirate_all+= _delim + document.all['STRating_'+kpiunid].value;
+
+			 kpiratesmarks_all+=_delim;
+			  if (document.all['STRating_'+kpiunid].value=="") rating=0; else {rating=parseFloat(document.all['STRating_'+kpiunid].value) ; mbocount++;}
+			kpires_all+= _delim + rating;
+			mbocount++;
+			}
+		
+
+<%
+ 			} 
+%>
+			
+			
+			
+			
+			
+			
+			
+			
+			weight=parseFloat(document.all['STNeedWeight_'+kpiunid].value);// /100.0;
+			if (isNaN(weight))
+			{
+				weight=0;
+			}	
+		
+		
+			kpiweights_all+= _delim + weight;
+	
+			
+<%
+	if (ArrayCount(workflow_fields) > 0)
+	{
+		for (_wf in workflow_fields)
+		{
+			_extra_identifier = "extra_" + _wf.field.name + "$";
+%>
+		if (document.getElementById("i_name_<%=_extra_identifier%>" + kpiunid))
+		{
+			kpi_all_wfinfo+="<%=_wf.field.name%>$$$$<%=_wf.field.field_group_id%>$$$$<%=_wf.field.type%>$$$$<%=(HtmlEncode(_wf.field.title))%>&|&";
+			kpi_all_wfvalues+=document.getElementById("i_value_<%=_extra_identifier%>" + kpiunid).value + "&|&";
+		}
+<%
+		}
+%>
+		kpi_all_wfinfo+="^";
+		kpi_all_wfvalues+="^";
+<%
+		
+	}
+%>
+	
+	
+		}	
+
+
+		tvar01=rating ;
+		
+		mbo+= tvar01 <%=(_weighted_result == "1" ? "* weight" : "")%>;
+		rating=0;
+	}
+
+
+var project_mbo = 0;
+
+
+//   Censoring projects:
+if (document.all['maxspaceWeHave0'])
+{
+	var maxspace = parseInt(document.all['maxspaceWeHave0'].value); 
+	if (isNaN(maxspace)) maxspace = 0;
+}
+else
+{
+	var maxspace = 0;
+}
+
+
+<%
+	if (_at_least_1_project && _proj_show)
+	{
+%>
+	if (maxspace == 0)
+	{
+		censor.value='1';
+	}
+<%
+	}
+%>
+
+
+
+var ex_kpis_all="";
+var ex_kpisunid_all="";
+var ex_kpiratesmarks_all="";
+var ex_kpifacts_all="";
+var ex_kpidescs_all="";
+var ex_kpiweights_all="";
+var ex_kpistdprojids_all="";
+
+var ex_kpivisible_all="";
+
+var weight_sum = 0;
+
+var ex_all_wfinfo="", ex_all_wfvalues="";
+
+<%
+		if (_extended_fields)
+		{
+%>
+		var ex_thresholds_all="";
+		var ex_challenges_all="";
+<%
+		}
+%>
+
+
+
+_delim = "";
+
+for (n=0; n<maxspace; n++)
+if (document.all['STCompIDEx_'+n])
+{
+	is_visible=parseInt(document.all['STCompExVisible_'+n].value);
+	if (document.all['STCompNameEx_'+n].value==""&& is_visible==1) {censor.value='1'; }
+	if (<%=(_plan_hide != "none" && !_plan_lock)%> && document.all['STCompExDesc_'+n] && document.all['STCompExDesc_'+n].value==""&& is_visible==1) {censor.value='1'; }
+	
+	if (ex_kpisunid_all != "") _delim = "^";
+	
+	ex_kpisunid_all+= _delim+document.all['STCompIDEx_'+n].value;		
+	ex_kpis_all+= _delim+document.all['STCompNameEx_'+n].value;
+	
+	ex_kpivisible_all+= _delim + is_visible;
+	
+	ex_kpidescs_all+= _delim;
+	if (document.all['STCompExDesc_'+n])
+		ex_kpidescs_all+= document.all['STCompExDesc_'+n].value;
+	
+	ex_kpistdprojids_all+= _delim;
+	if (document.all['standard_project_id_'+n])
+		ex_kpistdprojids_all+= document.all['standard_project_id_'+n].value;
+	
+<%
+		if (_extended_fields)
+		{
+%>
+			_temp_threshold='';
+			_temp_challeng='';
+			try
+			{
+				_temp_threshold=document.all['STCompExThreshold_'+n].value;
+				_temp_challeng=document.all['STCompExChallenge_'+n].value;
+			}
+			catch(ex)
+			{
+				
+			}
+			ex_thresholds_all+=_delim+_temp_threshold;
+			ex_challenges_all+=_delim+_temp_challeng;
+<%
+		}
+%>
+	
+	if (document.all['STNeedWeightEx_'+n])
+	{
+		weight = parseFloat(document.all['STNeedWeightEx_'+n].value);
+		if (isNaN(weight))
+			weight = 0;
+	}
+	else
+		weight = 0;
+	
+	ex_kpiweights_all+= _delim + weight;
+	weight_sum = weight_sum + weight;
+	
+<%
+			if (_ALLOW_MARK_MODIFY)
+			 if (PLAN != 1)
+			 {
+%>
+	
+	var _rate_ex = document.all['STRatingEx_'+n].value;
+	
+	if (<%=(_mark_hide != "none" && !_mark_lock)%> && _rate_ex==""&& is_visible==1) {censor.value='1'; }
+	else
+	{
+		if (!isNaN(parseFloat(_rate_ex)))
+		{
+			project_mbo += parseFloat(_rate_ex) <%=(_weighted_result == "1" ? "* weight / 100.0" : "")%>;
+		}
+	}
+	if (<%=(_fact_hide != "none" && !_fact_lock)%> && document.all['STCompExFact_'+n] && document.all['STCompExFact_'+n].value==""&& is_visible==1) {censor.value='1'; }
+
+	ex_kpiratesmarks_all+= _delim+_rate_ex;
+	ex_kpifacts_all+= _delim;
+	if (document.all['STCompExFact_'+n])
+		ex_kpifacts_all+= document.all['STCompExFact_'+n].value;
+	
+<%
+ 			}
+%>
+	
+	
+	
+<%
+	if (ArrayCount(workflow_fields) > 0)
+	{
+		for (_wf in workflow_fields)
+		{
+			_extra_identifier = "extra_" + _wf.field.name + "$";
+%>
+		if (document.getElementById("i_name_<%=_extra_identifier%>" + n))
+		{
+			ex_all_wfinfo+="<%=_wf.field.name%>$$$$<%=_wf.field.field_group_id%>$$$$<%=_wf.field.type%>$$$$<%=(HtmlEncode(_wf.field.title))%>&|&";
+			ex_all_wfvalues+=document.getElementById("i_value_<%=_extra_identifier%>" + n).value + "&|&";
+		}
+<%
+		}
+%>
+		ex_all_wfinfo+="^";
+		ex_all_wfvalues+="^";
+<%
+		
+	}
+%>
+		
+}
+
+
+<%
+	if (_pwb != undefined)
+	{
+%>
+	if (weight_sum < <%=_pwb[0]%> || weight_sum > <%=_pwb[1]%>)
+	{
+		window.alert("<%=tools.get_web_str("vcpb_weight")%> " + weight_sum + ";\n<%=tools.get_web_str("vsb_mess_weight_bounds")%> <%=(_pwb[0] != _pwb[1] ? _pwb[0] + " - " + _pwb[1] : _pwb[0])%>");
+		return false;
+	}
+<%
+	}
+%>
+
+
+
+hidin=document.createElement('INPUT'); hidin.type='hidden'; hidin.name='multi_ids';
+hidin.value= kpisunid_all; hidinins = tobj.insertAdjacentElement('beforeEnd',hidin);
+hidin=document.createElement('INPUT'); hidin.type='hidden'; hidin.name='multi_plans';
+hidin.value=kpidescs_all; hidinins = tobj.insertAdjacentElement('beforeEnd',hidin);
+
+
+<%
+			 if (PLAN != 1)
+			 {
+%>
+
+hidin=document.createElement('INPUT'); hidin.type='hidden'; hidin.name='multi_rates';
+hidin.value=kpirate_all; hidinins = tobj.insertAdjacentElement('beforeEnd',hidin);
+hidin=document.createElement('INPUT'); hidin.type='hidden'; hidin.name='multi_ratesmarks';
+hidin.value=kpiratesmarks_all; hidinins = tobj.insertAdjacentElement('beforeEnd',hidin);
+hidin=document.createElement('INPUT'); hidin.type='hidden'; hidin.name='multi_percents';
+hidin.value=kpires_all; hidinins = tobj.insertAdjacentElement('beforeEnd',hidin);
+
+hidin=document.createElement('INPUT'); hidin.type='hidden'; hidin.name='multi_prohibitflags';
+hidin.value=kpiprohibits_all; hidinins = tobj.insertAdjacentElement('beforeEnd',hidin);
+
+
+hidin=document.createElement('INPUT'); hidin.type='hidden'; hidin.name='multi_facts';
+hidin.value=kpifacts_all; hidinins = tobj.insertAdjacentElement('beforeEnd',hidin);
+
+<%
+ 			}
+%>
+
+hidin=document.createElement('INPUT'); hidin.type='hidden'; hidin.name='multi_visibles';
+hidin.value=kpivisible_all; hidinins = tobj.insertAdjacentElement('beforeEnd',hidin);
+
+hidin=document.createElement('INPUT'); hidin.type='hidden'; hidin.name='multi_weights';
+hidin.value=kpiweights_all; hidinins = tobj.insertAdjacentElement('beforeEnd',hidin);
+
+hidin=document.createElement('INPUT'); hidin.type='hidden'; hidin.name='multi_wfinfo';
+hidin.value=kpi_all_wfinfo;
+hidinins = tobj.insertAdjacentElement('beforeEnd',hidin);
+
+hidin=document.createElement('INPUT'); hidin.type='hidden'; hidin.name='multi_wfvalues';
+hidin.value=kpi_all_wfvalues;
+hidinins = tobj.insertAdjacentElement('beforeEnd',hidin);
+
+//alert("kpisunid_all: " + kpisunid_all + "\n kpidescs_all: " + kpidescs_all + "\n kpirate_all: " + kpirate_all + "\n kpifacts_all: " + kpifacts_all + "\n kpiratesmarks_all: " + kpiratesmarks_all + "\n kpiprohibits_all: " + kpiprohibits_all + "\n kpiweights_all: " + kpiweights_all);
+
+
+
+
+
+hidin=document.createElement('INPUT'); hidin.type='hidden'; hidin.name='multi_ex_ids';
+hidin.value= ex_kpisunid_all; hidinins = tobj.insertAdjacentElement('beforeEnd',hidin);
+hidin=document.createElement('INPUT'); hidin.type='hidden'; hidin.name='multi_ex_names';
+hidin.value=ex_kpis_all; hidinins = tobj.insertAdjacentElement('beforeEnd',hidin);
+hidin=document.createElement('INPUT'); hidin.type='hidden'; hidin.name='multi_ex_plans';
+hidin.value=ex_kpidescs_all; hidinins = tobj.insertAdjacentElement('beforeEnd',hidin);
+
+hidin=document.createElement('INPUT'); hidin.type='hidden'; hidin.name='multi_ex_visibles';
+hidin.value=ex_kpivisible_all; hidinins = tobj.insertAdjacentElement('beforeEnd',hidin);
+<%
+		if (_extended_fields)
+		{
+%>
+
+		hidin=document.createElement('INPUT'); hidin.type='hidden'; hidin.name='multi_ex_thresholds';
+		hidin.value=ex_thresholds_all; hidinins = tobj.insertAdjacentElement('beforeEnd',hidin);
+		hidin=document.createElement('INPUT'); hidin.type='hidden'; hidin.name='multi_ex_challenges';
+		hidin.value=ex_challenges_all; hidinins = tobj.insertAdjacentElement('beforeEnd',hidin);
+<%
+		}
+%>
+
+
+<%
+			if (_ALLOW_MARK_MODIFY)
+			 if (PLAN != 1)
+			 {
+%>
+
+hidin=document.createElement('INPUT'); hidin.type='hidden'; hidin.name='multi_ex_rates';
+hidin.value=ex_kpiratesmarks_all; hidinins = tobj.insertAdjacentElement('beforeEnd',hidin);
+
+hidin=document.createElement('INPUT'); hidin.type='hidden'; hidin.name='multi_ex_facts';
+hidin.value=ex_kpifacts_all; hidinins = tobj.insertAdjacentElement('beforeEnd',hidin);
+
+<%
+ 			}
+%>
+hidin=document.createElement('INPUT'); hidin.type='hidden'; hidin.name='multi_ex_wfinfo';
+hidin.value=ex_all_wfinfo;
+hidinins = tobj.insertAdjacentElement('beforeEnd',hidin);
+
+hidin=document.createElement('INPUT'); hidin.type='hidden'; hidin.name='multi_ex_wfvalues';
+hidin.value=ex_all_wfvalues;
+hidinins = tobj.insertAdjacentElement('beforeEnd',hidin);
+
+
+hidin=document.createElement('INPUT'); hidin.type='hidden'; hidin.name='multi_ex_weights';
+hidin.value=ex_kpiweights_all; hidinins = tobj.insertAdjacentElement('beforeEnd',hidin);
+
+hidin=document.createElement('INPUT'); hidin.type='hidden'; hidin.name='multi_ex_standard_project_ids';
+hidin.value= ex_kpistdprojids_all; hidinins = tobj.insertAdjacentElement('beforeEnd',hidin);
+
+if (document.getElementById('field_mbo'))
+{
+	document.getElementById('field_mbo').value = (KPI_AVG_RESULT ? (mbocount>0 ? mbo/mbocount: mbo).toFixed(2) : mbo.toFixed(2) / 100.0);
+}
+
+if (document.getElementById('field_project_mbo'))
+{
+	document.getElementById('field_project_mbo').value = project_mbo;
+}
+
+
+if (document.all['num_MBO']) document.all['num_MBO'].value=mbo.toFixed(2);
+
+
+
+
+n = 0;
+var stqObj;
+if (censor.value == "")
+while (document.all["stq_id_" + n] != undefined)
+{
+	stqObj = $("#supplementary_table input[name='stq_requered_" + n+"']");
+	if (stqObj.val() == "1")
+	{
+		stqObj = $("#supplementary_table [name='stq_mark_"+n+"']");
+		if (stqObj.length > 0)
+		{
+			if (stqObj.val() == "")
+			{
+				censor.value = "1";
+				break;
+			}
+		}
+		else
+		{
+			stqObj = $("#supplementary_table input[parent_id='stq_mark_" + n+"']");
+			if (stqObj.length > 0)
+			{
+				if (stqObj.filter(":checked").length == 0)
+				{
+					censor.value = "1";
+					break;
+				}
+			}
+		}
+	}
+	n++;
+}
+
+if (censor.value!="") window.alert("<%=tools.get_web_str("vrb_message2")%> ");
+
+return true;
+}
+//----------------------------------------------------------------------------------------------------------------------
+<%
+	}
+%>
+-->
+</script>
+
+
+
+<%
+	Server.Execute("view_assessment_header.html");
+	
+	WF_FORM_TOP = "top";
+	Server.Execute("view_assessment_workflow_buttons.html");
+%>
+
+
+
+
+<%
+if (is_post == '1')  //is_pos  start
+{
+
+	if ( Request.QueryString.HasProperty("wfbutt"))
+		_wfbutt = Request.QueryString.GetProperty("wfbutt")
+	else
+		_wfbutt = undefined;
+	
+	try
+	{
+		_save_message = Session.assessment_save_msg;
+		Session.assessment_save_msg = "";
+		if (_save_message == "" || _save_message == null || _save_message == undefined)
+			throw "bez_slov";
+	}
+	catch(_bez_slov_)
+	{
+		_save_message = "";
+	}
+	
+	if (_wfbutt == undefined || _save_message != "")
+	{
+%>
+<p>
+<center><b><%=(_save_message != "" ? HtmlEncode(_save_message) : tools.get_web_str("c_form_save"))%></b></center>
+</p>
+<%
+	}
+	
+	
+	if( _use_plan && (_wfbutt == curAssessmentPlan.workflow_state || _wfbutt == undefined))
+	{
+
+
+	_href=null;
+	if (IS_DONE == false)
+		for (_temp_pa in _temp_pas)
+		{
+		if (Int(Request.QueryString.pa_id) != _temp_pa.id && StrContains(_PRIVATE_PAS, _temp_pa.id))
+			if (!_temp_pa.is_done) 
+				{ 
+				
+				_href = 'view_doc.html?mode=assessment_appraise&doc_id=' + curDocID +'&pa_id='+_temp_pa.id + '&assessment_appraise_id=' + curAssessmentAppraiseID + '&assessment_appraise_type=' + _temp_pa.assessment_appraise_type ;
+				
+				
+				 break;
+				 
+				}
+		}
+		
+		if (_href == null && curAssessmentPlan.status == curPA.status && (!curAssessmentPlan.is_done) && StrContains(_PRIVATE_PAS, curAssessmentPlanID) )
+		{		
+			_href = 'view_doc.html?mode=assessment_appraise&doc_id=' + curDocID +'&pa_id='+ curAssessmentPlanID + '&assessment_appraise_id=' + curAssessmentAppraiseID + '&assessment_appraise_type=result';			
+		}	
+		
+		if (_href != null)
+		{
+%>		
+	<center><a class="asLink" href="<%=_href%>"><%=tools.get_web_str("ass_go_to_next_form")%> &raquo;</a></center>
+<%		
+		}
+
+	}
+
+//Cancel();
+_cancel = true;
+}
+
+}
+
+if (!_cancel) // _cancel start
+{
+%>
+	<form action='kpi_save.html' name='f_switch' id='f_switch' method="POST">
+	
+		<input type="hidden" name="doc_id" value="<%=curDocID%>">
+
+		<input type=hidden name="assessment_appraise_id" value="<%=curAssessmentAppraiseID%>">
+		<input type=hidden name="is_post" value="1">
+		<input type=hidden name="pa_id" value="<%=Request.QueryString.pa_id%>">
+		<input type=hidden name="isflawed" value="">
+		<input type=hidden name="plan" value="<%=PLAN%>">
+		<input type=hidden name="assessment_appraise_type" value="<%=Request.QueryString.assessment_appraise_type%>">
+		<input type="hidden" name="chech_resp" value="<%=chech_resp%>"/>
+<%
+
+
+sourcePA = curPA;
+	////----- ïîäñòàâà, êîãäà íàäî ïîäãðóæàòü ñëåäóþùèé ýòàï èç ïðåäûäóùåãî. 
+				
+	if (!curPA.flag_is_processed)
+	{
+		if (curPA.status == 'manager')
+		{
+			if (_self_pa != null) sourcePA = _self_pa;
+		}
+		else if (curPA.status == 'interview')
+		{
+			if (_manager_pa != null) sourcePA = _manager_pa;
+		}	
+	
+	}
+		
+
+	///------- êîíåö ïîäñòàâå -------
+
+
+if (_cur_assessment_appraise_type != undefined)
+	{
+		try
+		{
+			Response.Write(tools_web.insert_custom_code(_cur_assessment_appraise_type.custom_web_template_id, null,true,false));
+		}
+		catch(_oi_)
+		{}
+		
+		if(_cur_assessment_appraise_type.custom_post_web_template_id.HasValue)
+		{
+%>
+			<input type="hidden" name="custom_post_web_template_id" value="<%=_cur_assessment_appraise_type.custom_post_web_template_id%>"/>
+<%
+		}
+	}
+
+
+
+if (_kpi_show)  //ÏÎÊÀÇÛÂÀÒÜ ÁËÎÊ KPI???
+{
+%>
+<H3><b><%=tools.get_web_str("vkb_kpi")%></b></H3>
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td bgcolor="silver">
+<table cellspacing="1" cellpadding="3" width="100%">
+		<TBODY id="userbodytable">
+<tr id="tr_000" bgcolor="silver">
+<td align="center"><%=tools.get_web_str("vkb_kpi")%></td>
+<td width="220px" align="center" style="display: <%=_plan_hide%>"><%=tools.get_web_str("vkb_plan_value")%></td>
+
+<%
+			 if (PLAN != 1)
+			 {
+%>
+<td width="220px" align="center" style="display: <%=_fact_hide%>"><%=tools.get_web_str("vkb_actual_value")%></td>
+<%
+if (_manager_show_columns)
+{
+	if (curPA.status == 'manager' || curPA.status == 'interview')
+	{
+%>
+	<td width="80" align="center"><%=tools.get_web_str("ass_person_mark")%></td>
+<%
+	}
+
+	if (curPA.status == 'interview')
+	{
+%>
+	<td width="80" align="center"><%=tools.get_web_str("ass_boss_mark")%></td>
+<%
+	}
+}
+%>
+
+<td width="80" align="center" style="display: <%=_mark_hide%>"><%=tools.get_web_str("ass_mark")%>,%</td>
+
+<%
+ 			}
+%>
+
+<td width="80" style="display: <%=_weight_hide%>"><%=tools.get_web_str("vcpb_weight")%>,%</td>
+
+<%
+	for (_wf in workflow_fields)
+	{
+%>
+			<td bgcolor="silver" align="center" width="100"><%=tools_web.get_cur_lng_name(_wf.field.title, curLng.short_id)%></td>
+<%
+	}
+%>
+
+
+
+
+
+</tr>
+
+
+
+
+
+<!-------------------------------------------------------------------------------------->
+
+
+
+
+<%
+
+if (IS_MODIFY)	
+	disable = '';
+else
+	disable = ' disabled';
+
+
+id = 0;
+
+for (_kpi in sourcePA.kpis)
+{
+
+	try
+	{
+		_kpiUnid = _kpi.kpi_id;
+		kpiDoc = OpenDoc(UrlFromDocID(_kpi.kpi_id)).TopElem;
+	}
+	catch(_SHIIIIT_)
+	{
+		continue;		
+	}
+	_kpi_hide = "";
+	_is_visible=1;
+	if (isRespPerson)
+	{
+		if (kpiDoc.responsible_persons.GetOptChildByKey(curPersonID) != undefined)
+		{
+			_kpi_hide = "inline";
+			_is_visible=1;
+		}
+		else
+		{
+			_kpi_hide = "none";
+			_is_visible=0;
+		}
+	}
+	//Response.Write(_kpi_hide+'<br/>')
+	_show_mark = 0;
+	_show_weight = 0;
+
+%>
+
+<tr id='tr_<%=_kpiUnid%>'  style="display: <%=_kpi_hide%>">
+<td class="tableRowEven" width="200">
+	<input type="hidden" name="kpi_unid_<%=_kpiUnid%>" value="<%=_kpiUnid%>"/>
+	<input type="hidden" name="kpi_type_<%=_kpiUnid%>" value="<%=kpiDoc.type%>"/>
+		<span id='kpiname_<%=_kpiUnid%>' type=text>
+			<%=tools_web.get_cur_lng_name(kpiDoc.name, curLng.short_id)%>
+		</span>
+		
+<script>
+	var kpixnode=xkpis.selectSingleNode(".//*[@id='<%=_kpiUnid%>']");
+	if(kpixnode)
+	{
+		 kpixnode.setAttribute("selected",1);
+		 kpixnode.setAttribute("visible",<%=_is_visible%>);
+	}
+</script>
+		
+</td>
+
+
+<%
+
+	if (kpiDoc.type == 'auto')
+	{
+	
+		if (kpiDoc.auto_formula.HasValue)
+		{
+	
+%>
+<td bgcolor="white" align="center" style="display: <%=_plan_hide%>">
+<input type='text' class="inputEdit" <%=(_ALLOW_PLAN_MODIFY ? '' : 'disabled')%> id="STCompDesc_<%=_kpiUnid%>" name='STCompDesc_<%=_kpiUnid%>' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='formulate("<%=_kpiUnid%>","STCompDesc_<%=_kpiUnid%>","STCompFact_<%=_kpiUnid%>","STNeedWeight_<%=_kpiUnid%>", "STRating_<%=_kpiUnid%>");' value='<%=_kpi.plan%>' <%=(_plan_lock ? "readonly style='background-color: lightgrey'" : "")%>/>
+</td>
+
+<%
+			if (PLAN != 1)
+			{
+%>
+
+<td bgcolor="white" align="center" style="display: <%=_fact_hide%>">
+<input type='text' class="inputEdit" <%=(_ALLOW_PLAN_MODIFY ? '' : 'disabled')%> id="STCompFact_<%=id%>" name='STCompFact_<%=_kpiUnid%>' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='formulate("<%=_kpiUnid%>","STCompDesc_<%=_kpiUnid%>","STCompFact_<%=_kpiUnid%>","STNeedWeight_<%=_kpiUnid%>", "STRating_<%=_kpiUnid%>");' value='<%=_kpi.fact%>' <%=(_fact_lock ? "readonly style='background-color: lightgrey'" : "")%>/>
+</td>
+
+<%
+ 			}
+			
+			
+		}
+		else
+		{
+%>
+
+
+<td bgcolor="white" align="center" style="display: <%=_plan_hide%>">
+<input type='text' class="inputEdit" <%=(_ALLOW_PLAN_MODIFY ? '' : 'disabled')%> id="STCompDesc_<%=_kpiUnid%>" name='STCompDesc_<%=_kpiUnid%>' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='check_swear_calc(this,"STCompFact_<%=_kpiUnid%>","<%=kpiDoc.range_min%>","<%=kpiDoc.range_max%>",0,"STRating_<%=_kpiUnid%>");' value='<%=_kpi.plan%>' <%=(_plan_lock ? "readonly style='background-color: lightgrey'" : "")%>/>
+</td>
+
+<%
+			if (PLAN != 1)
+			{
+%>
+
+<td bgcolor="white" align="center" style="display: <%=_fact_hide%>">
+<input type='text' class="inputEdit" <%=(_ALLOW_PLAN_MODIFY ? '' : 'disabled')%> id="STCompFact_<%=id%>" name='STCompFact_<%=_kpiUnid%>' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='check_swear_calc(this,"STCompDesc_<%=_kpiUnid%>","<%=kpiDoc.range_min%>","<%=kpiDoc.range_max%>",1,"STRating_<%=_kpiUnid%>");' value='<%=_kpi.fact%>' <%=(_fact_lock ? "readonly style='background-color: lightgrey'" : "")%>/>
+</td>
+
+<%
+			}
+		}
+			
+	}
+	else
+	{
+%>
+
+<td bgcolor="white" align="center" style="display: <%=_plan_hide%>">
+<textarea name="STCompDesc_<%=_kpiUnid%>" id="STCompDesc_<%=_kpiUnid%>"<%=(_ALLOW_PLAN_MODIFY ? '' : 'disabled')%> cols="25" rows="5" <%=(_plan_lock ? "readonly style='background-color: lightgrey'" : "")%>><%=_kpi.plan%></textarea>
+</td>
+
+<%
+			if (PLAN != 1)
+			{
+%>
+
+<td bgcolor="white" align="center" style="display: <%=_fact_hide%>">
+<textarea name="STCompFact_<%=_kpiUnid%>" id="STCompFact_<%=_kpiUnid%>"<%=(_ALLOW_MARK_MODIFY ? '' : 'disabled')%> cols="25" rows="5" <%=(_fact_lock ? "readonly style='background-color: lightgrey'" : "")%>><%=_kpi.fact%></textarea>
+</td>
+
+<%
+ 			}
+
+
+
+			}
+
+
+			if (PLAN != 1)
+			{
+
+if (_manager_show_columns)
+{
+////// ------- show self column ----------
+	if (curPA.status == 'manager' || curPA.status == 'interview')
+	{
+		_mmmarrrk = '';
+							
+											
+		if (_self_pa != null)
+		{																		
+			try
+			{
+				_temp_kpi = _self_pa.kpis.GetChildByKey(_kpiUnid);
+			}
+			catch(_blya_)
+			{
+				_temp_kpi = null;
+			}
+				
+			if (_temp_kpi != null)
+			{
+				if (kpiDoc.type == 'scale')
+				{
+					for( _scale in kpiDoc.scales )
+					{
+						if (_temp_kpi.mark == _scale.PrimaryKey) {_mmmarrrk = tools_web.get_cur_lng_name(_scale.name, curLng.short_id); break; }
+					}	
+				}
+				else
+				{
+					_mmmarrrk = _temp_kpi.mark + "%";
+				}
+			
+			}
+	
+		}
+%>		
+<td bgcolor="white" align="center"><%=_mmmarrrk%></td>		
+<%		
+	}
+////// ------- end show self column ----------
+
+
+////// ------- end show manager column ----------
+if (curPA.status == 'interview')
+	{
+		_mmmarrrk = '';
+									
+		if (_manager_pa != null)
+		{																		
+			try
+			{
+				_temp_kpi = _manager_pa.kpis.GetChildByKey(_kpiUnid);
+			}
+			catch(_blya_)
+			{
+				_temp_kpi = null;
+			}
+				
+			if (_temp_kpi != null)
+			{
+				if (kpiDoc.type == 'scale')
+				{
+					for( _scale in kpiDoc.scales )
+					{
+						if (_temp_kpi.mark == _scale.PrimaryKey) {_mmmarrrk = tools_web.get_cur_lng_name(_scale.name, curLng.short_id); break; }
+					}	
+				}
+				else
+				{
+					_mmmarrrk = _temp_kpi.mark + "%";
+				}
+			
+			}
+	
+		}
+%>		
+<td bgcolor="white" align="center"><%=_mmmarrrk%></td>		
+<%		
+	}
+
+// --------- end of manager column ---------
+
+}
+
+
+%>
+
+<td bgcolor="white" align="center" style="display: <%=_mark_hide%>">
+
+<%
+
+	if (kpiDoc.type == 'scale')
+	{
+		if (_ALLOW_MARK_MODIFY && _mark_lock == false)
+		{
+%>
+
+	<select name="STRating_<%=_kpiUnid%>" id="STRating_<%=_kpiUnid%>" onblur="//calcAverage();">
+				<option value="">&nbsp;  &nbsp;</option>
+				
+				<%
+				if(_show_n) Response.Write('<option value="N"> N &nbsp;</option>');
+				
+				for( _scale in kpiDoc.scales )
+				{
+					if (_kpi.mark == _scale.PrimaryKey)
+					{
+						_selected_flag = ' selected';						
+					}	
+					else
+					{
+						_selected_flag = '';
+					}
+				
+					Response.Write('<option'+_selected_flag+' value="'+_scale.id+'">'+tools_web.get_cur_lng_name(_scale.name, curLng.short_id)+'</option>\n');				
+				}
+								
+				%>									
+	</select>
+	
+	<script>document.all['STRating_<%=_kpiUnid%>'].value="<%=(curPA.flag_is_processed ? _kpi.mark : '')%>";</script>
+<%
+		}
+		else
+		{
+			curmark_name='';
+			if (curPA.flag_is_processed)
+				for( _scale in kpiDoc.scales )
+				{
+					if (_kpi.mark == _scale.PrimaryKey) {curmark_name = tools_web.get_cur_lng_name(_scale.name, curLng.short_id); break; }
+				}	
+		
+		
+%>		
+			<label id='STRating_<%=_kpiUnid%>' name='STRating_<%=_kpiUnid%>'  value=""><%=curmark_name%></label>
+<%
+		}
+	}
+
+	if (kpiDoc.type == 'input')
+	{
+		if (curPA.flag_is_processed)
+			_show_mark = (_kpi.mark ? Real(_kpi.mark) : '' );
+		else 	
+			_show_mark = '';
+		if (_ALLOW_MARK_MODIFY)
+		{
+%>
+
+		<input type='text' class="inputEdit" name="STRating_<%=_kpiUnid%>" id="STRating_<%=_kpiUnid%>" onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='checkval(this,"<%=kpiDoc.range_min.Value%>","<%=kpiDoc.range_max.Value%>");' style='width: 50px; <%=(_mark_lock ? "background-color: lightgrey;" : "")%>' value="<%=_show_mark%>" <%=(_mark_lock ? "readonly" : "")%>/>
+
+<%
+		}
+		else
+		{
+%>	
+			<label id='STRating_<%=_kpiUnid%>' name='STRating_<%=_kpiUnid%>'  value="<%=_show_mark%>"><%=(_show_mark !='' ? _show_mark + '%' : '')%></label>
+<%		
+		}
+	}
+	if (kpiDoc.type == 'auto')
+	{
+		//if (curPA.flag_is_processed)
+			_show_mark = (_kpi.mark !='' ? Real(_kpi.mark) : '' );			
+		//else _show_mark = '';
+%>
+	<label id='STRating_<%=_kpiUnid%>' name='STRating_<%=_kpiUnid%>'  value="<%=(_show_mark)%>"><%=(_show_mark !='' ? _show_mark + ( kpiDoc.auto_formula.HasValue ? '' : '%') : '')%></label>
+<%
+	}
+	
+	
+	
+	
+%>
+
+</td>
+
+
+<%
+ 			}
+			
+			_show_weight = (_kpi.weight!='' ? Real(_kpi.weight) : '' );
+%>
+
+
+
+
+<td  bgcolor="white" style="display: <%=_weight_hide%>">
+<%
+if (_ALLOW_PLAN_MODIFY)
+{
+%>
+	<input type=text class="inputEdit" name="STNeedWeight_<%=_kpiUnid%>" id="STNeedWeight_<%=_kpiUnid%>" value="<%=_show_weight%>" onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='checkval(this);<%
+
+if (kpiDoc.type == 'auto' && kpiDoc.auto_formula.HasValue)
+	Response.Write('formulate("' + _kpiUnid + '","STCompDesc_' + _kpiUnid + '","STCompFact_' + _kpiUnid + '","STNeedWeight_' + _kpiUnid + '", "STRating_' + _kpiUnid + '");');
+	
+%>' style='width: 50px' <%=(_weight_lock ? "readonly style='background-color: lightgrey'" : "")%>/>
+
+<%
+}
+else
+{
+%>
+	<input type="hidden" name="STNeedWeight_<%=_kpiUnid%>" id="STNeedWeight_<%=_kpiUnid%>" value="<%=_show_weight%>"/><%=_show_weight%>
+<%
+}
+%>
+</td>
+
+<%
+		//----------- WORKFLOW-FIELDS ---------------- //
+			for (_wf in workflow_fields)
+			{
+				_extra_identifier = "extra_" + _wf.field.name + "$" + _kpiUnid;
+%>
+				<td id="td_<%=(_extra_identifier)%>" name="td_<%=(_extra_identifier)%>" bgcolor="white" align="center">
+					<input TYPE="hidden" id="i_name_<%=(_extra_identifier)%>" name="i_<%=(_extra_identifier)%>" value="<%=(_wf.field.name)%>"/>
+										
+					<%
+						_curwf = _kpi.workflow_fields.ObtainChildByKey(_wf.field.name);
+						
+						if (_wf.is_modify)
+						{
+							switch (_wf.field.type)
+							{
+								case "string":
+									_RESP_VAL = '<input TYPE="text" style="width: 300px" class="inputEdit" id="i_value_' + _extra_identifier + '" name="i_value_' + _extra_identifier + '" value="' + HtmlEncode(_curwf.value) + '"/>';
+									break;
+								case "integer":
+									_RESP_VAL = '<input TYPE="text" style="width: 60px" class="inputEdit" id="i_value_' + _extra_identifier + '" name="i_value_' + _extra_identifier + '" value="' + HtmlEncode(_curwf.value) + '" onKeyPress="return checkkeyInt();"/>';
+									break;
+								case "real":
+									_RESP_VAL = '<input TYPE="text" style="width: 60px" class="inputEdit" id="i_value_' + _extra_identifier + '" name="i_value_' + _extra_identifier + '" value="' + HtmlEncode(_curwf.value) + '" onKeyPress="return checkkey(this,window.event.keyCode);"/>';
+									break;
+								case "date":
+									_RESP_VAL = '<input type="text" style="width: 70px" id="i_value_' + _extra_identifier + '" name="i_value_' + _extra_identifier + '"  value="' + _curwf.value + '" class="inputEdit" readonly><a class="asLink" href="#"  tn="i_value_' + _extra_identifier + '" onclick="var h=0; var offP = this.offsetParent; while(offP.id != \'main_block\' && offP.tagName.toUpperCase()!=\'BODY\') {h+=offP.offsetTop; offP = offP.offsetParent;} ; showCalendar(this, document.getElementById(\'i_value_' + _extra_identifier + '\'), \'dd.mm.yyyy\',\'ru\',1, null, h + 40); return false;" id="cal' + _extra_identifier + '" name="cal' + _extra_identifier + '"><img src="scripts/calendar/calendar.gif" width="24" height="22" border="0" align="absmiddle" /></a>';
+									break;
+								case "bool":
+									_RESP_VAL = '<input type="checkbox" style="width: 15px" id="i_value_' + _extra_identifier + '" name="i_value_' + _extra_identifier + '" value="' + _curwf.value + '" onclick="if (this.checked) this.value=1; else this.value=0;" ' + (Trim(_curwf.value) == "1" ? "checked" : "") + '/>';
+									break;
+								case "combo":
+									_RESP_VAL = '<select id="i_value_' + _extra_identifier + '" name="i_value_' + _extra_identifier + '"><option value="">&nbsp;</option>';
+									for (_ent in _wf.field.entries)
+                                    {
+                                        _reload_val = HtmlEncode(_ent.value);
+                                        if (StrBegins(_reload_val , "@"))
+                                        {
+                                            _reload_val = String(_reload_val).slice(1);
+                                            _reload_val =_reload_val.split("[]");
+                                            
+                                            _drill_response = drill_select(Array(), null, _reload_val, 0);
+                                            for (_dr in _drill_response)
+                                            {
+                                                if (HtmlEncode(_dr) == _curwf.value)
+                                                    _RESP_VAL = _RESP_VAL + '<option value="' + HtmlEncode(_dr) + '" selected>' + HtmlEncode(_dr) + '</option>';
+                                                else
+                                                    _RESP_VAL = _RESP_VAL + '<option value="' + HtmlEncode(_dr) + '">' + HtmlEncode(_dr) + '</option>';
+                                            }
+                                        }
+                                        else
+                                        {
+                                        if (_reload_val == _curwf.value)
+                                            _RESP_VAL = _RESP_VAL + '<option value="' + _reload_val + '" selected>' + _reload_val + '</option>';
+                                        else
+                                            _RESP_VAL = _RESP_VAL + '<option value="' + _reload_val + '">' + _reload_val + '</option>';
+                                        }
+                                    }
+										_RESP_VAL = _RESP_VAL + '</select>';
+									break;
+								default:
+									_RESP_VAL = '<textarea id="i_value_' + _extra_identifier + '" name="i_value_' + _extra_identifier + '" class="commonTextarea" rows="5" style="width: 90%">' + _curwf.value + '</textarea>';
+									break;
+							}
+							Response.Write(_RESP_VAL);
+						}
+						else
+						{
+					%>
+							<input TYPE="hidden" id="i_value_<%=(_extra_identifier)%>" name="i_value_<%=(_extra_identifier)%>" value="<%=(_curwf.value)%>"/><%=(_curwf.value)%>
+					<%
+						}
+					%>
+				</td>
+<%
+			}
+			//----------- -------- ---------------- //
+%>
+
+</tr>
+
+<%
+
+id++;
+}
+%>
+
+
+<!--------------------------------------------------------------------------------->
+
+</TBODY>
+
+
+<tr>
+<td colspan="<%=(1 + (_plan_hide != "none" ? 1 : 0 ))%>" bgcolor="gray" class="tableRowEven"></td>
+
+<%
+			if (PLAN != 1)
+			{
+%>
+
+<%
+if (_manager_show_columns)
+{
+	if (curPA.status == 'manager' || curPA.status == 'interview')
+	{
+%>
+	<td bgcolor="silver" class="tableRowEven"></td>
+<%
+	}
+
+	if (curPA.status == 'interview')
+	{
+%>
+	<td bgcolor="silver" class="tableRowEven"></td>
+<%
+	}
+}
+
+%>
+<td bgcolor="silver" align="right" class="tableRowEven" style="display: <%=_fact_hide%>"><%=tools.get_web_str("vkb_mbo")%></td>
+
+<td bgcolor="silver"  class="tableRowEven" style="display: <%=_mark_hide%>"> <input type="hidden" name="field_mbo" id="field_mbo" value="<%=curPA.overall%>"/> <b><label name="sMBO" id="sMBO"><%=curPA.overall%></label></b></td>
+
+<%
+			if (_ALLOW_MARK_MODIFY)
+			{
+%>
+
+<script language="javascript">
+<!--
+	var _mbo = getMBO().toFixed(2);
+	document.getElementById('sMBO').innerHTML = _mbo;
+-->
+</script>
+
+
+<%
+			}
+ 			} 
+
+%>
+<td bgcolor="silver" class="tableRowEven" style="display: <%=_weight_hide%>"><label name="sWEIGHT" id="sWEIGHT">0</label>&nbsp;%</td>
+<%		
+	for (_wf in workflow_fields)
+	{
+%>
+		<td bgcolor="silver" class="tableRowEven">&nbsp;</td>
+<%
+	}
+%>
+
+
+</tr>
+
+</table>
+</td></tr></table>
+
+
+<script language="javascript">
+<!--
+	document.all['sWEIGHT'].innerHTML = getWeight().toFixed(2);
+-->
+</script>
+
+
+<%
+if (IS_MODIFY)	
+{
+%>
+<table cellpadding=0 cellspacing=0>
+<tr>
+<td>
+<%
+if (_add_kpi && _ALLOW_ADD)
+{
+%>
+	<input type=button name="addKPIbutton" value="<%=tools.get_web_str("vkb_add_kpi")%>" onclick="manageKpiS('');" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+<%
+}
+
+
+if (_ALLOW_PLAN_MODIFY && _flex_weights != "1")
+{
+%>
+<input type=button name="qqqqqqqqqq" value="<%=tools.get_web_str("vsb_make_even_weights")%>" onclick="if(!confirm('<%=tools.get_web_str("vsb_make_even_weights")%>?')) return false; kpiForceSum100(1);" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+<input type=button name="qqqqqqq" value="<%=tools.get_web_str("vsb_to_lead_100")%>" OnClick="if(!confirm('<%=tools.get_web_str("vsb_to_lead_100")%> ?')) return false; kpiForceSum100(0);" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+<%
+}
+%>
+
+
+</td>
+
+</tr>
+</table>
+
+<%
+}
+%>
+<hr/>
+
+
+
+<%
+
+} 
+
+%>
+
+
+
+
+
+<%
+
+
+
+if (_proj_show)  //ÏÎÊÀÇÛÂÀÒÜ ÁËÎÊ ÏÐÎÅÊÒÎÔÔ???
+{
+
+%>
+
+
+
+
+
+<font size=3><b><%=tools.get_web_str("vsb_purposes")%> / <%=tools.get_web_str("vkb_tasks")%></b><font>
+
+
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td class="mainMenu" bgcolor="silver">
+<table border="0" cellspacing="1" cellpadding="1" width="100%">
+		<TBODY id=prbodytable>
+<tr id="tr_pr0">
+<%
+	if (_extended_fields)
+	{
+%>
+
+	<td align="center" bgcolor="silver"><%=tools.get_web_str("vkb_index")%></td>
+
+	<td bgcolor="silver" width="80px" align="center"><%=tools.get_web_str("vkb_limit")%></td>
+	<td bgcolor="silver" width="80px" align="center" style="display: <%=_plan_hide%>"><%=tools.get_web_str("vsb_purpose")%></td>
+	<td bgcolor="silver" width="80px" align="center"><%=tools.get_web_str("vkb_call")%></td>
+	<td bgcolor="silver" width="80px" align="center"><%=tools.get_web_str("vkb_fact")%></td>
+	<td bgcolor="silver" width="80px" align="center"><%=tools.get_web_str("c_score")%></td>
+	<td bgcolor="silver" width="80px" align="center"><%=tools.get_web_str("vcpb_weight")%>,%</td>
+	<td bgcolor="silver" width="80px" align="center"><%=tools.get_web_str("vkb_weighed_points")%></td>
+<%
+	}
+	else
+	{
+%>
+
+
+<td align="center" bgcolor="silver"><%=tools.get_web_str("c_name")%></td>
+
+<td bgcolor="silver" align="center" width="220px" style="display: <%=_plan_hide%>"><%=tools.get_web_str("vkb_plan_value")%></td>
+
+<%
+			 if (PLAN != 1)
+			 {
+%>
+<td bgcolor="silver" align="center" width="" width="220px" style="display: <%=_fact_hide%>"><%=tools.get_web_str("vkb_actual_value")%></td>
+
+
+<%
+		if (_manager_show_columns)
+		{
+			if (curPA.status == 'manager' || curPA.status == 'interview')
+			{
+%>
+	<td align="center" width="50px"><%=tools.get_web_str("ass_person_mark")%></td>
+<%
+			}
+
+			if (curPA.status == 'interview')
+			{
+%>
+	<td align="center" width="50px"><%=tools.get_web_str("ass_boss_mark")%></td>
+<%
+			}
+		}
+%>
+
+<td align="center" bgcolor="silver" width="50px" style="display: <%=_mark_hide%>"><%=tools.get_web_str("ass_mark")%></td>
+
+<%
+ 			}
+%>
+
+<td width="20" bgcolor="silver" align="center" width="70px" style="display: <%=_weight_hide%>"><%=tools.get_web_str("vcpb_weight")%>,%</td>
+
+<%
+	}
+	
+	
+	for (_wf in workflow_fields)
+	{
+%>
+			<td bgcolor="silver" align="center" width="20%"><%=_wf.field.title%></td>
+<%
+	}
+
+if (_ALLOW_PLAN_MODIFY && _del_proj)
+{
+%>
+<td width="8" bgcolor="silver" width="50px"><%=tools.get_web_str("c_delete")%></td>
+<%
+}
+%>
+</tr>
+
+<%
+pr_id = 0;
+for (_project in sourcePA.projects)
+{
+	
+	_is_standard=false;
+	if (_project.standard_project_id.HasValue)
+	{
+		if (_project.standard_project_id!='')
+		{
+			try
+			{
+				_kpiUnid = _project.standard_project_id;
+				kpiDoc = OpenDoc(UrlFromDocID(_project.standard_project_id)).TopElem;
+			}
+			catch(_SHIIIIT_)
+			{
+				continue;		
+			}
+			_kpi_hide = "inline";
+			_is_visible=1;
+			if (isRespPerson)
+			{
+				if (kpiDoc.responsible_persons.GetOptChildByKey(curPersonID) != undefined)
+				{
+					_kpi_hide = "inline";
+					_is_visible=1;
+				}
+				else
+				{
+					_kpi_hide = "none";
+					_is_visible=0;
+				}
+			}
+			_is_standard=true;
+		}
+	}
+	_show_mark = 0;
+	_show_weight = 0;
+	
+	if (_is_standard==true)
+	{
+	//--------------------------------start std poject-------------------------/
+%>
+
+<tr id='line<%=pr_id%>' std_proj_id='std_proj_id_<%=_kpiUnid%>' style="display: <%=_kpi_hide%>">
+<td class="tableRowEven" width="200">
+	<input type="hidden" name='STCompIDEx_<%=pr_id%>' value="<%=_project.project_id%>"/>
+	<input type="hidden" name="kpi_type_<%=_kpiUnid%>" value="<%=kpiDoc.type%>"/>
+	<input type='hidden' name='standard_project_id_<%=pr_id%>' value='<%=_kpiUnid%>'/>
+	<input type='hidden' name='STCompExVisible_<%=pr_id%>' id='STCompExVisible_<%=pr_id%>' value='<%=_is_visible%>'/>
+	<input type='hidden' name='STCompNameEx_<%=pr_id%>' id='STCompNameEx_<%=pr_id%>' value='<%=kpiDoc.name%>'/>
+		<span id='std_proj_id_<%=_kpiUnid%>' type=text>
+			<%=kpiDoc.name%>
+		</span>
+
+<script>
+	var kpixnode=xkpis.selectSingleNode(".//*[@id='<%=_kpiUnid%>']");
+	if(kpixnode)
+	{
+		 kpixnode.setAttribute("selected",1);
+		 kpixnode.setAttribute("visible",<%=_is_visible%>);
+	}
+</script>
+		
+</td>
+<%
+	_wstrlong='';
+	if (_extended_fields)
+	{
+		_wstrlong="weighted_quantity_calculation("+pr_id+")";
+%>
+		<td bgcolor="white" align="center">&nbsp;
+			
+		</td>
+<%
+	}
+%>
+<%
+
+	if (kpiDoc.type == 'auto')
+	{
+	
+		if (kpiDoc.auto_formula.HasValue)
+		{
+	
+%>
+<td bgcolor="white" align="center" width="220" style="display: <%=_plan_hide%>">
+<input type='text' class="inputEdit" <%=(_ALLOW_PLAN_MODIFY ? '' : 'disabled')%> id="STCompExDesc_<%=pr_id%>" name='STCompExDesc_<%=pr_id%>' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='formulate("<%=_kpiUnid%>","STCompExDesc_<%=pr_id%>","STCompExFact_<%=pr_id%>","STNeedWeightEx_<%=pr_id%>", "STRatingEx_<%=pr_id%>");<%=_wstrlong%>' value='<%=_project.plan%>' <%=(_plan_lock ? "readonly style='background-color: lightgrey'" : "")%>/>
+</td>
+<%
+			if (_extended_fields)
+			{
+%>
+				<td bgcolor="white" align="center">&nbsp;
+			
+				</td>
+<%
+			}
+
+			if (PLAN != 1)
+			{
+		
+%>
+
+<td bgcolor="white" align="center" width="220" style="display: <%=_fact_hide%>">
+<input type='text' class="inputEdit" <%=(_ALLOW_PLAN_MODIFY ? '' : 'disabled')%> id="STCompExFact_<%=pr_id%>" name='STCompExFact_<%=pr_id%>' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='formulate("<%=_kpiUnid%>","STCompExDesc_<%=pr_id%>","STCompExFact_<%=pr_id%>","STNeedWeightEx_<%=pr_id%>", "STRatingEx_<%=pr_id%>");<%=_wstrlong%>' value='<%=_project.fact%>' <%=(_fact_lock ? "readonly style='background-color: lightgrey'" : "")%>/>
+</td>
+
+<%
+ 			}
+			
+			
+		}
+		else
+		{
+%>
+
+
+<td bgcolor="white" align="center" width="220" style="display: <%=_plan_hide%>">
+<input type='text' class="inputEdit" <%=(_ALLOW_PLAN_MODIFY ? '' : 'disabled')%> id="STCompExDesc_<%=pr_id%>" name='STCompExDesc_<%=pr_id%>' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='check_swear_calc(this,"STCompExFact_<%=pr_id%>","<%=kpiDoc.range_min%>","<%=kpiDoc.range_max%>",0,"STRatingEx_<%=pr_id%>");<%=_wstrlong%>' value='<%=_project.plan%>' <%=(_plan_lock ? "readonly style='background-color: lightgrey'" : "")%>/>
+</td>
+<%
+			if (_extended_fields)
+			{
+%>
+				<td bgcolor="white" align="center">&nbsp;
+			
+				</td>
+<%
+			}
+			if (PLAN != 1) 
+			{
+%>
+
+<td bgcolor="white" align="center" width="220" style="display: <%=_fact_hide%>">
+<input type='text' class="inputEdit" <%=(_ALLOW_PLAN_MODIFY ? '' : 'disabled')%> id="STCompExFact_<%=pr_id%>" name='STCompExFact_<%=pr_id%>' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='check_swear_calc(this,"STCompExDesc_<%=pr_id%>","<%=kpiDoc.range_min%>","<%=kpiDoc.range_max%>",1,"STRatingEx_<%=pr_id%>");<%=_wstrlong%>' value='<%=_project.fact%>' <%=(_fact_lock ? "readonly style='background-color: lightgrey'" : "")%>/>
+</td>
+
+<%
+			}
+		}
+			
+	}
+	else
+	{
+%>
+
+<td bgcolor="white" align="center" width="220" style="display: <%=_plan_hide%>">
+<textarea name="STCompExDesc_<%=pr_id%>" id="STCompExDesc_<%=pr_id%>"<%=(_ALLOW_PLAN_MODIFY ? '' : 'disabled')%> cols="25" rows="5" <%=(_plan_lock ? "readonly style='background-color: lightgrey'" : "")%>><%=_project.plan%></textarea>
+
+</td>
+<%
+			if (_extended_fields)
+			{
+%>
+				<td bgcolor="white" align="center">&nbsp;
+			
+				</td>
+<%
+			}
+			if (PLAN != 1) 
+			{
+%>
+
+<td bgcolor="white" align="center" width="220" style="display: <%=_fact_hide%>">
+<textarea name="STCompExFact_<%=pr_id%>" id="STCompExFact_<%=pr_id%>"<%=(_ALLOW_MARK_MODIFY ? '' : 'disabled')%> cols="25" rows="5" <%=(_fact_lock ? "readonly style='background-color: lightgrey'" : "")%>><%=_project.fact%></textarea>
+</td>
+
+<%
+ 			}
+	}
+		
+	if (PLAN != 1) 
+	{
+%>
+
+<td width="20" bgcolor="white" align="center" style="display: <%=_mark_hide%>">
+
+<%
+
+	if (kpiDoc.type == 'scale')
+	{
+		if (_ALLOW_MARK_MODIFY && _mark_lock == false)
+		{
+%>
+	<select name="STRatingEx_<%=pr_id%>" id="STRatingEx_<%=pr_id%>" onblur="//calcAverage();">
+				<option value="">&nbsp;  &nbsp;</option>
+				
+				<%
+				if(_show_n) Response.Write('<option value="N"> N &nbsp;</option>');
+				
+				for( _scale in kpiDoc.scales )
+				{
+					if (_scale.percent != null)
+					{
+						if (StrContains(Trim(String(_project.mark)), Trim(String(_scale.percent)), true)&&(StrLen(_project.mark)==StrLen(_scale.percent)))
+						{
+							_selected_flag = ' selected';						
+						}	
+						else
+						{
+							_selected_flag = '';
+						}
+					}
+					else
+					{
+						if (StrContains(Trim(String(_project.mark)), Trim(String(_scale.name)), true)&&(StrLen(_project.mark)==StrLen(_scale.name)))
+						{
+							_selected_flag = ' selected';						
+						}	
+						else
+						{
+							_selected_flag = '';
+						}
+					}
+					Response.Write('<option'+_selected_flag+' value="'+_scale.id+'">'+_scale.name+'</option>\n');
+							
+				}
+								
+				%>									
+	</select>
+	
+
+<%
+		}
+		else
+		{
+			curmark_name='';
+			if (curPA.flag_is_processed)
+				for( _scale in kpiDoc.scales )
+				{
+					if (_scale.percent != null)
+					{
+						if (StrContains(Trim(String(_project.mark)), Trim(String(_scale.percent)), true)&&(StrLen(_project.mark)==StrLen(_scale.percent)))
+						{
+							curmark_name = _scale.percent; break;						
+						}	
+					}
+					else
+					{
+						if (StrContains(Trim(String(_project.mark)), Trim(String(_scale.name)), true)&&(StrLen(_project.mark)==StrLen(_scale.name)))
+						{
+							curmark_name = _scale.name; break;
+						}
+					}
+					//if (_project.mark == _scale.PrimaryKey) {curmark_name = _scale.name; break; }
+				}	
+		
+		
+%>		
+			<label id='STRatingEx_<%=pr_id%>' name='STRatingEx_<%=pr_id%>'  value="<%=curmark_name%>"><%=curmark_name%></label>
+<%
+		}
+	}
+
+	if (kpiDoc.type == 'input')
+	{
+		if (curPA.flag_is_processed)
+		{
+			_show_mark = (_project.mark ? Real(_project.mark) : '' );
+		}
+		else 	
+			_show_mark = '';
+		if (_ALLOW_MARK_MODIFY)
+		{
+%>
+
+		<input type='text' class="inputEdit" name="STRatingEx_<%=pr_id%>" id="STRatingEx_<%=pr_id%>" onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='checkval(this,"","");' style='width: 50px; <%=(_mark_lock ? "background-color: lightgrey;" : "")%>' value="<%=_show_mark%>" <%=(_mark_lock ? "readonly" : "")%>/>
+
+<%
+		}
+		else
+		{
+%>	
+			<label id='STRatingEx_<%=pr_id%>' name='STRatingEx_<%=pr_id%>'  value="<%=_show_mark%>"><%=(_show_mark !='' ? _show_mark + '%' : '')%></label>
+<%		
+		}
+	}
+	if (kpiDoc.type == 'auto')
+	{
+		//if (curPA.flag_is_processed)
+			_show_mark = (Trim(_project.mark) !='' ? Real(_project.mark) : '' );			
+		//else _show_mark = '';
+%>
+	<label id='STRatingEx_<%=pr_id%>' name='STRatingEx_<%=pr_id%>'  value="<%=(_show_mark)%>"><%=(_show_mark !='' ? _show_mark + ( kpiDoc.auto_formula.HasValue ? '' : '%') : '')%></label>
+<%
+	}
+	
+%>
+
+</td>
+
+<%
+ 	}
+
+	_show_weight = (_project.weight!='' ? Real(_project.weight) : '' );
+%>
+
+<td  width="20" bgcolor="white" style="display: <%=_weight_hide%>">
+<%
+if (_ALLOW_PLAN_MODIFY)
+{
+%>
+	<input type=text class="inputEdit" name="STNeedWeightEx_<%=pr_id%>" id="STNeedWeightEx_<%=pr_id%>" value="<%=_show_weight%>" onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='checkval(this);<%
+
+if (kpiDoc.type == 'auto' && kpiDoc.auto_formula.HasValue)
+
+	 Response.Write('formulate("' + _kpiUnid + '","STCompExDesc_' + pr_id + '","STCompExFact_' + pr_id + '","STNeedWeightEx_' + pr_id + '", "STRatingEx_' + pr_id + '");');
+	
+%><%=_wstrlong%>' style='width: 50px' <%=(_weight_lock ? "readonly style='background-color: lightgrey'" : "")%>/>
+
+<%
+}
+else
+{
+%>
+	<input type="hidden" name="STNeedWeightEx_<%=pr_id%>" id="STNeedWeightEx_<%=pr_id%>" value="<%=_show_weight%>"/><%=_show_weight%>
+<%
+}
+%>
+</td>
+<%
+if (_ALLOW_PLAN_MODIFY)
+{
+	if (_extended_fields)
+	{
+		if (_project.mark.HasValue)
+			_weighted_value = StrReal( (_project.mark * _project.weight / 100.0) , 2);
+		else
+			_weighted_value = "";
+%>
+		<td bgcolor="white" align="center" style="display: <%=_weight_hide%>">
+			<label name="STCompExWeightedMark_<%=pr_id%>" id="STCompExWeightedMark_<%=pr_id%>" value="<%=_weighted_value%>"><%=_weighted_value%></label>	
+		</td>	
+<%
+	}
+}
+
+//--------------------------------end std poject-------------------------/
+	}
+	else
+	{
+		_kpi_hide = "";
+		_is_visible=1;
+			if (isRespPerson)
+			{
+				_kpi_hide = "none";
+				_is_visible=0;
+			}
+			
+%>
+
+<tr id="line<%=pr_id%>"  style="display: <%=_kpi_hide%>">
+
+
+<td bgcolor="whitesmoke" width="" align="center">
+<input type='hidden' name='STCompExVisible_<%=pr_id%>' id='STCompExVisible_<%=pr_id%>' value='<%=_is_visible%>'/>
+<input type="hidden" name='STCompIDEx_<%=pr_id%>' value="<%=_project.project_id%>"/>
+
+<%
+if (_ALLOW_PLAN_MODIFY && !_name_lock)
+{
+%>
+<textarea name="STCompNameEx_<%=pr_id%>" id="STCompNameEx_<%=pr_id%>" rows="5" style="width: 100%"><%=_project.name%></textarea>
+
+<%
+}
+else
+{
+Response.Write("<input type='hidden' name='STCompNameEx_" + pr_id + "' id='STCompNameEx_" + pr_id + "' value='" + HtmlEncode(_project.name) + "'/>");
+Response.Write(_project.name);
+}
+%>
+
+</td>
+
+
+<%
+	if (_extended_fields)
+	{
+%>
+		<td bgcolor="white" align="center">
+<%
+		if (_ALLOW_PLAN_MODIFY)
+		{
+			if (_project_type == 'auto')
+			{
+%>
+
+			<input type='text' class='inputEdit' id='STCompExThreshold_<%=pr_id%>' name='STCompExThreshold_<%=pr_id%>' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='eval_formula( <%=pr_id%> );' value='<%=_project.threshold%>' style='width: 90%'/>
+
+<%
+			}
+			else
+			{
+%>
+			<textarea style="width: 100%" rows="5" name="STCompExThreshold_<%=pr_id%>" id="STCompExThreshold_<%=pr_id%>"><%=_project.threshold%></textarea>
+<%
+			}
+		}
+		else
+		{
+			Response.Write("<input type='hidden' name='STCompExThreshold_" + pr_id + "' id='STCompExThreshold_" + pr_id + "' value='" + HtmlEncode(_project.threshold) + "'/>");
+			Response.Write(_project.threshold);
+		}
+%>
+		</td>
+<%
+	}
+%>
+
+
+<td bgcolor="white" align="center" style="display: <%=_plan_hide%>">
+<%
+if (_ALLOW_PLAN_MODIFY)
+{
+
+	if (_project_type == 'auto')
+	{
+%>
+
+<input type='text' class='inputEdit' id='STCompExDesc_<%=pr_id%>' name='STCompExDesc_<%=pr_id%>' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='eval_formula(<%=pr_id%> );' value='<%=_project.plan%>' style='width: 90%; <%=(_plan_lock ? "background-color: lightgrey" : "")%>' <%=(_plan_lock ? "readonly" : "")%>/>
+
+<%
+	}
+	else
+	{
+%>
+<textarea style="width: 100%; <%=(_plan_lock ? "background-color: lightgrey" : "")%>" rows="5" name="STCompExDesc_<%=pr_id%>" id="STCompExDesc_<%=pr_id%>" <%=(_plan_lock ? "readonly" : "")%>><%=_project.plan%></textarea>
+<%
+	}
+}
+else
+{
+	Response.Write("<input type='hidden' name='STCompExDesc_" + pr_id + "' id='STCompExDesc_" + pr_id + "' value='" + HtmlEncode(_project.plan) + "'/>");
+	Response.Write(_project.plan);
+}
+%>
+
+</td>
+
+
+
+
+<%
+	if (_extended_fields)
+	{
+%>
+		<td bgcolor="white" align="center">
+<%
+	if (_ALLOW_PLAN_MODIFY)
+	{
+		if (_project_type == 'auto')
+		{
+%>
+			<input type='text' class='inputEdit' id='STCompExChallenge_<%=pr_id%>' name='STCompExChallenge_<%=pr_id%>' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='eval_formula( <%=pr_id%> );' value='<%=_project.challenge%>' style='width: 90%'/>
+<%
+		}
+		else
+		{
+%>
+			<textarea cols="20" rows="5" name="STCompExChallenge_<%=pr_id%>" id="STCompExChallenge_<%=pr_id%>"><%=_project.challenge%></textarea>
+<%
+		}
+	}
+	else
+	{
+		Response.Write("<input type='hidden' name='STCompExChallenge_" + pr_id + "' id='STCompExChallenge_" + pr_id + "' value='" + HtmlEncode(_project.challenge) + "'/>");
+		Response.Write(_project.challenge);
+	}
+%>
+		</td>
+<%
+	}
+%>
+
+
+<%
+			 if (PLAN != 1)
+			 {
+%>
+
+<td bgcolor="white" align="center" style="display: <%=_fact_hide%>">
+<%
+if (_ALLOW_MARK_MODIFY)
+{
+	if (_project_type == 'auto')
+	{
+%>
+
+<input type='text' class='inputEdit' id='STCompExFact_<%=pr_id%>' name='STCompExFact_<%=pr_id%>' onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='eval_formula( <%=pr_id%> );' value='<%=_project.fact%>' style='width: 90%; <%=(_fact_lock ? "background-color: lightgrey" : "")%>' <%=(_fact_lock ? "readonly" : "")%>/>
+
+<%
+	}
+	else
+	{
+%>
+
+<textarea cols="20" rows="5" name="STCompExFact_<%=pr_id%>" style='<%=(_fact_lock ? "background-color: lightgrey" : "")%>' id="STCompExFact_<%=pr_id%>" <%=(_fact_lock ? "readonly" : "")%>><%=_project.fact%></textarea>
+
+<%
+	}
+}
+else
+{
+	Response.Write("<input type='hidden' name='STCompExFact_" + pr_id + "' id='STCompExFact_" + pr_id + "' value='" + HtmlEncode(_project.fact) + "'/>");
+	Response.Write(_project.fact);
+}
+%>
+
+</td>
+
+
+
+
+<%
+if (_extended_fields == false)
+{
+if (_manager_show_columns)
+{
+////// ------- show self column ----------
+	if (curPA.status == 'manager' || curPA.status == 'interview')
+	{
+		_mmmarrrk = '';
+							
+											
+		if (_self_pa != null)
+		{																		
+			try
+			{
+				_temp_project = _self_pa.projects.GetChildByKey(_project.project_id);
+			}
+			catch(_blya_)
+			{
+				_temp_project = null;
+			}
+				
+			if (_temp_project != null)
+			{				
+					_mmmarrrk = _temp_project.mark;
+			}
+	
+		}
+%>		
+<td width=20 bgcolor="white" align="center"><%=_mmmarrrk%></td>		
+<%		
+	}
+////// ------- end show self column ----------
+
+
+////// ------- end show manager column ----------
+	if (curPA.status == 'interview')
+	{
+		_mmmarrrk = '';
+	
+		if (_manager_pa != null)
+		{																		
+			try
+			{
+				_temp_project = _manager_pa.projects.GetChildByKey(_project.project_id);
+			}
+			catch(_blya_)
+			{
+				_temp_project = null;
+			}
+				
+			if (_temp_project != null)
+			{
+					_mmmarrrk = _temp_project.mark;
+			}
+	
+		}
+%>		
+<td width=20  bgcolor="white" align="center"><%=_mmmarrrk%></td>		
+<%		
+	}
+
+// --------- end of manager column ---------
+
+}
+
+}
+
+%>
+
+
+<td bgcolor="white" align="center" style="display: <%=_mark_hide%>">
+<%
+if (_ALLOW_MARK_MODIFY && _mark_lock == false)
+{
+	if (_project_type == 'auto')
+	{
+%>
+		<label name="STRatingEx_<%=pr_id%>" id="STRatingEx_<%=pr_id%>" value="<%=_project.mark%>"><%=_project.mark%></label>
+<%
+	}
+	else if (_project_type == 'handinput')
+	{
+%>
+		<input type='text' class='inputEdit' id='STRatingEx_<%=pr_id%>' name='STRatingEx_<%=pr_id%>' onKeyPress='return checkkey(this,window.event.keyCode);' value='<%=_project.mark%>' style='width: 50px'/>
+<%
+	}
+	else
+	{
+%>
+<select name="STRatingEx_<%=pr_id%>" id="STRatingEx_<%=pr_id%>">
+			<option value=''>&nbsp; &nbsp;</option>
+
+			<%
+				if(_show_n) Response.Write('<option value="N"> N &nbsp;</option>');
+				for (iopt = _min; iopt <= _max; iopt++)
+				{
+					Response.Write('<option value="'+iopt+'">&nbsp;'+iopt+'&nbsp;</option>');
+				}
+			%>
+			
+</select>
+		<script>document.all['STRatingEx_<%=pr_id%>'].value="<%=(curPA.flag_is_processed ? _project.mark : '')%>";</script>
+<%
+	}
+}
+else
+{
+	Response.Write("<input type='hidden' name='STRatingEx_" + pr_id + "' id='STRatingEx_" + pr_id + "' value='" + HtmlEncode(_project.mark) + "'/>");
+	
+if (curPA.flag_is_processed)
+	Response.Write(_project.mark);
+}
+%>
+
+
+</td>
+
+<%
+ 			}
+%>
+
+<td bgcolor="white" align="center" style="display: <%=_weight_hide%>">
+<%
+if (_ALLOW_PLAN_MODIFY)
+{
+%>
+	<input type=text class="inputEdit" name="STNeedWeightEx_<%=pr_id%>" id="STNeedWeightEx_<%=pr_id%>" value="<%=_project.weight%>"  onKeyPress='return checkkey(this,window.event.keyCode);' onBlur='checkval(this,0,100); eval_formula( <%=pr_id%> );' style='width: 30px; <%=(_weight_lock ? "background-color: lightgrey" : "")%>' <%=(_weight_lock ? "readonly" : "")%>/>
+<%
+}
+else
+{
+	Response.Write("<input type='hidden' name='STNeedWeightEx_" + pr_id + "' id='STNeedWeightEx_" + pr_id + "' value='" + HtmlEncode(_project.weight) + "'/>");
+	Response.Write(_project.weight);
+}
+%>
+
+</td>
+
+
+
+
+<%
+	if (_extended_fields)
+	{
+		if (_project.mark.HasValue)
+			_weighted_value = StrReal( (_project.mark * _project.weight / 100.0) , 2);
+		else
+			_weighted_value = "";
+%>
+		<td bgcolor="white" align="center">
+			<label name="STCompExWeightedMark_<%=pr_id%>" id="STCompExWeightedMark_<%=pr_id%>" value="<%=_weighted_value%>"><%=_weighted_value%></label>	
+		</td>	
+<%
+	}
+
+	
+}	
+	
+		//----------- WORKFLOW-FIELDS ---------------- //
+			for (_wf in workflow_fields)
+			{
+				_extra_identifier = "extra_" + _wf.field.name + "$" + pr_id;
+%>
+				<td id="td_<%=(_extra_identifier)%>" name="td_<%=(_extra_identifier)%>" bgcolor="white" align="center">
+					<input TYPE="hidden" id="i_name_<%=(_extra_identifier)%>" name="i_<%=(_extra_identifier)%>" value="<%=(_wf.field.name)%>"/>
+										
+					<%
+						_curwf = _project.workflow_fields.ObtainChildByKey(_wf.field.name);
+						
+						if (_wf.is_modify)
+						{
+							switch (_wf.field.type)
+							{
+								case "string":
+									_RESP_VAL = '<input TYPE="text" style="width: 300px" class="inputEdit" id="i_value_' + _extra_identifier + '" name="i_value_' + _extra_identifier + '" value="' + HtmlEncode(_curwf.value) + '"/>';
+									break;
+								case "integer":
+									_RESP_VAL = '<input TYPE="text" style="width: 60px" class="inputEdit" id="i_value_' + _extra_identifier + '" name="i_value_' + _extra_identifier + '" value="' + HtmlEncode(_curwf.value) + '" onKeyPress="return checkkeyInt();"/>';
+									break;
+								case "real":
+									_RESP_VAL = '<input TYPE="text" style="width: 60px" class="inputEdit" id="i_value_' + _extra_identifier + '" name="i_value_' + _extra_identifier + '" value="' + HtmlEncode(_curwf.value) + '" onKeyPress="return checkkey(this,window.event.keyCode);"/>';
+									break;
+								case "date":
+									_RESP_VAL = '<input type="text" style="width: 70px" id="i_value_' + _extra_identifier + '" name="i_value_' + _extra_identifier + '"  value="' + _curwf.value + '" class="inputEdit" readonly><a class="asLink" href="#"  tn="i_value_' + _extra_identifier + '" onclick="var h=0; var offP = this.offsetParent; while(offP.id != \'main_block\' && offP.tagName.toUpperCase()!=\'BODY\') {h+=offP.offsetTop; offP = offP.offsetParent;} ; showCalendar(this, document.getElementById(\'i_value_' + _extra_identifier + '\'), \'dd.mm.yyyy\',\'ru\',1, null, h + 40); return false;" id="cal' + _extra_identifier + '" name="cal' + _extra_identifier + '"><img src="scripts/calendar/calendar.gif" width="24" height="22" border="0" align="absmiddle" /></a>';
+									break;
+								case "bool":
+									_RESP_VAL = '<input type="checkbox" style="width: 15px" id="i_value_' + _extra_identifier + '" name="i_value_' + _extra_identifier + '" value="' + _curwf.value + '" onclick="if (this.checked) this.value=1; else this.value=0;" ' + (Trim(_curwf.value) == "1" ? "checked" : "") + '/>';
+									break;
+								case "combo":
+									_RESP_VAL = '<select id="i_value_' + _extra_identifier + '" name="i_value_' + _extra_identifier + '"><option value="">&nbsp;</option>';
+									for (_ent in _wf.field.entries)
+                                    {
+                                        _reload_val = HtmlEncode(_ent.value);
+                                        if (StrBegins(_reload_val , "@"))
+                                        {
+                                            _reload_val = String(_reload_val).slice(1);
+                                            _reload_val =_reload_val.split("[]");
+                                            
+                                            _drill_response = drill_select(Array(), null, _reload_val, 0);
+                                            for (_dr in _drill_response)
+                                            {
+                                                if (HtmlEncode(_dr) == _curwf.value)
+                                                    _RESP_VAL = _RESP_VAL + '<option value="' + HtmlEncode(_dr) + '" selected>' + HtmlEncode(_dr) + '</option>';
+                                                else
+                                                    _RESP_VAL = _RESP_VAL + '<option value="' + HtmlEncode(_dr) + '">' + HtmlEncode(_dr) + '</option>';
+                                            }
+                                        }
+                                        else
+                                        {
+                                        if (_reload_val == _curwf.value)
+                                            _RESP_VAL = _RESP_VAL + '<option value="' + _reload_val + '" selected>' + _reload_val + '</option>';
+                                        else
+                                            _RESP_VAL = _RESP_VAL + '<option value="' + _reload_val + '">' + _reload_val + '</option>';
+                                        }
+                                    }
+										_RESP_VAL = _RESP_VAL + '</select>';
+									break;
+								default:
+									_RESP_VAL = '<textarea id="i_value_' + _extra_identifier + '" name="i_value_' + _extra_identifier + '" class="commonTextarea" rows="5" style="width: 90%">' + _curwf.value + '</textarea>';
+									break;
+							}
+							Response.Write(_RESP_VAL);
+						}
+						else
+						{
+					%>
+							<input TYPE="hidden" id="i_value_<%=(_extra_identifier)%>" name="i_value_<%=(_extra_identifier)%>" value="<%=(_curwf.value)%>"/><%=(_curwf.value)%>
+					<%
+						}
+					%>
+				</td>
+<%
+			}
+			//----------- -------- ---------------- //
+
+			
+			
+			
+if (_ALLOW_PLAN_MODIFY && _del_proj)
+{
+	if (! _is_standard)
+	{
+%>
+<td bgcolor="white" align="center">	
+	<input type=button name="removeProjButton<%=pr_id%>" id="removeProjButton<%=pr_id%>" style="font: 10px; width: 50px" value="<%=tools_web.get_web_str("c_delete")%>" linecorr="<%=pr_id%>" onclick="delFreeproj(this);" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+</td>
+<%
+	}
+	else
+	{
+		Response.Write('<td bgcolor="white" align="center">&nbsp;</td>')
+	}
+}
+%>
+
+
+</tr>
+<%
+
+pr_id = pr_id + 1;
+}
+%>
+
+</TBODY>
+</table>
+</td></tr></table>
+
+
+<%
+if (IS_MODIFY)
+{
+%>
+
+
+<%
+	if (!_kpi_show && _proj_show && PLAN != 1)
+	{
+%>
+
+<input type="hidden" name="field_project_mbo" id="field_project_mbo" value="<%=curPA.overall%>"/>
+
+
+<%
+	}
+%>
+
+<table cellpadding="6" cellspacing="0" width="100%">
+<tr>
+<td>
+
+<%
+if (_ALLOW_PLAN_MODIFY)
+{
+
+	if (_add_proj)
+	{
+%>
+<input type=button name="addProjButton" value="<%=tools.get_web_str("vkb_add_project")%>" onclick="addFreeproj();" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+<%
+	}
+
+	if (_weight_hide != "none" && _flex_weights != "1")
+	{
+%>
+
+<input type=button name="pampamparam" value="<%=tools.get_web_str("vsb_make_even_weights")%>" onclick="projForceSum100(1);" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+<input type=button name="titstitstidits" value="<%=tools.get_web_str("vsb_to_lead_100")%>" onclick="projForceSum100(0);" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+<%
+	}
+	
+	if (_add_standard_proj)
+	{
+%>
+<input type=button name="addProjButton" value="<%=tools.get_web_str("vkb_add_std_project")%>" OnClick="addSTDproj()" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+<%
+	}	
+}
+
+%>
+
+</td>
+
+</tr>
+</table>
+
+
+<%
+}
+%>
+
+
+<input type=hidden name="maxspaceWeHave0" id="maxspaceWeHave0" value='<%=pr_id%>'/>
+
+<hr/>
+
+<%
+}  //ÏÎÊÀÇÛÂÀÒÜ ÁËÎÊ ÏÐÎÅÊÒÎÔÔ??? *ÊÀÍÝÖ*
+
+
+
+if( tools_ass.get_workflow_state_parameter(_curState, "show_kp_overalls") == "1" )
+{
+%>
+
+
+<table cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td class="mainMenu" bgcolor="silver">
+<table border="0" cellspacing="1" cellpadding="1" width="100%">
+<tr>
+	<td width="50%" align="center">
+		<%=tools.get_web_str("vcpb_weight")%>
+		<script language="javascript">
+			<!-- 
+				document.write((getWeight() + getProjectWeight()).toFixed(2));
+			-->
+		</script>
+	</td>
+	<td width="50%" align="center">
+		<%=tools.get_web_str("vkb_mbo")%>
+		<script language="javascript">
+			<!-- 
+				document.write( (getMBO() + getProjectRating()).toFixed(2) );
+			-->
+		</script>
+	</td>
+</tr>
+</table>
+</table>
+<%
+}
+	Server.Execute('view_supplementary_questions.html');
+%>
+	
+
+<%
+	Server.Execute('view_assessment_comment.html');
+%>
+
+
+<table width=100% cellspacing=5>
+<tr>
+<td align="center">
+<div name="secretArea" id="secretArea">
+<%
+if (IS_MODIFY)
+{
+%>
+<center><input type=submit Name="Submit" onClick='<%if (!_submit_script_hide) {%> return whatToSubmit();<%}%>' value="    <%=tools.get_web_str("c_save")%>    " class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"></center>
+<%
+}
+%>
+
+
+</div>
+</td>
+</tr>
+
+</table>
+
+
+	</form>
+<%
+		 WF_FORM_TOP = 'bottom';
+		Server.Execute('view_assessment_workflow_buttons.html');
+	} // _cancel end
+%>
+
+	</TD>
+</TR>
+</TABLE>

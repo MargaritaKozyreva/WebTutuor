@@ -1,0 +1,164 @@
+<%
+	Server.Execute( "include/user_init.html" );
+	
+	try
+	{
+		competenceDoc = OpenDoc( UrlFromDocID( Int(Request.QueryString.competence_id) ) ).TopElem;
+	}
+	catch(_wow_)
+	{
+		competenceDoc = null;
+	}
+%>
+<HTML> 
+<HEAD>
+<title><%=tools_web.get_web_str("ass_asessment_by_competence_select_course_title")%></title>
+
+<script language="javascript">
+<!--
+function processExit(flag)
+{
+	dialogArguments.courses = new Array();
+	dialogArguments.courses_id = new Array();
+	var x = 0;
+	var n_courses = 0;
+	var o;
+	if (flag)
+	{
+	
+	<%
+		try
+		{
+			_ubound = Int(Request.QueryString.ubound);
+		}
+		catch(_bez_granits_)
+		{
+			_ubound = undefined;
+		}
+		
+		if (_ubound != undefined)
+		{
+	%>
+			o = document.all[("course_" + x)];
+			while (o)
+			{	
+				if(o.checked)
+				{
+					n_courses++;
+					if (n_courses > <%=_ubound%>)
+					{
+						alert("<%=HtmlEncode(StrReplace(tools_web.get_web_str("ass_asessment_by_competence_ubound_warning"),"{PARAM1}",_ubound))%>");
+						return false;
+					}
+				}
+				x++;
+				o = document.all[("course_" + x)];
+			}
+		
+			x = 0;
+			n_courses = 0;
+	<%	
+		}
+	%>	
+		o = document.all[("course_" + x)];
+		while (o)
+		{	
+			if(o.checked)
+			{
+				dialogArguments.courses[n_courses] = o.value2;
+				dialogArguments.courses_id[n_courses] = o.value;			
+				n_courses++;
+			}
+			x++;
+			o = document.all[("course_" + x)];
+		}
+	}
+	dialogArguments.courses_n = n_courses;
+	dialogArguments.handle=flag;
+	window.parent.close();
+ 
+}
+
+-->
+</script>
+
+</HEAD>
+<BODY>
+
+<%
+	if (competenceDoc == null)
+	{
+		Response.Write('<center><b>'+tools_web.get_web_str("ass_asessment_by_competence_competence_not_exist")+'</b><br/><br/><input type="button" value="OK" onClick="dialogArguments.handle=false; window.parent.close();"></center>');
+		Cancel();
+	}
+%>
+
+
+<span id="assessmentsSpanArea" STYLE="width:480px; height:400;overflow:scroll; border:3px window-inset;background-color: white;">
+
+<%
+
+stupid_list = '';
+i = 0;
+for(_level in competenceDoc.levels)
+{
+	for(_education_method in _level.education_methods) 
+	{
+		if( !StrContains(stupid_list, _education_method.PrimaryKey))
+		{
+			nam = _education_method.PrimaryKey.OptForeignElem;
+			if (nam != undefined)
+			{
+				nam  = nam.name;
+		
+%>
+
+<input type="checkbox" id="course_<%=i%>" value="<%=_education_method.PrimaryKey%>" value2="<%=nam%>"/><%=nam%><br/>
+
+<%
+			stupid_list = stupid_list + _education_method.PrimaryKey + '^';
+			i=i+1;
+			}
+		}
+		
+	}
+}
+
+if (i==0) Response.Write('<font size="+1" color="brown"><br/><center><b>'+tools_web.get_web_str("ass_asessment_by_competence_no_corr_edu_program")+'</b></center></font>');
+ 
+%>
+
+</span>
+<table width="100%" border="1">
+<tr><td align="center">
+<%
+if (i>0)
+{
+%>
+<input type="button" name="ok" value="<%=tools_web.get_web_str("c_save")%>" onClick="processExit(true);" size=10>&nbsp;&nbsp;&nbsp
+<%
+}
+%>
+
+<input type="button" name="cancel" value="<%=tools_web.get_web_str("c_cancel")%>" onClick="processExit(false);">
+</td></tr>
+</table>
+<script language="javascript">
+<!--
+var a = 0;
+var o;
+o = document.all[("course_" + a)];
+while(o)
+{
+	if (dialogArguments.course_list.indexOf(o.id) > 0) o.checked=true;
+	a++;
+	o = document.all[("course_" + a)];
+}
+-->
+</script>
+
+
+</BODY>
+
+
+</HTML>

@@ -1,0 +1,7 @@
+<%
+Server.Execute( "include/sid_access_init.html" );
+
+DeleteDoc( UrlFromDocID( Int( Request.Query.subscription_id ) ) );
+
+Response.Redirect( "view_doc.html?mode=subscriptions&doc_code=subscriptions" );
+%>

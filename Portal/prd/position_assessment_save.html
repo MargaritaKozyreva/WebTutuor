@@ -1,0 +1,78 @@
+<%
+	Server.Execute( "include/user_init.html" );
+	
+	//alert("!! START SAVING !!!");
+
+	docPaResponse = OpenDoc( UrlFromDocID( Int(Request.Form.pa_id) ) )
+	
+	//Int( Request.Form.assessment_appraise_id );	
+	_count = 0;
+	
+	curAssessmentAppraise = OpenDoc( UrlFromDocID( docPaResponse.TopElem.assessment_appraise_id )).TopElem;
+	
+		
+	try
+	{
+		qcount=Int(Request.Form.stq_count);
+	}
+	catch(_hren_)
+	{
+	}
+	
+	
+	for (j = 0; j<qcount; j++)
+	{
+	
+		try
+		{		
+			q_mark = eval("Request.Form.stq_mark_" + j)
+			q_id = Int(eval("Request.Form.stq_id_" + j));
+			_questions = docPaResponse.TopElem.supplementary_questions.GetChildByKey(q_id);
+			_questions.supplementary_question_mark = q_mark;		
+		}
+		catch(_zhopa_)
+		{
+			continue;	
+		}
+	
+	}
+	
+	sum=0;
+	for (_supplementary_question in docPaResponse.TopElem.supplementary_questions)
+	{
+		_questionSource=OpenDoc( UrlFromDocID( _supplementary_question.PrimaryKey ) ).TopElem;
+		if (_supplementary_question.supplementary_question_mark.HasValue)
+		{
+			_scale = _questionSource.scales.GetOptChildByKey(_supplementary_question.supplementary_question_mark);
+			if(_scale)
+				sum=sum+_scale.percent; 
+		}
+	}
+	docPaResponse.TopElem.scale=sum;
+	
+	if (docPaResponse.TopElem.scale.HasValue)
+	{
+		min=100000;
+		for (_grade in OpenDoc( UrlFromDocID( docPaResponse.TopElem.assessment_appraise_id ) ).TopElem.grades)
+		{
+			try
+			{
+				delta=docPaResponse.TopElem.scale-_grade.level;
+				if ( delta>=0 && delta<min)
+				{
+					min=delta;
+					docPaResponse.TopElem.grade_id=_grade.grade_id;
+				}
+			}
+			catch(_X_)
+			{}
+		}
+	}
+	
+	
+	_href = 'view_doc.html?mode=position_assessment_appraise&doc_id='+Request.Form.doc_id+'&assessment_appraise_id='+Request.Form.assessment_appraise_id+'&pa_id='+Request.Form.pa_id+'&position_common_id='+Request.Form.position_common_id+'&is_done='+Request.Form.is_done+'&is_post=1';	
+		
+	docPaResponse.Save();
+		
+	Response.Redirect( _href );
+%>

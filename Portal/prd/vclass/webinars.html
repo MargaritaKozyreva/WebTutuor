@@ -1,0 +1,427 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=windows-1251" />
+    <meta http-equiv="Content-Language" content="en">
+    <meta name="Description" content="">
+    <meta name="Keywords" content="">
+    <meta name="Revisit-After" content="15 days">
+    <title><%=tools.get_web_str('c_webinars')%></title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+
+<script>
+function doSubmit(oButton) {
+
+
+	var txt2 = "";
+	var qty=0;
+	if(document.getElementById("first_name").value=="") {
+		txt2+="<%=tools.get_web_str('uf_name')%>";
+		qty++;
+	}
+	if(document.getElementById("last_name").value=="") {
+		if(qty>0) txt2+=", ";
+		txt2+="<%=tools.get_web_str('uf_last_name')%>";
+		qty++;
+	}
+	if(document.getElementById("user_company").value=="") {
+		if(qty>0) txt2+=", ";
+		qty++;
+		txt2+=<%=CodeLiteral( tools.get_web_str('c_company') )%>;
+	}
+	if(document.getElementById("position").value=="") {
+	
+		if(qty>0) txt2+=", ";
+		qty++;
+		txt2+="<%=tools.get_web_str('c_position')%>";
+	}
+var bMalformed = false;
+	if(document.getElementById("email").value=="") {
+		if(qty>0) txt2+=", ";
+		qty++;
+		txt2+="E-mail";
+	} else {
+		var sEMail = document.getElementById("email").value;
+		var a1 = sEMail.split("@");
+		var a2 = sEMail.split(".");
+		if(a1.length!=2 || a2.length<2) {
+			bMalformed = true;
+		} else {
+			if(a1[0].length<2) bMalformed = true;
+			if(a1[1].length<4) bMalformed = true;
+			if(a2[a2.length-1].length<2)  bMalformed = true;
+		}
+}
+
+
+	var txt = "";
+	if(qty==0 && !bMalformed) {
+		oButton.disabled = true;
+		document.getElementById("reg_form").submit();
+	} else {
+		if(qty>0) {
+			if(qty>1) {
+				txt+=String(<%=CodeLiteral( tools.get_web_str('vc_mess_no_fields') )%>).replace('{PARAM1}',txt2);
+			} else {
+				txt+=String(<%=CodeLiteral( tools.get_web_str('vc_mess_no_field') )%>).replace('{PARAM1}',txt2);
+			}
+			if(bMalformed) txt += "\n" + <%=CodeLiteral( tools.get_web_str('vc_mess_wrong_email') )%>
+			alert(txt);
+		} else {
+			alert(<%=CodeLiteral( tools.get_web_str('vc_mess_wrong_email') )%>);
+		}
+	}
+	return false;
+}
+</script>
+<%
+
+var api_url = "http://" + Request.UrlHost + "/vclass/vcservices.xml";
+var allright = false;
+var LOGIN = "admin";
+var PASSWORD = "admin";
+var data;
+try
+{
+	_post_param = UrlEncodeQuery
+	(
+	  'login', LOGIN,
+	  'password', PASSWORD
+	);
+	resp = HttpRequest( api_url + "?method=getrooms", 'post', _post_param);
+	data = OpenDocFromStr( resp.Body).TopElem;
+	
+	if(!data.ChildExists('error'))
+	{
+		allright = true;
+	}
+	else
+	{
+		Response.Write(data.error_string);
+	}
+}
+catch ( ee )
+{
+  Response.Write(ms_tools.get_const('wpd8ha5qod'));
+  alert(ms_tools.get_const('wpd8ha5qod'));
+}
+
+/*---------Functions------------*/
+function GetDateFromString(_datestr)
+{
+	_d = ParseDate(_datestr);
+	_t = String(_datestr).split(" ");
+	_t = String(_t[1]).split(":");
+	return DateNewTime(_d, Int(_t[0]), Int(_t[1]),0);
+}
+/*---------End of functions------------*/
+if(allright)
+{
+  var today = new Date();
+  var rooms = OpenDocFromStr( resp.Body).TopElem;
+
+  var mode = "default";
+  var company_id = "";
+  if(Request.QueryString.HasProperty("wmode"))
+    mode = Request.QueryString.wmode;
+  if(Request.QueryString.HasProperty("cid"))
+    company_id = Request.QueryString.cid;
+  switch(mode)
+  {
+      case "default":
+      {
+        var counter=0;
+		%>
+  <h3><%=tools.get_web_str('c_webinars')%></h3>
+  <table width="100%"  border="0" cellspacing="0" cellpadding="3">
+      <tr>
+          <td class="tableHeaderWithText"><%=tools_web.get_web_str('c_name')%></td>
+          <td class="tableHeaderWithText"><%=tools.get_web_str('c_begin')%></td>
+          <td class="tableHeaderWithText"><%=tools.get_web_str('c_duration')%></td>
+          <td class="tableHeaderWithText"><%=tools_web.get_web_str('c_status')%></td>
+          <td class="tableHeaderWithText">&nbsp</td>
+      </tr>
+      <tr>
+          <td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+          <td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+          <td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+          <td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+          <td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+          <td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+      </tr>
+  <%
+          for ( room in rooms )
+          {
+            _status="";
+            _show_register = false;
+			_duration = (DateToRawSeconds(GetDateFromString(room.end_time)) - DateToRawSeconds(GetDateFromString(room.start_time)))/60;
+            endDate = GetDateFromString(room.end_time);
+            if(today > endDate)
+              continue;
+            switch(room.status)
+            {
+                case "plan":
+                  curRegStart = GetDateFromString(room.registration_start);
+                  curRegEnd= GetDateFromString(room.registration_end);
+
+                  if(curRegEnd > today )
+                  {
+                        if(curRegStart<today)
+                        {
+                            _status=<%=CodeLiteral( tools.get_web_str('vc_reg_continue') )%>;
+                            _show_register = true;
+                        }
+                        else
+                        {
+                            _status=<%=CodeLiteral( tools.get_web_str('vc_reg_not_start') )%>;
+                            _show_register = false;
+                        }
+
+                  }
+                  else
+                    _status=<%=CodeLiteral( tools.get_web_str('vc_reg_finish') )%>;
+                  break;
+                case "active":
+                  _status=<%=CodeLiteral( tools.get_web_str('c_webinar_continue') )%>;
+                  break;
+                case "close":
+                  _status=<%=CodeLiteral( tools.get_web_str('c_webinar_finish') )%>;
+                  break;
+                case "cancel":
+                  _status=<%=CodeLiteral( tools.get_web_str('c_webinar_cancel') )%>;
+                  break;
+            }
+            _class = counter++ % 2 ? 'tableRowEven' : 'tableRowOdd';
+
+          %>
+
+              <tr valign="MIDDLE">
+               <td class="<%=_class%>"><a href="webinars.html?wmode=view&wid=<%=room.id%>&cid=<%=company_id%>"><%=room.name%></a></td>
+                  <td class="<%=_class%>" align="center"><%=room.start_time%></td>
+                  <td class="<%=_class%>" align="center"><%=_duration%> <%=StrNonTitleCase( tools.get_web_str('c_minutes') )%></td>
+                  <td class="<%=_class%>" align="center"><%=_status%></td>
+                  <td class="<%=_class%>" align="center">
+                  <%
+                    if(_show_register)
+                    {
+                  %>
+                    <input type="button" value="<%=tools.get_web_str('uf_submit')%>" class="inputButton" style="text-align:center; height: 19px;" onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';" onclick="document.location.href='webinars.html?wmode=view&wid=<%=room.id%>&cid=<%=company_id%>'"/></a>
+                  <%
+                    }
+                  %>
+                  </td>
+              </tr>
+          <%
+          }
+
+  %>
+      <tr>
+          <td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+          <td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+          <td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+          <td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+          <td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+      </tr>
+  </table>
+  <%
+          break;
+        }
+        case "view":
+        {
+          var _room_id = Request.QueryString.wid;
+
+          for ( room in rooms )
+          {
+			  _duration = (DateToRawSeconds(GetDateFromString(room.end_time)) - DateToRawSeconds(GetDateFromString(room.start_time)))/60;
+              if(room.id == _room_id)
+              {
+				endDate = GetDateFromString(room.end_time);
+				if(today > endDate)
+				  continue;
+                _status="";
+                _show_register = false;
+                switch(room.status)
+                {
+                    case "plan":
+					  curRegStart = GetDateFromString(room.registration_start);
+					  curRegEnd= GetDateFromString(room.registration_end);
+
+					  if(curRegEnd > today )
+					  {
+							if(curRegStart<today)
+							{
+								_status=tools.get_web_str('vc_reg_continue');
+								_show_register = true;
+							}
+							else
+							{
+								_status=tools.get_web_str('vc_reg_not_start');
+								_show_register = false;
+							}
+
+					  }
+                      break;
+                    case "active":
+                      _status=tools.get_web_str('c_webinar_continue');
+                      break;
+                    case "close":
+                      _status=tools.get_web_str('c_webinar_finish');
+                      break;
+                    case "cancel":
+                      _status=tools.get_web_str('c_webinar_cancel');
+                      break;
+                }
+
+                %>
+  <h3 align="center"><%=tools.get_web_str('c_webinar')%> "<%=room.name%>"</h3>
+          <table width="100%"  border="0" cellspacing="0" cellpadding="5">
+            <tr>
+              <td width="50%" align="right" valign="top"><b><%=tools_web.get_web_str('c_status')%></b></td>
+              <td width="50%" align="left" valign="top"><%=_status%></td>
+            </tr>
+            <tr>
+              <td width="50%" align="right" valign="top"><b><%=tools.get_web_str('c_start_time')%>:</b></td>
+              <td width="50%" align="left" valign="top"><%=room.start_time%></td>
+            </tr>
+            <tr>
+              <td width="50%" align="right" valign="top"><b><%=tools.get_web_str('c_finish_time')%>:</b></td>
+              <td width="50%" align="left" valign="top"><%=room.end_time%></td>
+            </tr>
+            <tr>
+              <td width="50%" align="right" valign="top"><b><%=tools.get_web_str('c_duration')%>:</b></td>
+              <td width="50%" align="left" valign="top"><%=_duration%> <%=StrNonTitleCase( tools.get_web_str('c_minutes') )%></td>
+            </tr>
+            <tr>
+              <td width="50%" align="right" valign="top"><b><%=tools.get_web_str('vc_start_reg')%>:</b></td>
+              <td width="50%" align="left" valign="top"><%=room.registration_start%></td>
+            </tr>
+            <tr>
+              <td width="50%" align="right" valign="top"><b><%=tools.get_web_str('vc_finish_reg')%>:</b></td>
+              <td width="50%" align="left" valign="top"><%=room.registration_end%></td>
+            </tr>
+            <tr>
+              <td width="50%" align="right" valign="top"><b><%=tools.get_web_str('vc_reg_persons')%>:</b></td>
+              <td width="50%" align="left" valign="top"><%=room.registered%></td>
+            </tr>
+            <tr>
+              <td width="50%" align="right" valign="top"><b><%=tools.get_web_str('vc_reg_max_persons')%>:</b></td>
+              <td width="50%" align="left" valign="top"><%=room.maxusers%></td>
+            </tr>
+            <tr>
+              <td width="50%" align="right" valign="top"><b><%=tools.get_web_str('c_lectors')%>:</b></td>
+              <td width="50%" align="left" valign="top" valign="top">
+                <%
+                  for(_lector in room.managers)
+                  {
+                    %>
+                      <%=_lector.name%><br/>
+                    <%
+                  }
+                %>
+              </td>
+            </tr>
+            <tr>
+              <td width="100%" colspan="2" align="center"><br/><b><%=tools_web.get_web_str('c_desc')%>:</b></td>
+            </tr>
+            <tr>
+              <td width="100%" colspan="2"><%=room.description != "" ? room.description : "<p>" + tools.get_web_str('vc_no_desc') + "</p>"%></td>
+            </tr>
+              <%
+                if(_show_register)
+                {
+              %>
+			
+            <tr>
+              <td width="100%" colspan="2" align="center">
+
+				<form id="reg_form" method="post" action="webinars.html?wmode=register">
+					<input type="hidden" name="room_id" id="room_id" value="<%=room.id%>" />
+					<input type="hidden" name="company_id" id="company_id" value="<%=company_id%>" />
+
+					<table align="center" border="0" cellspacing="0" cellpadding="5">                
+						<tr>                                                                             
+							<td class="form_fieldname_mandatory"><%=tools.get_web_str('uf_last_name')%>:</td>
+							<td class="form_field_mandatory"><input type="text" name="last_name" id="last_name" value="" class="textfield" /></td>
+						</tr>
+						<tr>
+							<td class="form_fieldname_mandatory"><%=tools.get_web_str('uf_name')%>:</td>
+							<td class="form_field_mandatory"><input type="text" name="first_name" id="first_name" value="" class="textfield" /></td>
+						</tr>
+						<tr>
+							<td class="form_fieldname"><%=tools.get_web_str('uf_s_name')%>:</td>
+							<td class="form_field"><input type="text" name="middle_name" id="middle_name" value="" class="textfield" /></td>
+						</tr>
+						<tr>
+							<td class="form_fieldname_mandatory"><%=tools.get_web_str('c_company')%>:</td>
+							<td class="form_field_mandatory"><input type="text" name="user_company" id="user_company" value="" class="textfield" /></td>
+						</tr>
+						<tr>
+							<td class="form_fieldname_mandatory"><%=tools.get_web_str('c_position')%>:</td>
+							<td class="form_field_mandatory"><input type="text" name="position" id="position" value="" class="textfield" /></td>
+						</tr>
+						<tr>
+							<td class="form_fieldname_mandatory">E-mail:</td>
+							<td class="form_field_mandatory"><input type="text" name="email" id="email" value="" class="textfield" /></td>
+						</tr>
+						<tr>
+							<td class="form_fieldname"><%=tools.get_web_str('vkpb_comment')%>:</td>
+							<td class="form_field"><textarea name="comment" id="comment" value="" class="textarea"></textarea></td>
+						</tr>
+						<tr>
+							<td colspan="2" align="center">
+								<input type="button" value="<%=tools.get_web_str('uf_submit')%>" class="inputButton" style="text-align:center; height: 19px;" onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';" onclick="doSubmit(this)"/></a>
+							</td>
+						</tr>
+					</table>
+
+
+				</form>
+              </td>
+            </tr>  
+              <%
+                }
+              %>
+          </table>
+
+                <%
+                break;
+              }
+          }
+          break;
+        }
+        case "register":
+        {
+          _post_param = UrlEncodeQuery
+          (
+              'last_name', Request.Form.last_name,
+              'first_name', Request.Form.first_name,
+              'middle_name', Request.Form.middle_name,
+              'user_company', Request.Form.user_company,
+              'position', Request.Form.position,
+              'email', Request.Form.email,
+              'comment', Request.Form.comment,
+              'room_id',Request.Form.room_id,
+              'company_id',Request.Form.company_id
+          );
+          resp = HttpRequest( api_url + "?method=register", 'post', _post_param);
+		  var result = OpenDocFromStr( resp.Body).TopElem;
+          if(result.error == "none")
+          {
+            Response.Write('<p aling="center">' + tools.get_web_str('vc_mess_enter_link') + '</p>');
+          }
+          else
+          {
+            Response.Write('<p aling="center">' + tools.get_web_str('vc_err_common') + '</p>');
+          }
+
+          break;
+        }
+    }
+}
+%>
+
+
+</body>
+</html>

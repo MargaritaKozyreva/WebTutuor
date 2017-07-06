@@ -1,0 +1,292 @@
+<%
+	try
+	{
+		curCLCourseID = Int( Request.QueryString.object_id );
+		curCLCourse = OpenDoc( UrlFromDocID( curCLCourseID ) ).TopElem;
+	}
+	catch(_fuck_)
+	{
+		curCLCourse = null;
+		curCLCourseID = null;
+	}
+
+	try
+	{
+		Session.RETURN_MSG;
+	}
+	catch(_x_)
+	{
+		Session.RETURN_MSG = "";
+	}
+
+	if (Session.RETURN_MSG != "")
+	{
+		Response.Write("<br/><center><font size='+1' align='center'><i><b>" + HtmlEncode(Session.RETURN_MSG) + "</b></i></font></center>");
+		Session.RETURN_MSG = "";
+	}
+%>
+<script src="scripts/calendar/calendar.js"></script>
+<script language="javascript">
+<!--
+//------------------------------------------------------------------------------------------
+function buttonMouseOver()
+{
+	window.event.srcElement.className='inputButtonOver';
+}
+function buttonMouseOut()
+{
+	window.event.srcElement.className='inputButton';
+}
+function checkkey(srcobj, keycode, flag_flat)
+{			
+	if ((keycode<48 || keycode>57)& keycode!=46) return false;
+	if (keycode==46) 
+	{
+		if( (!flag_flat) || srcobj.value.indexOf('.') >= 0) return false;
+	}
+	return true;
+}
+//------------------------------------------------------------------------------------------
+function toggle_section(_word)
+{
+	$("div[id^='cdiv_']").each(function(){ if (this.id == "cdiv_" + _word) $(this).show(); else $(this).hide(); });
+	$("td[id^='ctd_']").each(function(){if (this.id == "ctd_" + _word){$(this).addClass("tab_td_sel"); $(this).removeClass("tab_td"); $("input#hrefhiddeninput").val("<%=tools_web.get_query_string(true, "tab")%>tab=" + _word);} else {$(this).removeClass("tab_td_sel"); $(this).addClass("tab_td");} });
+	return false;
+}
+//------------------------------------------------------------------------------------------
+-->
+</script>
+
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+	<tr>
+		<td class="tab_td_empty"><img src="pics/1blank.gif" width="10" height="0"/></td>
+		<td class="tab_td" id="ctd_0" onclick="return toggle_section('0');"><img src="pics/1blank.gif" width="140" height="0"/><br/><a style="text-decoration:none" href="#" onclick="return toggle_section('0');"><%=tools_web.get_web_str("c_common_settings")%></a></td>
+		<td class="tab_td_empty" width="10px">&nbsp;</td>
+<%
+	if (curCLCourse != null)
+	{
+%>
+		<td class="tab_td" id="ctd_1" onclick="return toggle_section('1');"><img src="pics/1blank.gif" width="140" height="0"/><br/><a style="text-decoration:none" href="#" onclick=" return toggle_section('1');"><%=tools.get_web_str('vcceb_proj_course')%></a></td>
+		<td class="tab_td_empty" width="10px">&nbsp;</td>
+<%
+	}
+%>
+		<td class="tab_td_empty" width="100%">&nbsp;</td>
+	</tr>
+</table>
+<br/>
+<div width="100%" id="cdiv_0" style="display: none">
+<table width="100%"  border="0" cellspacing="0" cellpadding="3" name="top_report_table">
+<tr>
+<td>
+<script language="javascript">
+<!--
+function what2submit()
+{
+	if($('form#cl_course_submitter input#name').val() == "")
+	{
+		window.alert(<%=CodeLiteral( tools_web.get_web_str("vaaeb_mess_no_name") )%>);
+		return false;
+	}
+	
+	
+	return true;
+}
+function select_auditorys()
+{
+	var oPars=new Object(); oPars.check_access = true;
+	var strAttr='status:no;dialogWidth:780px;dialogHeight:550px;help:no;resizable:1';
+	
+	oPars.selected_object_ids = "";
+	$("form#cl_course_submitter tbody#auditorizer > tr").each(function(){oPars.selected_object_ids+=this.getAttribute("key_id") +";";});
+	oPars.can_be_empty = true;
+	xShowModalDialog('dlg_select.html?doc_id=<%=curDocID%>&catalog_name=collaborator&typein=1&multi_select=1&rand='+Math.random(), oPars, strAttr);
+	if (!oPars.handle ) return false;
+	
+	$('form#cl_course_submitter tbody#auditorizer').empty();
+	for (var _x = 0; _x < oPars.elemArray.length; _x++)
+	{
+		add_auditorys(oPars.elemArray[_x], oPars.elemNamesArray[_x]);
+	}
+	
+}
+
+function add_auditorys(_id, _name)
+{
+	var item_count = parseInt($("form#cl_course_submitter input#auditory_count").val());
+	var _class = item_count % 2 ? "tableRowEven" : "tableRowOdd";
+	
+	$("form#cl_course_submitter tbody#auditorizer").append('<tr key_id="'+_id+'"><td class="' +_class+ '"><input type="hidden" id="auditory_id_'+item_count+'" name="auditory_id_'+item_count+'" value="'+_id+'"/>' +_name+ '</td></tr>');
+	$("form#cl_course_submitter input#auditory_count").val(item_count+1);
+}
+
+-->
+</script>
+<form name="cl_course_submitter" id="cl_course_submitter" action="content_panel_process.html" method="post">
+<input type="hidden" name="cl_course_id" value="<%=(curCLCourseID != null ? curCLCourseID : 0)%>"/>
+<input type="hidden" name="mode" value="cl_course"/>
+<input type="hidden" name="doc_id" value="<%=curDocID%>"/>
+<input type="hidden" id="hrefhiddeninput" name="href" value="<%=Request.Url%>"/>
+
+<table width="100%" cellspacing="0" cellpadding="4" class="tableBorder" border="0">
+	<tr>
+		<td style="font-weight:bolder; font-size:larger;" width="100px"><%=tools.get_web_str('c_code')%>:</td>
+		<td style="font-weight:bolder; font-size:larger"><input type="text" id="code" name="code" value="<%=(curCLCourse != null ? HtmlEncode(curCLCourse.code) : "")%>" class="inputEdit" style="width:50px"/></td>
+	</tr>
+	<tr>
+		<td style="font-weight:bolder; font-size:larger;" width="100px"><%=tools_web.get_web_str('c_name')%>:</td>
+		<td style="font-weight:bolder; font-size:larger"><input type="text" id="name" name="name" value="<%=(curCLCourse != null ? HtmlEncode(curCLCourse.name) : "")%>" class="inputEdit" style="width:100%"/></td>
+	</tr>
+	<tr>
+		<td style="font-weight:bolder; font-size:larger;" width="100px"><%=tools_web.get_web_str('c_status')%>:</td>
+		<td style="font-weight:bolder; font-size:larger">
+			<select id="state_id" name="state_id">
+<%
+	for (commonStateIDElem in common.cl_states)
+	{
+%>
+			<option value="<%=commonStateIDElem.id%>" <%=(curCLCourse != null && curCLCourse.state_id == commonStateIDElem.id? "selected":"")%>><%=commonStateIDElem.name%></option>
+<%
+	}
+%>
+			</select>
+		</td>
+	</tr>
+	<tr>
+		<td style="font-weight:bolder; font-size:larger;" width="100px"><%=tools_web.get_web_str('c_start_date')%>:</td>
+		<td style="font-weight:bolder; font-size:larger">
+			<TABLE cellpadding="0" cellspacing="2">
+			<tr>
+				<td>
+					<input type="text" id="start_date" name="start_date" value="<%=(curCLCourse != null ? curCLCourse.start_date : "")%>" class="inputEdit" style="width:100px" readonly/>
+				</td>
+				<td>
+					<a href="#" onclick="var h=0; var offP = this.offsetParent; while(offP.id != 'main_block' && offP.tagName.toUpperCase()!='BODY') {h+=offP.offsetTop; offP = offP.offsetParent;} ; showCalendar(this, document.getElementById('start_date'), 'dd.mm.yyyy','ru',1,null, h+40); return false;"><img src="/scripts/calendar/calendar.gif" width="24" height="22" border="0"/></a>
+				</td>
+				<td valign="middle">
+					<input type="button" value="x" title="<%=tools.get_web_str("c_clear_field")%>" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="document.getElementById('start_date').value = '';" style="width: 25px"/>
+				</td>
+			</tr>
+			</TABLE>
+		</td>
+	</tr>
+	<tr>
+		<td style="font-weight:bolder; font-size:larger;" width="100px"><%=tools_web.get_web_str('c_finish_date')%>:</td>
+		<td style="font-weight:bolder; font-size:larger">
+			<TABLE cellpadding="0" cellspacing="2">
+			<tr>
+				<td>
+					<input type="text" id="end_date" name="end_date" value="<%=(curCLCourse != null ? curCLCourse.end_date : "")%>" class="inputEdit" style="width:100px" readonly/>
+				</td>
+				<td>
+					<a href="#" onclick="var h=0; var offP = this.offsetParent; while(offP.id != 'main_block' && offP.tagName.toUpperCase()!='BODY') {h+=offP.offsetTop; offP = offP.offsetParent;} ; showCalendar(this, document.getElementById('end_date'), 'dd.mm.yyyy','ru',1,null, h+40); return false;"><img src="/scripts/calendar/calendar.gif" width="24" height="22" border="0"/></a>
+				</td>
+				<td valign="middle">
+					<input type="button" value="x" title="<%=tools.get_web_str("c_clear_field")%>" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="document.getElementById('end_date').value = '';" style="width: 25px"/>
+				</td>
+			</tr>
+			</TABLE>
+		</td>
+	</tr>
+	<tr>
+		<td style="font-weight:bolder; font-size:larger;" width="100px"><%=tools.get_web_str('vfb_forum')%>:</td>
+		<td style="font-weight:bolder; font-size:larger">
+			<table width="100%" cellspacing="0" cellpadding="2" border="0">
+				<tr>
+<%
+			_catCurForum = (curCLCourse != null ? curCLCourse.forum_id.OptForeignElem : undefined);
+%>
+					<td><input type="text" id="forum_name" value="<%=(_catCurForum != undefined ? HtmlEncode(_catCurForum.name): "")%>" class="inputEdit" style="width:100%" readonly/>
+					<input type="hidden" name="forum_id" id="forum_id" value="<%=(_catCurForum != undefined ? _catCurForum.id : "")%>"/>
+					</td>
+					<td width="25px">
+					<input type="button" value="..." class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="
+						var pars=new Object(); pars.check_access = true;
+						var strAttr='status:no;dialogWidth:780px;dialogHeight:550px;help:no;resizable:1';
+						xShowModalDialog('dlg_select.html?doc_id=<%=curDocID%>&catalog_name=forum&multi_select=0&rand='+Math.random(), pars, strAttr);
+						if (!pars.handle ) return false;
+						$('form#cl_course_submitter input#forum_id').val(pars.element_id);
+						$('form#cl_course_submitter input#forum_name').val(pars.element_name);
+					" style="width: 25px"/>
+					</td>
+					<td width="25px">
+					<input type="button" value="x" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="
+						$('form#cl_course_submitter input#forum_id').val('');
+						$('form#cl_course_submitter input#forum_name').val('');
+					" style="width: 25px"/>
+					</td>
+				</tr>
+			</table>
+		</td>
+	</tr>
+</table>
+<!--
+<div width="100%" id="div_auditory">
+	<table width="100%"  border="0" cellspacing="0" cellpadding="3">
+		<tr>
+			<td class="tableHeaderWithText"><%=tools.get_web_str('vcceb_boss_proj')%></td>
+		</tr>
+		<tr>
+			<td class="tableHeaderNoText" colspan="1"><img src="pics/1blank.gif" width="1" height="1"/></td>
+		</tr>	
+		<tbody id="auditorizer"></tbody>
+		<tr>
+			<td class="tableFooter" colspan="1"><img src="pics/1blank.gif" width="1" height="1"/></td>
+		</tr>
+	</table>
+	<table width="100%" border="0" cellspacing="0" cellpadding="0" class="activator">
+	<TR>
+		<TD ALIGN="CENTER" class="activator">
+			<input type="hidden" name="auditory_count" id="auditory_count" value="0"/>
+			<input type="button" value=tools.get_web_str('c_choose') + '...' onClick="select_auditorys();" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+		</TD>
+	</TR>
+	</table>
+</div>
+<br/>
+-->
+<br/>
+<center><input type="submit" value="<%=tools.get_web_str("c_save")%>" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="return what2submit();"/>
+<%
+	if (curCLCourseID != null)
+	{
+%>
+<input type="button" value="<%=tools.get_web_str('cl_open_course')%>" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="if (parseInt($('div#div_repositorium input#repositoriums_count').val()) == 0) window.alert(<%=CodeLiteral( tools.get_web_str('vccb_mess_no_rep') )%>); else window.open('/courselab/wcl/default.html?cl_course_id=<%=curCLCourseID%>', 'newCLwindow', 'width='+screen.availWidth+',height='+screen.availHeight+',resizable=1,top=0,left=0');" name="btn_open_wcl_course" style="display:inline"/>
+<%
+	}
+%>
+<BR/>
+</center>
+</form>
+<br/>
+</td>
+</tr>
+</table>
+</div>
+<div width="100%" id="cdiv_1" style="display: none">
+<%
+	if (curCLCourseID != null)
+	{
+		bMASTER_MODE = true;
+		Server.Execute("view_cl_course_body.html");
+	}
+%>
+</div>
+<script language="javascript">
+<!--
+	//toggle_section("<%=Request.QueryString.GetOptProperty("tab",0)%>");
+	toggle_section("<%=(curCLCourse != null ? 1 : 0)%>");
+-->
+</script>
+<%
+	_href = tools_web.get_url_protocol( Request.Url ) + Request.UrlHost + UrlPath( Request.Url ) + "?mode=content_panel&doc_id="+curDocID+"&tab=cl_course";
+	
+%>
+<table style="width:100%">
+<tr>
+	<td width="50%" align="left">
+		<a href="<%=_href%>">&laquo;&laquo;&nbsp;<%=tools_web.get_web_str("vaaeb_list_back")%></a>
+	</td>
+</tr>
+</table>

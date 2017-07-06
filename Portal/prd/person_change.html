@@ -1,0 +1,43 @@
+<%Server.Execute( "include/sid_access_init.html" )%>
+
+<%
+	if ( curUser.access.access_role != 'admin' && curUser.access.access_role != 'organizer' )
+	{
+		Response.Write( tools.get_web_str( 'c_access_error' ) );
+	}
+	else
+	{
+		userDoc = OpenDoc( UrlFromDocID( Int( Request.Form.person_id ) ) );
+
+
+		fieldArray = Array( 'lastname', 'firstname', 'middlename', 'phone', 'address', 'email', 'sex' );
+		for ( _field in fieldArray )
+			if ( Request.Form.HasProperty( _field ) )
+				userDoc.TopElem.Child( _field ).Value = Request.Form.GetProperty( _field );
+
+		
+		try
+		{
+			if ( Request.Form.birth_date == '' )
+				userDoc.TopElem.birth_date = null;
+			else
+				userDoc.TopElem.birth_date = Date( Request.Form.birth_date );
+		}
+		catch ( ee )
+		{
+		}	
+		
+		try
+		{
+			tools_web.web_custom_elems_filling( 'collaborator', null, userDoc.TopElem, Request.Form );
+		}
+		catch ( e )
+		{
+			alert( e );
+		}	
+		
+		userDoc.Save();
+		
+		Response.Redirect( 'view_doc.html?mode=person&object_id=' + Request.Form.person_id + '&doc_id=' + Request.Form.doc_id );
+	}
+%>

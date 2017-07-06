@@ -1,0 +1,182 @@
+<%
+	_url = 'bp/real/content.xml';
+	stroldDoc = LoadUrlData( _url );
+  strDoc = '';
+  for ( _node in curObject.nodes )
+  {
+    strDoc = strDoc + '
+        <node id="'+_node.id+'">
+      <label>'+_node.name+'</label>
+      <role id="'+_node.role_id+'"/>';
+      if ( _node.changed )
+        strDoc = strDoc + '<new/>';  
+      strDoc = strDoc + '<type>'+_node.type+'</type>
+        <description><font color="#000000" size="12">'+_node.desc;
+      for ( _link in ArraySelectDistinct( _node.links, 'catalog' ) )
+      {
+        try
+        {
+           _object = OpenDoc( UrlFromDocID( Int( _link.value ) ) ).TopElem;
+           out_str = '<A class="pathLink" HREF="' + curLngCommon.exchange_object_types.GetChildByKey( _link.catalog ).web_template + '&object_id=' + _link.value + '">';
+           strDoc = strDoc  + '<br/>' + out_str + _link.catalog.ForeignElem.title + ': ' + _object.name  + '</A>';
+        }
+        catch (ee)
+        {
+        }         
+     }
+      strDoc = strDoc + '</font></description>
+    </node>
+    ';
+  }
+   strDoc = '
+    <?xml version="1.0" encoding="utf-8"?>
+      <content tagVersion="0.6" contentVersion="0.1">
+      ' + strDoc;
+      for ( _relation in curObject.relations )
+      {
+        if ( _relation.name.HasValue )
+        {
+          strDoc = strDoc + '
+    <relation from="'+_relation.nodeout_id +'" to="'+ _relation.nodein_id +'">
+    <label>'+_relation.name+'</label>
+    <description>'+_relation.desc+'</description>
+    </relation>
+    ';
+        }
+      }
+
+    strDoc = strDoc  + '
+    </content>
+      ';
+      PutUrlData( _url, EncodeCharset( strDoc, 'utf-8' ) );
+
+
+      _url = 'bp/real/structure.xml';
+      stroldDoc = LoadUrlData( _url );
+      strDoc = '';
+
+      function DFSVisit ( _node )
+      {
+        _node.visited = 0.5;
+        strDoc = strDoc + '
+        <node id="' + _node.id + '" ';
+          if ( _node.entry )
+          {
+            strDoc =  strDoc + 'entry="' + _node.entry +'"';
+          }
+          strDoc = strDoc + '>
+          ';
+          for ( _child_node in ( ArraySelect( curObject.nodes, 'parent_node_id ==' + _node.id ) ) )
+          {
+          if ( _child_node.visited == 0 )
+          {
+          DFSVisit ( _child_node );
+          }
+          }
+          _node.visited = 1;
+          _nodeout = curObject.structure.nodeouts.GetOptChildByKey( _node.id );
+          if ( _nodeout != undefined )
+          {
+          for ( _nodein in _nodeout.nodeins )
+          {
+          strDoc = strDoc + '   <relation to="' + _nodein.id + '"/>
+            ';
+            }
+          }
+          strDoc = strDoc + '
+      </node>
+      ';
+      }
+
+      for (  _node in curObject.nodes )
+      {
+        _node.visited = 0;
+      }
+      for ( _node in ( ArraySelect( curObject.nodes, 'parent_node_id == 0' ) ) )
+      {
+        DFSVisit ( _node );
+      }
+
+     strDoc = '
+      <?xml version="1.0" encoding="windows-1251"?>
+        <structure tagVersion="0.9" contentVersion="0.2">
+        ' + strDoc +
+        '
+      </structure>
+      ';
+      PutUrlData( _url, EncodeCharset( strDoc, 'utf-8' ) );
+
+      _url = 'bp/real/roles.xml';
+      stroldDoc = LoadUrlData( _url );
+      strDoc = '';
+      strDoc = '';
+        for ( _node in ArraySelectDistinct( curObject.nodes, 'role_id' ))
+        {
+          if ( _node.role_id.HasValue )
+          {
+            strDoc = strDoc + '<role id="'+_node.role_id+'">
+                <label>'+(_node.role_id.OptForeignElem!=undefined?_node.role_id.OptForeignElem.name:'')+'</label>
+                <description>'+(_node.role_id.OptForeignElem!=undefined?_node.role_id.OptForeignElem.desc:'')+'</description>
+              </role>
+              ';
+          }
+        }
+
+        strDoc = '
+        <?xml version="1.0" encoding="windows-1251"?>
+          <roles tagVersion="0.5" contentVersion="0.0">
+          ' + strDoc +
+          '
+        </roles>
+        ';
+  
+        PutUrlData( _url, EncodeCharset( strDoc, 'utf-8' ) );
+%>
+
+<script language="javascript">AC_FL_RunContent = 0;</script>
+<script src="bp/AC_RunActiveContent.js" language="javascript"></script>
+<script language="javascript"> DetectFlashVer = 0; </script>
+<script language="JavaScript" type="text/javascript">
+<!--
+// -----------------------------------------------------------------------------
+// Globals
+// Major version of Flash required
+var requiredMajorVersion = 9;
+// Minor version of Flash required
+var requiredMinorVersion = 0;
+// Revision of Flash required
+var requiredRevision = 115;
+// -----------------------------------------------------------------------------
+// -->
+
+function schemeHelp(){
+	var url="help.swf";
+	var w=window.open(url, "schemeHelpWindow", 'width=800, height=600, toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=no, copyhistory=no, resizable=no');
+	if(!w){
+		return url;
+	}
+}
+function schemeQuit(){
+	window.close();
+}
+
+</script>
+	
+<p class="tableHeaderTextInner"><b><%=tools.get_web_str('c_bp')%>: </b><%=curObject.name%></p>
+<br/>
+
+
+<table width="100%" height="100%" border="0" cellspacing="0" cellpadding="0">
+  <tr>
+ <td height="100%"><script language="javascript">
+	if (AC_FL_RunContent == 0) {
+		alert("This page requires AC_RunActiveContent.js.");
+	} else {
+		AC_FL_RunContent( 'codebase','http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=9,0,0,0','width','1100','height','800','id','UniversalScheme','align','middle','src','UniversalScheme','quality','high','scale','noscale','salign','lt','bgcolor','#ffffff','name','UniversalScheme','allowscriptaccess','sameDomain','allowfullscreen','false','pluginspage','http://www.macromedia.com/go/getflashplayer','movie','UniversalScheme', 'flashvars', 'roleId=2'); //end AC code
+	}
+</script>
+
+</td>
+</tr>
+</table>
+

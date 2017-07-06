@@ -1,0 +1,155 @@
+<%
+	try
+	{
+		_supplementary_hide = (ArrayOptFind(_hide_fields, "This == 'supplementary_questions'") != undefined);
+	}
+	catch(_xxx_)
+	{
+		_supplementary_hide = false;
+	}
+	try
+	{
+	_supplementary_header_hide = (ArrayOptFind(_hide_fields, "This == 'supplementary_questions_header'") != undefined);
+	}
+	catch(_xxx_)
+	{
+		_supplementary_header_hide = false;
+	}
+	try
+	{
+		SUPPLEMENTARY_INDEXER = Int(SUPPLEMENTARY_INDEXER);
+	}
+	catch(_xxx_)
+	{
+		SUPPLEMENTARY_INDEXER = 0;
+	}
+	if (_supplementary_hide == false && ArrayCount(curPA.supplementary_questions) > 0)
+	{
+		if (!_supplementary_header_hide)
+		{
+%>	
+	<center><b><%=tools.get_web_str("ass_supplementary_questions")%></b></center><br>
+<%
+		}
+%>
+					<table width="100%" cellpadding="1" cellspacing="1" class="ass_table" id="supplementary_table">
+					<tr>
+					<td class="tableHeaderColumn ass_tableHeaderColumn"><%=tools.get_web_str("c_question")%></td>
+					<td class="tableHeaderColumn ass_tableHeaderColumn" width="50%"><%=tools.get_web_str("c_answer")%></td>
+					</tr>
+					
+<%
+		
+		for (_question in curPA.supplementary_questions)
+		{
+		
+			try
+			{
+				questionDoc = OpenDoc(UrlFromDocID(_question.supplementary_question_id)).TopElem;
+			}
+			catch(_damn_)
+			{
+				questionDoc = null;
+				Response.Write(tools.get_web_str("vsq_error_no_question"));
+			}
+			
+			if ( questionDoc!=null )
+			{ 
+%>				
+			
+					<tr bgcolor="white">
+					<td class="ass_tableFirstColumn">
+						<input type="hidden" name="<%=("stq_id_"+ SUPPLEMENTARY_INDEXER)%>" value="<%=_question.supplementary_question_id%>"/>
+						<input type="hidden" name="<%=("stq_requered_"+ SUPPLEMENTARY_INDEXER)%>" value="<%=(questionDoc.is_requered ? 1 : 0)%>">
+						<%=tools_web.get_cur_lng_name(_question.supplementary_question_name, curLng.short_id)%>
+					</td>
+					<td class="ass_tableCell">
+		<%
+		
+			if (_question.supplementary_question_type == '1')
+			{
+				if (IS_MODIFY)
+				{
+		%>		
+			
+			<textarea name="<%=("stq_mark_"+ SUPPLEMENTARY_INDEXER)%>" style="width: 100%" rows="2" class="commonTextarea"><%=_question.supplementary_question_mark%></textarea>
+			
+		<%	
+				}
+				else
+				{
+					Response.Write(_question.supplementary_question_mark);
+				}
+			}		
+			else if (_question.supplementary_question_type == "2")
+			{
+			
+			if(questionDoc != null)
+			{			
+			
+			if (IS_MODIFY)
+			{
+		%>	
+			
+			<select name="<%=("stq_mark_"+ SUPPLEMENTARY_INDEXER)%>">
+				<option value=""> </option>
+		<%	
+			}
+			for (_scale in questionDoc.scales )
+			{
+					if (_question.supplementary_question_mark == _scale.PrimaryKey)
+					{
+						_selected_flag = " selected";
+						if (!IS_MODIFY)
+						{
+							Response.Write(tools_web.get_cur_lng_name(_scale.name, curLng.short_id));
+							break;
+						}
+					}
+					else
+					_selected_flag = '';
+					if (IS_MODIFY)
+					{
+						Response.Write('<option'+_selected_flag+' value="'+_scale.id+'">'+tools_web.get_cur_lng_name(_scale.name, curLng.short_id)+'</option>\n');
+					}
+			}
+					
+		if (IS_MODIFY)			
+		{			
+		%>
+			</select>
+		<%	
+		}
+			}
+			}
+			else if (_question.supplementary_question_type == "3")
+			{
+				
+				for (_scale in questionDoc.scales )
+				{
+					bSelected = StrContains(_question.supplementary_question_mark, _scale.PrimaryKey);
+					if (IS_MODIFY)
+					{
+%>
+						<input type="checkbox" parent_id="stq_mark_<%=SUPPLEMENTARY_INDEXER%>" name="stq_mark_<%=SUPPLEMENTARY_INDEXER%>_<%=_scale.id%>" value="1" <%=(bSelected ? "checked":"")%>/><%=tools_web.get_cur_lng_name(_scale.name, curLng.short_id)%><br/>
+<%
+					}
+					else if (bSelected)
+					{
+						Response.Write("<li>"+tools_web.get_cur_lng_name(_scale.name, curLng.short_id) + "</li>");
+					}
+				}
+			}
+		%>					
+					</td>
+					</tr>
+<%			
+			SUPPLEMENTARY_INDEXER++;
+			}
+		}
+%>				
+				</table>
+<%				
+	}			
+%>			
+	<input type="hidden" name="stq_count" value="<%=SUPPLEMENTARY_INDEXER%>"/>

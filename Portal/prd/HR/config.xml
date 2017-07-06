@@ -1,0 +1,91 @@
+<config>
+	<services>
+		<rootId></rootId>
+		<depth>3</depth>
+		<serverUrl></serverUrl>
+		<structureUrl>/wtapi2.html?command=get_structure&root_id={root_id}&selection=1&depth={depth}&has_width=1</structureUrl>
+		<filterListUrl>/wtapi2.html?command=list_functions</filterListUrl>
+		<filterUrl>/wtapi2.html?command=get_aggregate_data&root_id={root_id}&selection=1&depth={depth}</filterUrl>
+		<factsListUrl>/wtapi2.html?command=list_facts</factsListUrl>
+		<factUrl>/wtapi2.html?command=get_fact&node_id={node_id}&fact_id={fact_id}</factUrl>
+		<periodsListUrl>/wtapi2.html?command=list_periods</periodsListUrl>
+		<periodInfoUrl>/wtapi2.html?command=period_info&period_id={period_id}</periodInfoUrl>
+<!--		<facts>data/info.xml</facts> -->
+	</services>
+	<defaults>
+<!--	<diagram>radial</diagram> -->
+		<diagram>tree</diagram>
+		<diagramSize>actualSize</diagramSize>
+<!--	<diagramSize>fitToScreen</diagramSize> -->
+	</defaults>
+	<radial>
+		<color>0xFFCC99</color>
+		<color>0xFF0000</color>
+		<color>0xFF0033</color>
+		<color>0xFF3333</color>
+		<color>0xFF6633</color>
+		<color>0xFF0066</color>
+		<color>0xFF3366</color>
+		<color>0xFF6666</color>
+		<color>0xFF0099</color>
+		<color>0xFF3399</color>
+		<color>0xFF6699</color>
+		<color>0xFF9999</color>
+		<color>0xFF00CC</color>
+		<color>0xFF33CC</color>
+		<color>0xFF99EE</color>
+		<color>0xFF66EE</color>
+		<color>0xFF99EE</color>
+		<color>0xAAAAFF</color>
+		<color>0xFF66CC</color>
+		<color>0xFF99CC</color>
+		<color>0xFFAAEE</color>
+		<color>0xFFBBEE</color>
+		<color>0xFFCCEE</color>
+		<color>0xFFDDEE</color>
+		<color>0xCCFF88</color>
+		<color>0xAAFF00</color>
+		<color>0xCCFF66</color>
+		<color>0x00CCAA</color>
+		<color>0xCCFF99</color>
+		<color>0x33CCCC</color>
+		<color>0xCCDD00</color>
+		<color>0x33FF00</color>
+		<color>0xCCDD99</color>
+		<color>0x99FF00</color>
+		<color>0xCCFF00</color>
+		<color>0xCCFF33</color>
+		<color>0xCCAA33</color>
+		<color>0xCCAA55</color>
+		<color>0xCCFF66</color>
+		<color>0xCCFF99</color>
+		<color>0xCCDD00</color>
+		<color>0xCCDD33</color>
+		<color>0xCCDD66</color>
+		<color>0xCCDD99</color>
+		<color>0xCC88CC</color>
+		<color>0x66AAFF</color>
+		<color>0xCCAAFF</color>
+		<color>0xCC55AA</color>
+		<color>0xCC66FF</color>
+		<color>0x3366CC</color>
+		<color>0x66CCDD</color>
+		<color>0x3300FF</color>
+		<color>0xCC66DD</color>
+		<color>0xCC99FF</color>
+	</radial>
+	<tree>
+		<limit>3</limit>
+	</tree>
+	<shortInfo>
+		<icons>
+			<icon fact_id="0">images/active_learning.png</icon>
+			<icon fact_id="1">images/learning.png</icon>
+			<icon fact_id="2">images/active_test_learning.png</icon>
+			<icon fact_id="3">images/test_learning.png</icon>
+			<icon fact_id="4">images/desc.png</icon>
+			<icon fact_id="5">images/event.png</icon>
+
+		</icons>
+	</shortInfo>
+</config>

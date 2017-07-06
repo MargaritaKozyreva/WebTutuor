@@ -1,0 +1,473 @@
+<%
+	RESULT_ARRAY = Array();
+	RESULT_STRING = "";
+	
+	_text_area = String(curDoc.text_area);
+	_reg_eval_code = _text_area.slice( _text_area.indexOf("#REG_EVAL_CODE") + StrLen("#REG_EVAL_CODE") ,  _text_area.indexOf("#END REG_EVAL_CODE") );
+	
+	_post_eval_code = _text_area.slice( _text_area.indexOf("#POST_EVAL_CODE") + StrLen("#POST_EVAL_CODE") ,  _text_area.indexOf("#END POST_EVAL_CODE") );
+	
+	_person_result_code = _text_area.slice( _text_area.indexOf("#PERSON_EVAL_CODE") + StrLen("#PERSON_EVAL_CODE") ,  _text_area.indexOf("#END PERSON_EVAL_CODE") ); 
+	
+	
+	if (Request.QueryString.HasProperty("person_id") && Request.QueryString.person_id != "" && ArrayOptFind(_elems_full, "PrimaryKey + '' == Request.QueryString.person_id" ) != undefined )
+	{
+		if (_curAssessmentAppraise.flag_use_plan)
+		{
+			_query = "for $ap in assessment_plans where $ap/assessment_appraise_id = " + _curAssessmentAppraiseID + " and $ap/person_id = " + Request.QueryString.person_id + " return $ap";
+		
+			_assessment_plans = XQuery(_query);
+		
+			if (ArrayCount(_assessment_plans) > 0)
+			{
+		
+				OUTTER_STRING = "";
+				
+				try
+				{
+					workFlowDoc = OpenDoc(UrlFromDocID(_curAssessmentAppraise.workflow_id)).TopElem;
+				}
+				catch(_heh_)
+				{
+					workFlowDoc = undefined;
+				}
+				
+				_assessmentPlanDoc = OpenDoc(UrlFromDocID( ArrayFirstElem(_assessment_plans).id )).TopElem;
+				
+				if (workFlowDoc != undefined && _assessmentPlanDoc.workflow_state.HasValue)
+				{
+					_cur_state = workFlowDoc.states.GetOptChildByKey(_assessmentPlanDoc.workflow_state);
+					
+					OUTTER_STRING = OUTTER_STRING + "<br/><font size='+1'><b>"+tools_web.get_web_str("c_phase")+":&nbsp;</b>" + (_cur_state != undefined ? _cur_state.name : tools_web.get_web_str("ass_report_msg_not_defined")) + "</font><br/>";
+					
+				}
+				
+			
+				TO = undefined;
+				TC = undefined;
+				_query = "for $pa in pas where $pa/assessment_appraise_id = " + _curAssessmentAppraiseID + " and $pa/person_id = " + Request.QueryString.person_id + " and $pa/is_final = true() order by $pa/status return $pa";
+												
+				_pa_arr = XQuery(_query);
+				
+				for(_pa in _pa_arr)
+				{
+					_paDoc = OpenDoc(UrlFromDocID(_pa.PrimaryKey)).TopElem;
+					
+					switch (_paDoc.assessment_appraise_type)
+					{
+						case "competence_appraisal":
+							_mark_arr = Array();
+	
+	
+						OUTTER_STRING = OUTTER_STRING + '<br/><h3>'+tools_web.get_web_str("c_competence_appraisal")+'. ' + (_paDoc.status.HasValue ? _paDoc.status.ForeignElem.name : "") + '</h3><table width="100%" border="0" cellspacing="0" cellpadding="3" border="1">';
+	
+							_table_heart="";
+							_counter = 0;
+							_n_counter = 0;
+							for(_competence in _paDoc.competences)
+							{
+								_competenceDoc = OpenDoc(UrlFromDocID(_competence.PrimaryKey)).TopElem;
+								_class = _counter++ % 2 ? 'tableRowEven' : 'tableRowOdd';
+			
+								_table_heart = _table_heart + '<tr valign="MIDDLE">';
+								_table_heart = _table_heart + '<td class="' + _class + '">' + _competenceDoc.name + '</td>';
+								
+								if(_competence.mark == "N")
+								{
+									_bubblik = "&bull;";
+									_n_counter++;
+								}
+								else
+									_bubblik = "&nbsp;";
+								
+								_table_heart = _table_heart + '<td class="' + _class + '" width="50px" align="center"><font style="font-size: small">' + _bubblik + '</font></td>';
+			
+								for (_scale in _competenceDoc.scales)
+								{
+									if (ArrayCount(_mark_arr) <= _scale.ChildIndex)
+										_mark_arr[_scale.ChildIndex] = 0;
+									if (_scale.PrimaryKey == _competence.mark)
+									{
+										_mark_arr[_scale.ChildIndex] = _mark_arr[_scale.ChildIndex] + 1;							
+										_bubblik = "&bull;";
+									}
+									else
+									{
+										_bubblik = "&nbsp;";
+									}
+									_table_heart = _table_heart + '<td class="' + _class + '" width="50px" align="center"><font style="font-size: small">' + _bubblik + '</font></td>';
+								}
+								_table_heart = _table_heart + '</tr>';
+							}
+							
+							OUTTER_STRING = OUTTER_STRING + '<tr><td class="tableHeaderWithText">'+tools_web.get_web_str("ass_competence")+'</td><td class="tableHeaderWithText" width="50px">N</td>';
+							for(_n = 1; _n <= ArrayCount(_mark_arr); _n++)
+								OUTTER_STRING = OUTTER_STRING + '<td class="tableHeaderWithText" width="50px" align="center">' + _n + '</td>';
+							OUTTER_STRING = OUTTER_STRING + '</tr>';
+							
+							OUTTER_STRING = OUTTER_STRING + _table_heart;
+							
+							OUTTER_STRING = OUTTER_STRING + '<tr><td class="tableHeaderWithText">&nbsp;</td><td class="tableHeaderWithText">' + _n_counter + '</td>';
+							for(_n = 0; _n < ArrayCount(_mark_arr); _n++)
+								OUTTER_STRING = OUTTER_STRING + '<td class="tableHeaderWithText">' + _mark_arr[_n] + '</td>';
+							OUTTER_STRING = OUTTER_STRING + '</tr>';
+							
+							OUTTER_STRING = OUTTER_STRING + '<tr><td class="tableHeaderWithText" colspan="' + (ArrayCount(_mark_arr) + 2) + '" align="right" width="100%">'+tools_web.get_web_str("ass_final_estimation")+': ' + _paDoc.overall + '&nbsp;</td></tr>';
+							
+							TC = _paDoc.overall;
+							
+							OUTTER_STRING = OUTTER_STRING + '</table><hr/>';
+						
+							
+						break;
+						
+						case "staffrating":
+							_sum_weight = 0;
+							_sum_mark=0;
+							
+							
+							OUTTER_STRING = OUTTER_STRING + '<br/><h3>'+tools_web.get_web_str("c_staffrating")+'. ' + (_paDoc.status.HasValue ? _paDoc.status.ForeignElem.name : "") + '</h3>'
+							
+							OUTTER_STRING = OUTTER_STRING + '<table width="100%"  border="0" cellspacing="0" cellpadding="3" border="1">';
+							
+							OUTTER_STRING = OUTTER_STRING + '<tr><td class="tableHeaderWithText" width="50px">#</td><td class="tableHeaderWithText">' +tools_web.get_web_str("vsb_purpose")+ '</td><td class="tableHeaderWithText" width="50px">' +tools_web.get_web_str("vcpb_weight")+ '</td><td class="tableHeaderWithText" width="20%">' +tools_web.get_web_str("vcpb_plan")+ '</td><td class="tableHeaderWithText" width="50px">' +tools_web.get_web_str("c_date")+ '</td><td class="tableHeaderWithText" width="20%">' +tools_web.get_web_str("vkb_fact")+ '</td><td class="tableHeaderWithText" width="50px">' +tools_web.get_web_str("ass_mark")+ '</td></tr>';
+	
+							_counter = 0;
+							_weight_sum = 0.0;
+							_mark_sum = 0.0;
+							for (_objective in _paDoc.objectives)
+							{
+								_class = _counter++ % 2 ? 'tableRowEven' : 'tableRowOdd';
+								
+								if(_objective.weight.HasValue)
+									_weight_sum = _weight_sum + _objective.weight;
+									_rowspan = ArrayCount(_objective.subobjectives);
+									
+									
+								OUTTER_STRING = OUTTER_STRING + '<tr valign="MIDDLE">';
+								OUTTER_STRING = OUTTER_STRING + '<td class="' + _class + '" width="20px" rowspan="' + _rowspan + '" align="center">' + (_objective.ChildIndex + 1) + '</td>';
+								OUTTER_STRING = OUTTER_STRING + '<td class="' + _class + '" rowspan="' + _rowspan + '">' + _objective.name + '</td>';
+								OUTTER_STRING = OUTTER_STRING + '<td class="' + _class + '" width="50px" rowspan="' + _rowspan + '" align="center">' + _objective.weight + '</td>';
+								
+								for(_subobjective in _objective.subobjectives)
+								{
+									if(_subobjective.mark.HasValue)
+										_mark_sum = _mark_sum +_subobjective.mark;
+									if (_subobjective.ChildIndex > 0)
+										OUTTER_STRING = OUTTER_STRING + '<tr>';
+	
+	
+									OUTTER_STRING = OUTTER_STRING + '<td class="' + _class + '" width="20%">' + _subobjective.plan + '</td>';
+									OUTTER_STRING = OUTTER_STRING + '<td class="' + _class + '" width="50px" align="center">' + _subobjective.date + '</td>';
+									OUTTER_STRING = OUTTER_STRING + '<td class="' + _class + '" width="20%">' + _subobjective.fact + '</td>';
+									OUTTER_STRING = OUTTER_STRING + '<td class="' + _class + '" width="50px" align="center">' + _subobjective.mark + '</td>';
+									OUTTER_STRING = OUTTER_STRING + '</tr>';
+								
+								}
+							
+								if (_rowspan == 0)
+									OUTTER_STRING = OUTTER_STRING + '</tr>';
+							}
+							if (_weight_sum > 0)
+								TO = _mark_sum / _weight_sum;
+								
+								
+							OUTTER_STRING = OUTTER_STRING + '<tr><td colspan="2" class="tableHeaderWithText">&nbsp;</td><td class="tableHeaderWithText">' + _weight_sum + '</td><td colspan="3" class="tableHeaderWithText">&nbsp;</td><td class="tableHeaderWithText">' + _mark_sum + '</td></tr></table><hr/>';
+								
+						break;
+					}
+				}
+				
+				
+				try
+				{
+					eval(_person_result_code);
+				}
+				catch(_hoho_)
+				{}
+				
+				Response.Write( RESULT_STRING );
+				
+				Response.Write(OUTTER_STRING);
+				
+			}
+		}
+		
+		
+		
+		if (_curAssessmentAppraise.participant_select.HasValue || _curAssessmentAppraise.flag_use_plan == false)
+		{
+			if (_curAssessmentAppraise.participant_select.HasValue)
+			{
+				_query = "for $pa in pas where $pa/assessment_appraise_id = " + _curAssessmentAppraiseID + " and $pa/person_id = " + Request.QueryString.person_id + " and $pa/assessment_appraise_type = 'competence_appraisal' and $pa/status = '" + _curAssessmentAppraise.participant_select + "' return $pa";
+				_pa_arr = XQuery(_query);
+				if (ArrayCount(_pa_arr) == 1)
+					_pa_arr = Array();
+		
+			}
+			else
+			{
+				_query = "for $pa in pas where $pa/assessment_appraise_id = " + _curAssessmentAppraiseID + " and $pa/person_id = " + Request.QueryString.person_id + " and $pa/assessment_appraise_type = 'competence_appraisal' order by $pa/status return $pa";
+				_pa_arr = XQuery(_query);
+			}
+			
+		if (ArrayCount(_pa_arr) > 0)
+		{
+%>
+			<br/><h3><%=tools_web.get_web_str("ass_report_horiz_assessment")%></h3>
+<%					
+						
+			_total_blanks = ArrayCount(_pa_arr);
+			
+			_pa_arr = ArraySelect(_pa_arr, "is_done == true");
+			
+			
+			_competence_array = Array();
+			_competence_idx = 0;
+			
+			for(_pa in _pa_arr)
+			{
+				_paDoc = OpenDoc(UrlFromDocID(_pa.PrimaryKey)).TopElem;
+				for (_competence in _paDoc.competences)
+				{
+					_hatched_comp = ArrayOptFind(_competence_array, "id == _competence.PrimaryKey");
+					if (_hatched_comp == undefined)
+					{
+						try
+						{
+							_compDoc = OpenDoc(UrlFromDocID(_competence.PrimaryKey)).TopElem;
+						}
+						catch(_shit_)
+						{
+							continue;
+						}
+						
+						_hatched_comp = new Object;
+						_hatched_comp.id =  _competence.PrimaryKey;
+						_hatched_comp.name = _compDoc.name;
+						_hatched_comp.scales = _compDoc.scales;
+						_hatched_comp.total = 0.0;
+						_hatched_comp.count = 0.0;
+						
+						_competence_array[_competence_idx] = _hatched_comp;
+						_competence_idx++;
+					}
+
+					_scale = ArrayOptFind(_hatched_comp.scales , "PrimaryKey == _competence.mark");
+					if (_scale == undefined)
+					{
+						try
+						{
+							_scale = Real(_competence.mark);
+						}
+						catch(_xxx_)
+						{
+							_scale = undefined;
+						}
+						
+						if (_scale != undefined)
+						{
+							_hatched_comp.total = _hatched_comp.total + _scale;
+							_hatched_comp.count = _hatched_comp.count + 1;
+						}
+												
+					}
+					else
+					{
+						_hatched_comp.total = _hatched_comp.total + _scale.ChildIndex + 1;
+						_hatched_comp.count = _hatched_comp.count + 1;
+					}
+					
+				}
+			}			
+		
+		
+%>
+			<table width="100%"  border="0" cellspacing="0" cellpadding="3" border="1">
+				<tr>
+					<td class="tableHeaderWithText"><%=tools_web.get_web_str("ass_report_declared_experts")%></td>
+					<td class="tableHeaderWithText" width="100px"><%=_total_blanks%></td>
+				</tr>
+				<tr>
+					<td class="tableHeaderWithText"><%=tools_web.get_web_str("ass_report_experts_in_flesh")%></td>
+					<td class="tableHeaderWithText" width="100px"><%=ArrayCount(_pa_arr)%></td>
+				</tr>
+				<tr>
+					<td class="tableHeaderWithText"><%=tools_web.get_web_str("ass_competences")%></td>
+					<td class="tableHeaderWithText" width="100px"><%=tools_web.get_web_str("ass_mark")%></td>
+				</tr>
+
+
+<%
+			_counter = 0;
+			for (_c in _competence_array)
+			{
+				_class = _counter++ % 2 ? 'tableRowEven' : 'tableRowOdd';
+%>
+				<tr valign="MIDDLE">
+					<td class="<%=_class%>"><%=_c.name%></td>
+					<td class="<%=_class%>" align="center"><%=(_c.count > 0 ? StrReal( _c.total / _c.count, 2) : '-')%></td>
+				</tr>
+<%
+			
+			}
+		
+		}
+		}
+	}
+	else if( Request.QueryString.HasProperty("subdivision_id") && Request.QueryString.subdivision_id != "" )
+	{
+		positionArray = XQuery( "CatalogHierSubset('subs'," + Request.QueryString.subdivision_id + ")" );
+		positionArray = ArraySelect( positionArray, 'basic_collaborator_id.HasValue' );
+		curPersonsArray = ArrayExtract( positionArray, 'basic_collaborator_id' );
+		curPersonsArray = QueryCatalogByKeys( 'collaborators', 'id', curPersonsArray );
+		
+		pa_array = XQuery("for $pa in pas where $pa/assessment_appraise_id = " + _curAssessmentAppraiseID + " and $pa/is_final = true() order by $pa/status return $pa");
+							
+		for (_elem in _elems_full)
+		{
+			
+			if (ArrayOptFind(curPersonsArray , "PrimaryKey == _elem.PrimaryKey") != undefined)
+			{
+				/***********************			
+				_query = "for $pa in pas where $pa/assessment_appraise_id = " + _curAssessmentAppraiseID + " and $pa/person_id = " + _elem.PrimaryKey + " and $pa/is_final = true() order by $pa/status return $pa";
+				
+				_pa_arr = XQuery(_query);
+				************************/
+				
+				_pa_arr = ArraySelect(pa_array, 'person_id == _elem.PrimaryKey');
+				
+				TO = undefined;
+				TC = undefined;
+				
+				staffratingWeight = 0.0;
+				staffratingMark = 0.0;
+				staffrating_alive = false;
+				competenceArray = Array();
+				max_comp = 0;
+				_n_counter = 0;
+				
+				for (_pa in _pa_arr)
+				{						
+					_paDoc = OpenDoc(UrlFromDocID(_pa.PrimaryKey)).TopElem;
+			
+					switch (_paDoc.assessment_appraise_type)
+					{
+						case "competence_appraisal":
+						
+						/**************
+							for(_competence in _paDoc.competences)
+							{
+								_competenceDoc = OpenDoc(UrlFromDocID(_competence.PrimaryKey)).TopElem;
+												
+								if(_competence.mark == "N")
+									_n_counter++;
+			
+								for (_scale in _competenceDoc.scales)
+								{
+									if (ArrayCount(competenceArray) <= _scale.ChildIndex)
+										competenceArray[_scale.ChildIndex] = 0;
+									if (_scale.PrimaryKey == _competence.mark)
+									{
+										competenceArray[_scale.ChildIndex] = competenceArray[_scale.ChildIndex] + 1;							
+									}
+								}
+								if (ArrayCount(_competenceDoc.scales) > max_comp)
+									max_comp = ArrayCount(_competenceDoc.scales);
+																										
+							}
+						******************/
+						
+							TC = _paDoc.overall;
+					
+						break;
+						case "staffrating":
+							
+							_counter = 0;
+							_weight_sum = 0.0;
+							_mark_sum = 0.0;
+							for (_objective in _paDoc.objectives)
+							{								
+								if(_objective.weight.HasValue)
+									_weight_sum = _weight_sum + _objective.weight;
+																			
+								for(_subobjective in _objective.subobjectives)
+								{
+									if(_subobjective.mark.HasValue)
+										_mark_sum = _mark_sum +_subobjective.mark;
+								}
+							}
+							staffratingWeight = staffratingWeight + _weight_sum;
+							staffratingMark = staffratingMark + _mark_sum;
+							staffrating_alive = true;
+							if (staffratingWeight > 0)
+								TO = staffratingMark / staffratingWeight;
+							
+							
+						break;
+					}
+				}
+					
+				try
+				{
+					eval(_reg_eval_code);
+				}
+				catch(_hoho_)
+				{}
+				
+			}
+			
+				
+		}	
+		
+		if ( false )
+		{
+%>
+			<br/><h3><%=tools_web.get_web_str("c_competence_appraisal")%></h3>
+					<table width="100%" border="0" cellspacing="0" cellpadding="3" border="1">
+						<tr>
+<%
+						
+						for(_n = 1; _n <= max_comp; _n++)
+							Response.Write('<td class="tableHeaderWithText" width="50px" align="center">' + _n + '</td>');
+						Response.Write('</tr><tr>');
+						_counter = 0;
+						_sum = 0;
+						_class = _counter++ % 2 ? 'tableRowEven' : 'tableRowOdd';
+						for(_n = 0; _n < max_comp; _n++)
+						{
+							
+							if (_n >= ArrayCount(competenceArray) || competenceArray[_n] == undefined)
+								Response.Write('<td class="' + _class + '" width="50px" align="center">&nbsp;</td>');
+							else
+							{
+								Response.Write('<td class="' + _class + '" width="50px" align="center">' + competenceArray[_n] + '</td>');
+								_sum = _sum + competenceArray[_n];
+							}
+								
+						}
+						Response.Write('</tr>');
+%>
+					</table>
+<%
+
+		}
+		
+		
+		try
+		{
+			eval(_post_eval_code);
+		}
+		catch(_hoho_)
+		{
+		}
+		
+		Response.Write( RESULT_STRING );
+				
+		
+	}
+	else
+	{
+		Response.Write("&nbsp;");
+	}
+%>

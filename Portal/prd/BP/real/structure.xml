@@ -1,0 +1,237 @@
+<?xml version="1.0"?>
+<structure tagVersion="0.9" contentVersion="0.2">
+	<node id="TC001" entry="true">
+		<node id="TC004" entry="true">
+			<node id="1.1.1" entry="true">
+				<node id="1.1.1.1" entry="true">
+					<relation to="1.1.1.3"/>
+				</node>
+				<node id="1.1.1.2" entry="true">
+					<relation to="1.1.1.4"/>
+				</node>
+				<node id="1.1.1.3">
+					<relation to="1.1.1.5"/>
+				</node>
+				<node id="1.1.1.4">
+					<relation to="1.1.1.6"/>
+				</node>
+				<node id="1.1.1.5">
+					<relation to="1.1.2.1"/>
+					<relation to="1.1.2.2"/>
+				</node>
+				<node id="1.1.1.6">
+					<relation to="1.1.2.1"/>
+					<relation to="1.1.2.2"/>
+				</node>
+			</node>
+			<node id="1.1.2">
+				<node id="1.1.2.1">
+					<relation to="1.1.2.3"/>
+				</node>
+				<node id="1.1.2.2">
+					<relation to="1.1.2.3"/>
+				</node>
+				<node id="1.1.2.3">
+					<relation to="1.1.5"/>
+					<relation to="1.1.6"/>
+				</node>
+			</node>
+			<node id="1.1.3" entry="true">
+				<!-- ? -->
+				<relation to="1.1.4"/>
+			</node>
+			<node id="1.1.4">
+				<relation to="1.1.5"/>
+				<relation to="1.1.6"/>
+			</node>
+			<node id="1.1.5">
+				<relation to="1.1.7"/>				
+			</node>
+			<node id="1.1.6">
+				<relation to="1.1.8"/>
+			</node>
+			<node id="1.1.7">
+				<relation to="1.1.9"/>
+				<relation to="1.1.10"/>
+			</node>
+			<node id="1.1.8">
+				<relation to="1.1.11"/>
+				<relation to="1.1.12"/>
+			</node>
+			<node id="1.1.9">
+				<relation to="1.1.13"/>
+			</node>
+			<node id="1.1.10">
+				<relation to="1.1.13"/>
+			</node>
+			<node id="1.1.11">
+				<relation to="1.1.13"/>
+			</node>
+			<node id="1.1.12">
+				<relation to="1.1.13"/>
+			</node>
+			<node id="1.1.13">
+				<relation to="1.4.1"/>
+				<relation to="1.4.2"/>
+			</node>
+		</node>
+		<node id="TC005" entry="true">
+			<node id="1.2.1" entry="true">
+				<relation to="1.2.2"/>
+			</node>
+			<node id="1.2.2">
+				<relation to="1.2.3"/>
+			</node>
+			<node id="1.2.3">
+				<relation to="1.2.4"/>
+			</node>
+			<node id="1.2.4">
+				<relation to="1.4.1"/>
+				<relation to="1.4.2"/>
+			</node>
+		</node>
+		<node id="TC009" entry="true">
+			<node id="1.3.1" entry="true">
+				<relation to="1.4.1"/>
+				<relation to="1.4.2"/>
+			</node>
+		</node>
+		<node id="TC006">
+			<node id="1.4.1">
+				<relation to="1.4.3"/>
+			</node>				
+			<node id="1.4.2">
+				<relation to="1.4.1"/>
+			</node>	
+			<node id="1.4.3">
+				<relation to="1.4.5"/>
+			</node>					
+			<node id="1.4.4" entry="true">
+				<!-- ? -->
+				<relation to="1.4.3"/>
+			</node>
+			<node id="1.4.5">
+				<relation to="1.4.6"/>
+			</node>					
+			<node id="1.4.6">
+				<relation to="1.4.7"/>
+				<relation to="1.4.8"/>
+			</node>	
+			<node id="1.4.7">
+				<relation to="1.5.1"/>
+				<relation to="1.5.2"/>
+				<relation to="1.5.3"/>
+			</node>			
+			<node id="1.4.8">
+				<relation to="1.5.1"/>
+				<relation to="1.5.2"/>
+				<relation to="1.5.3"/>
+			</node>			
+		</node>
+		<node id="TC007">
+			<node id="1.5.1">
+				<relation to="1.5.4"/>
+			</node>				
+			<node id="1.5.2">
+				<relation to="1.5.4"/>
+			</node>	
+			<node id="1.5.3">
+				<relation to="1.5.4"/>
+			</node>					
+			<node id="1.5.4">
+				<relation to="1.6.1"/>
+				<relation to="1.6.2"/>
+			</node>
+		</node>
+		<node id="TC008">
+			<node id="1.6.1">
+				<relation to="1.6.3"/>
+			</node>				
+			<node id="1.6.2">
+				<relation to="1.6.3"/>
+			</node>	
+			<node id="1.6.3">
+				<relation to="1.6.4"/>
+			</node>					
+			<node id="1.6.4">
+				<relation to="1.6.5"/>
+			</node>		
+			<node id="1.6.5">
+				<relation to="1.6.6"/>
+			</node>
+			<node id="1.6.6">
+				<relation to="2.1.1"/>
+				<relation to="2.1.2"/>
+				<relation to="2.1.3"/>
+				<relation to="2.1.4"/>
+			</node>
+		</node>
+	</node>
+	<node id="TC002">
+		<node id="TC010">
+			<node id="2.1.1">
+				<relation to="2.1.5"/>
+			</node>
+			<node id="2.1.2">
+				<relation to="2.1.5"/>
+			</node>
+			<node id="2.1.3">
+				<relation to="2.1.5"/>
+			</node>
+			<node id="2.1.4">
+				<relation to="2.1.5"/>
+			</node>
+			<node id="2.1.5">
+				<relation to="2.2.1"/>
+				<relation to="2.2.2"/>
+				<relation to="2.3.1"/>
+				<relation to="2.3.3"/>
+				<relation to="2.3.4"/>
+				<relation to="2.3.5"/>
+			</node>
+		</node>
+		<node id="TC011">
+			<node id="2.2.1">
+				<relation to="2.4.1"/>
+			</node>
+			<node id="2.2.2">
+				<relation to="2.4.1"/>
+			</node>
+		</node>
+		<node id="TC012">
+			<node id="2.3.1">
+				<relation to="2.3.2"/>
+			</node>
+			<node id="2.3.2">
+				<relation to="2.4.1"/>
+			</node>
+			<node id="2.3.3">
+				<relation to="2.4.1"/>
+			</node>
+			<node id="2.3.4">
+				<relation to="2.4.1"/>
+			</node>
+			<node id="2.3.5">
+				<relation to="2.4.1"/>
+			</node>
+		</node>
+		<node id="TC013">
+			<node id="2.4.1">
+				<relation to="2.4.2"/>
+			</node>
+			<node id="2.4.2">
+				<relation to="2.4.3"/>
+			</node>
+			<node id="2.4.3">
+				<relation to="2.4.5"/>
+			</node>
+			<node id="2.4.4">
+				<relation to="2.4.5"/>
+			</node>
+			<node id="2.4.5">
+				<relation to="3"/>
+			</node>
+		</node>
+	</node>
+	<node id="3"/>
+</structure>

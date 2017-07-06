@@ -1,0 +1,65 @@
+<%
+	_entrys_array = XQuery( 'for $forum_entry in forum_entrys order by $forum_entry/create_date descending return $forum_entry' );
+	if ( ArrayOptFirstElem( _entrys_array ) != undefined )
+	{
+%>	
+<table width="100%" class="panelForumEntrysTable" border="0" cellspacing="0" cellpadding="0">
+	<tr>
+		<td class="tableForumTop"><div id="panelForumEntrysHeaderText" class="headerText" style="margin-top:10px;margin-bottom:5px;margin-left:5px; text-align: center;"><%=tools_web.get_web_str('vfb_discus')%></div></td>
+	</tr>
+<%
+		_counter = 0;
+		_len = Int( curWebCommon.count_forum_entrys_panel_unit );
+		for ( _cur_entry in _entrys_array )
+		{
+			if ( _counter >= _len )
+				break;
+			
+			try
+			{
+				_cur_forum = _cur_entry.forum_id.ForeignElem;
+			}
+			catch ( ff )
+			{
+				continue;
+			}
+%>	
+	<tr>
+		<td class="ForumColumnDigest">
+			<a class="forumPanelItem" href="view_doc.html?mode=forums&object_id=<%=_cur_entry.forum_id%>&doc_id=<%=curDocID%>"><%=tools_web.get_cur_lng_name( _cur_forum.name )%></a><br/>
+			<span class="forumColumnDate">
+<%
+			_fname = String( _cur_entry.person_fullname );
+			_f_array = _fname.split( ' ' );
+			_flen = ArrayCount( _f_array );
+			if ( _flen > 2 )
+			{
+				_temp_string = '';
+				for ( i = 0; i < _flen - 1; i++ )
+					_temp_string = _temp_string + ' ' + _f_array[i];
+					
+				Response.Write( _temp_string );
+			}
+			else
+			{
+				Response.Write( _fname );
+			}
+%>
+			</span><br/>
+			<a class="forumPanelItemText" href="view_doc.html?mode=forums&object_id=<%=_cur_entry.forum_id%>&entry_id=<%=_cur_entry.id%>&doc_id=<%=curDocID%>"><%=_cur_entry.name%></a>
+		</td>
+	</tr>
+	<tr>
+		<td class="horDividerForum"><img src="pics/1blank.gif" width="0" height="0" /></td>
+	</tr>
+<%
+			_counter++;
+		}
+%>	
+	<tr>
+		<td class="tableForumBottom" style="text-align: center"><img src="pics/1blank.gif" width="0" height="0" /></td>
+	</tr>
+</table>
+<%
+	}
+%>	

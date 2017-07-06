@@ -1,0 +1,948 @@
+<%
+
+	FLAG_BY_ROLE = true;
+
+	RES_STR = "";
+    
+    if (Request.QueryString.HasProperty("person_id") && Request.QueryString.person_id != "" && ArrayOptFind(_elems_full, "PrimaryKey + '' == Request.QueryString.person_id" ) != undefined )
+    {
+    
+	    _my_pas = XQuery("for $pa in pas where $pa/person_id = " + Request.QueryString.person_id + " and $pa/assessment_appraise_id = " + _curAssessmentAppraiseID + " and $pa/is_done = true() and $pa/assessment_appraise_type = 'competence_appraisal' return $pa");
+    	if (ArrayOptFirstElem(_my_pas) != undefined)
+        {
+    
+    	_my_fuckin_form = '<?xml version=&quot;1.0&quot; encoding=&quot;windows-1251&quot;?>
+	<SPXML-FORM>
+	<oo_report_form>
+		<person_id TYPE="integer" FOREIGN-ARRAY="collaborators"/>
+		<person_fullname TYPE="string"/>
+		<position_name TYPE="string"/>
+		
+        <statuses>
+            <status MULTIPLE="1" PRIMARY-KEY="status_id">
+                <status_id TYPE="string" FOREIGN-ARRAY="common.assessment_appraise_participants"/>
+                <status_name TYPE="string"/>
+                <index TYPE="integer"/>
+                <count TYPE="integer" DEFAULT="0" NOT-NULL="1"/>
+				
+				<competence_str TYPE="string"/>
+				<score_str TYPE="string"/>
+				
+            </status>
+        </statuses>
+        
+        
+		<competences>
+            <competence MULTIPLE="1" PRIMARY-KEY="competence_id">
+                <competence_id TYPE="integer" FOREIGN-ARRAY="competences"/>
+                <competence_name TYPE="string"/>
+                <statuses>
+                    <status MULTIPLE="1">
+                        <status_id TYPE="string" FOREIGN-ARRAY="common.assessment_appraise_participants"/>
+						<score TYPE="real" NOT-NULL="1" DEFAULT="0.0"/>
+                        <show_score TYPE="string"/>
+                        <counter TYPE="integer" DEFAULT="0" NOT-NULL="1"/>
+                   	</status>
+				</statuses>
+                <score TYPE="real" NOT-NULL="1" DEFAULT="0.0"/>
+                <counter TYPE="integer" DEFAULT="0" NOT-NULL="1"/>
+                
+                <indicators>
+                    <indicator MULTIPLE="1" PRIMARY-KEY="indicator_id">
+                        <indicator_id TYPE="integer" FOREIGN-ARRAY="indicators"/>
+                        <indicator_name TYPE="string"/>
+                        <statuses>
+                            <status MULTIPLE="1">
+                                <status_id TYPE="string" FOREIGN-ARRAY="common.assessment_appraise_participants"/>
+                                <score TYPE="real" NOT-NULL="1" DEFAULT="0.0"/>
+                                <show_score TYPE="string"/>
+                            </status>
+                        </statuses>
+                        <score TYPE="real" NOT-NULL="1" DEFAULT="0.0"/>
+                        <counter TYPE="integer" DEFAULT="0" NOT-NULL="1"/>
+						
+						<min TYPE="integer"/>
+						<max TYPE="integer"/>
+						
+                    </indicator>
+                </indicators>
+			</competence>
+		</competences>
+	</oo_report_form>
+	</SPXML-FORM>';
+    
+    
+    	RegisterFormFromStr('oo_report_form', _my_fuckin_form);
+    
+				
+		try
+		{
+			_myFuckinDoc = OpenNewDoc( 'oo_report_form').TopElem;
+			_myFuckinDoc.person_id = Request.QueryString.person_id;
+			_myFuckinDoc.person_fullname = _myFuckinDoc.person_id.ForeignElem.fullname;
+			_myFuckinDoc.position_name = _myFuckinDoc.person_id.ForeignElem.position_name;
+		}
+		catch(_nenavizhu_)
+		{
+			Response.Write("<center><b>" +tools_web.get_web_str("ass_report_error2")+ ":</b><br/><br/>" + _nenavizhu_ + "</center>");
+			Cancel();
+		}
+        
+        var competenceArray = Array();
+		var compCounter = 0;
+        
+		_deviance = Array();	
+		
+		for (_pa in _my_pas)
+        if (_pa.status.HasValue)
+		{
+        	_paDoc = OpenDoc(UrlFromDocID(_pa.PrimaryKey)).TopElem;
+            
+            _anchor_status = _myFuckinDoc.statuses.GetOptChildByKey(_pa.status);
+                        
+            if ( _anchor_status == undefined)
+            {
+            	_anchor_status = _myFuckinDoc.statuses.ObtainChildByKey(_pa.status);
+                _anchor_status.status_name = _pa.status.PrimaryKey.ForeignElem.name;
+                _anchor_status.index = _pa.status.PrimaryKey.ForeignElem.index;
+            }
+                        
+            _anchor_status.count = _anchor_status.count + 1;
+            
+            for (_comp in _paDoc.competences)
+            {
+            	_curCompetence = ArrayOptFind(competenceArray, 'id == _comp.PrimaryKey');
+                if (_curCompetence == undefined)
+                {
+                    try
+                    {
+                        _curCompetenceDoc = OpenDoc(UrlFromDocID(_comp.PrimaryKey)).TopElem;
+                    }
+                    catch(_shit_)
+                    {
+                        continue;
+                    }
+                    
+                    _curCompetence = new Object;
+                    _curCompetence.id = _comp.PrimaryKey;
+                    _curCompetence.TopElem = _curCompetenceDoc;
+                    
+                    competenceArray[compCounter] = _curCompetence;
+                    compCounter++;
+                    
+                }
+            
+	            _cur_competence = _myFuckinDoc.competences.ObtainChildByKey(_curCompetence.id);
+				if (_cur_competence.competence_name == '')
+						_cur_competence.competence_name = _curCompetence.TopElem.name;
+    
+    			if (!FLAG_BY_ROLE)
+                {
+                
+	                _cur_status = _cur_competence.statuses.AddChild();
+                	_cur_status.status_id = _anchor_status.PrimaryKey;
+                
+                
+                    if (_comp.mark == "" || _comp.mark == "N")
+                    {
+                        _cur_status.show_score = _comp.mark;
+                    }
+                    else
+                    {
+                        _scale = _curCompetence.TopElem.scales.GetOptChildByKey(_comp.mark);
+                        if (_scale != undefined)
+                        {
+                            _cur_status.show_score = _scale.name;
+                            if (_scale.percent.HasValue)
+                            {
+                                _cur_competence.score = _cur_competence.score + _scale.percent; //_cur_aatype.incrementation;
+                                _cur_status.score = _scale.percent;
+                            }
+                            else
+                            {
+                                _cur_competence.score = _cur_competence.score + _scale.ChildIndex + 1; //_cur_aatype.incrementation;
+                                _cur_status.score = _cur_competence.score;
+                            }
+																					
+                            _cur_competence.counter = _cur_competence.counter + 1;
+                            
+                        }
+                        else
+                        {
+                            try
+                            {
+								_cur_status.show_score = _comp.mark;
+								_cur_status.score = Real(_comp.mark);
+                                _cur_competence.score = _cur_competence.score + _cur_status.score	//_cur_aatype.incrementation;
+                                _cur_competence.counter = _cur_competence.counter + 1;
+                            }
+                            catch(_v_prolete_)
+                            {
+                               	continue;
+                            }
+                        }
+						
+						
+						_dev = new Object;
+						_dev.competence_id = _curCompetence.id;
+						_dev.indicator_id = undefined;
+						_dev.status = _anchor_status.PrimaryKey;
+						_dev.score = _cur_status.score;
+						_deviance[ArrayCount(_deviance)] = _dev;
+						
+                            
+                    }
+                }
+                
+                
+                
+                for (_ind in _comp.indicators)
+                {
+                    _curIndicator = ArrayOptFind(competenceArray, 'id == _ind.PrimaryKey');
+                    if (_curIndicator == undefined)
+                    {
+                        try
+                        {
+                            _curIndicatorDoc = OpenDoc(UrlFromDocID(_ind.PrimaryKey)).TopElem;
+                        }
+                        catch(_shit_)
+                        {
+                            continue;
+                        }
+                        
+                        _curIndicator = new Object;
+                        _curIndicator.id = _ind.PrimaryKey;
+                        _curIndicator.TopElem = _curIndicatorDoc;
+                        
+                        competenceArray[compCounter] = _curIndicator;
+                        compCounter++;
+                        
+                    }
+                	
+						_cur_indicator = _cur_competence.indicators.ObtainChildByKey(_curIndicator.id);
+                        if (_cur_indicator.indicator_name == '')
+                                _cur_indicator.indicator_name = _curIndicator.TopElem.name;
+                        
+                        _cur_status = _cur_indicator.statuses.AddChild();
+                        _cur_status.status_id = _anchor_status.PrimaryKey;
+                    
+                    
+                    	if (_ind.mark == "" || _ind.mark == "N")
+                        {
+                            _cur_status.show_score = _ind.mark;
+                        }
+                        else
+                        {
+                            _scale = _curIndicator.TopElem.scales.GetOptChildByKey(_ind.mark);
+                            if (_scale != undefined)
+                            {
+                                _cur_status.show_score = _scale.name;
+                                if (_scale.percent.HasValue)
+                                {
+                                   	_cur_indicator.score = _cur_indicator.score + _scale.percent; //_cur_aatype.incrementation;
+                                   	_cur_status.score = _scale.percent;									
+                                }
+                                else
+                                {
+                                   _cur_indicator.score = _cur_indicator.score + _scale.ChildIndex + 1; //_cur_aatype.incrementation;
+                                   _cur_status.score = _scale.ChildIndex + 1;
+                                }
+                                _cur_indicator.counter = _cur_indicator.counter + 1;
+								
+                            }
+                            else
+                            {
+                                try
+                                {
+									_cur_indicator.show_score = _ind.mark;
+                                    _cur_indicator.score = Real(_ind.mark) + _cur_indicator.score + 1;//_cur_aatype.incrementation;
+                                    _cur_status.score = Real(_ind.mark);
+                                    									
+                                    _cur_indicator.counter = _cur_indicator.counter + 1;
+                                }
+                                catch(_v_prolete_)
+                                {
+                                    continue;
+                                }
+                            }
+							
+							if (!_cur_indicator.min.HasValue || _cur_indicator.min > _cur_status.score)
+						   		_cur_indicator.min = _cur_status.score;
+							if (!_cur_indicator.max.HasValue || _cur_indicator.max < _cur_status.score)
+								_cur_indicator.max = _cur_status.score;
+							
+							_dev = new Object;
+							_dev.competence_id = _comp.PrimaryKey;
+							_dev.indicator_id = _curIndicator.id;
+							_dev.status = _anchor_status.PrimaryKey;
+							_dev.score = _cur_status.score;
+							_deviance[ArrayCount(_deviance)] = _dev;
+                                
+                        }
+                    
+                }
+            }
+		}
+		
+		for (_status in _myFuckinDoc.statuses)
+		{
+			if (_status.status_id == "coll" || _status.status_id == "staff" || _status.status_id == "expert")
+			{
+				if (_status.count < 3)
+					_status.Delete();
+			}
+		}
+		
+	
+		if (FLAG_BY_ROLE)
+		{
+			for (_comp in _myFuckinDoc.competences)
+			{
+				_comp.score.Clear();
+				_comp.counter.Clear();
+				_comp.statuses.Clear();
+				
+				for (_ind in _comp.indicators)
+				{
+					for (_st in _ind.statuses)
+					{
+						_cur_status = ArrayOptFind(_comp.statuses, 'status_id == _st.status_id')
+						if (_cur_status == undefined)
+						{
+							_cur_status = _comp.statuses.AddChild();
+							_cur_status.status_id = _st.status_id;
+						}
+						_cur_status.score = _cur_status.score + _st.score;
+						_cur_status.counter = _cur_status.counter + 1;
+					}
+				}
+				
+				for (_st in _comp.statuses)
+				{				
+					_dev = new Object;
+					_dev.competence_id = _comp.PrimaryKey;
+					_dev.indicator_id = undefined;
+					_dev.status = _st.status_id;
+					_dev.score = (_st.counter > 0 ? _st.score / _st.counter : 0);
+					_deviance[ArrayCount(_deviance)] = _dev;
+				}
+			}
+		}
+		
+		
+		
+		RES_STR = '<style>\n<!--\n .net_datam{mso-number-format:General;  mso-pattern:auto;    mso-protection:locked visible;msoo-displayed-decimal-separator:"\\.";} .pervorodniy_text{mso-style-parent:style0;mso-number-format:"\\@";}\n-->\n</style>';
+		
+		
+		RES_STR = RES_STR + "<table border='1' cellspacing='0' width='100%'>";
+		if (ArrayCount(_myFuckinDoc.statuses) > 0)
+		{
+			_max_stat_pack = ArrayFirstElem(ArraySort(_myFuckinDoc.statuses, 'count', '-')).count;
+			_sorted_stat_pack = ArraySort(_myFuckinDoc.statuses, 'index', '+');
+		}
+		else
+		{
+			_max_stat_pack = Array();
+			_sorted_stat_pack = Array();
+		}
+		
+		for (_comp in _myFuckinDoc.competences)
+		{
+			RES_STR = RES_STR + "<tr>";
+			RES_STR = RES_STR + "<td colspan='"+ (_max_stat_pack + 2) +"'><b>" + _comp.competence_name + "</b></td><td>&nbsp;</td>";
+			
+			for (_ind in _comp.indicators)
+			{
+				RES_STR = RES_STR + "<td colspan='"+ (_max_stat_pack + 2) +"'>" + _ind.indicator_name + "</td><td>&nbsp;</td>";
+			}
+			RES_STR = RES_STR + "</tr>";
+			
+			for (_cur_status in _sorted_stat_pack)
+			{
+				RES_STR = RES_STR + "<tr>";
+				
+				RES_STR = RES_STR + "<td>" + _cur_status.status_name + "</td>";
+				
+				_st_pack = ArraySelect(_comp.statuses, 'status_id == _cur_status.PrimaryKey');
+			   
+				_score = 0.0;
+				_counter = 0.0;
+				
+				for (_st in _st_pack)
+				{
+					
+					_score = _score + (_st.counter > 0 ? _st.score / _st.counter: 0 );
+					RES_STR = RES_STR + "<td class='net_datam' x:num>" + StrReal(_score , 2) + "</td>";
+					
+					_counter++;
+				}
+				
+				for (_ = ArrayCount(_st_pack); _ < _max_stat_pack; _++)
+				{
+					RES_STR = RES_STR + "<td>&nbsp;</td>";
+				}
+				
+				RES_STR = RES_STR + "<td class='net_datam' x:num><b>" + (_counter > 0 ? StrReal(_score / _counter, 1): 0 )+ "</b></td>";
+				
+				RES_STR = RES_STR + "<td>&nbsp;</td>";
+								
+				for (_ind in _comp.indicators)
+				{
+					 RES_STR = RES_STR + "<td>" + _cur_status.status_name + "</td>";
+					
+					_st_pack = ArraySelect(_ind.statuses, 'status_id == _cur_status.PrimaryKey');
+				   
+					_score = 0.0;
+					_counter = 0.0;
+					
+					for (_st in _st_pack)
+					{
+						
+						_score = _score + _st.score;
+						RES_STR = RES_STR + "<td class='net_datam' x:num>" + _st.show_score + "</td>";
+						
+						_counter++;
+					}
+					
+					for (_ = ArrayCount(_st_pack); _ < _max_stat_pack; _++)
+					{
+						RES_STR = RES_STR + "<td>&nbsp;</td>";
+					}
+					
+					RES_STR = RES_STR + "<td class='net_datam' x:num><b>" + (_counter > 0 ? StrReal(_score / _counter, 1): 0 )+ "</b></td>";
+					
+					RES_STR = RES_STR + "<td>&nbsp;</td>";
+				}
+				RES_STR = RES_STR + "</tr>";
+			}
+			
+			
+		}
+		RES_STR = RES_STR + "</table>";
+		
+	function get_deviance(_arr)
+	{
+		if (ArrayCount(_arr) - 1 <= 0)
+			return 0;
+		
+		_avg = 0.0;
+		
+		for (_e in _arr)
+		{
+			_avg = _avg + _e.score;
+		}
+		
+		_avg = _avg / ArrayCount(_arr);
+		
+		_sq_sum = 0.0;
+		for (_e in _arr)
+		{
+			_x_minus_x = _e.score - _avg;
+			_sq_sum = _sq_sum + _x_minus_x * _x_minus_x;
+		}
+		
+		return Math.sqrt(_sq_sum / (ArrayCount(_arr) - 1));
+	}
+
+
+			
+		RES_STR = RES_STR + "<BR/><BR/><table border='1' cellspacing='0' width='100%'>";
+		
+		_ALTER_STR = "<BR/><BR/><table border='1' cellspacing='0' width='100%'>";
+		
+		RES_STR = RES_STR + "<tr><th>"+tools_web.get_web_str("ass_competence")+"</th><th>"+tools_web.get_web_str("ass_estimating_person")+"</th><th>*</th><th>"+tools_web.get_web_str("ass_report_mid")+"</th><th>"+tools_web.get_web_str("ass_report_spread")+"</th><th>"+tools_web.get_web_str("ass_report_div")+"</th><th>"+tools_web.get_web_str("c_self")+"</th></tr>"
+		_ALTER_STR = _ALTER_STR + "<tr><th>"+tools_web.get_web_str("ass_competence")+"</th><th>"+tools_web.get_web_str("ass_estimating_person")+"</th><th>*</th><th>"+tools_web.get_web_str("ass_report_mid")+"</th><th>"+tools_web.get_web_str("ass_report_spread")+"</th><th>"+tools_web.get_web_str("ass_report_div")+"</th><th>"+tools_web.get_web_str("c_self")+"</th></tr>"
+		
+		_rowspan = ArrayCount(_sorted_stat_pack) + 1;
+		
+		for (_comp in _myFuckinDoc.competences)
+		{
+			RES_STR = RES_STR + "<tr><td rowspan='"+ _rowspan +"'>" + _comp.competence_name + "</td>";
+			_ALTER_STR = _ALTER_STR + "<tr bgcolor='lightgrey'><td rowspan='"+ _rowspan +"'><b>" + _comp.competence_name + "</b></td>";
+						
+			_all_count = 0;
+			_all_score = 0.0;
+			_all_counter = 0.0;
+			_self = null;
+			
+			_allmin = null;
+			_allmax = null;
+				
+			for (_i = 0; _i < ArrayCount(_sorted_stat_pack); _i++ )
+			{
+				if (_i > 0)
+				{
+					RES_STR = RES_STR + "<tr>";
+					_ALTER_STR = _ALTER_STR + "<tr bgcolor='lightgrey'>";
+				}
+				RES_STR = RES_STR + "<td>" + _sorted_stat_pack[_i].status_name + "</td>";
+				_ALTER_STR = _ALTER_STR + "<td>" + _sorted_stat_pack[_i].status_name + "</td>";
+											
+				RES_STR = RES_STR + "<td>" + _sorted_stat_pack[_i].count + "</td>";
+				_ALTER_STR = _ALTER_STR + "<td>" + _sorted_stat_pack[_i].count + "</td>";
+				
+				_st_pack = ArraySelect(_comp.statuses, 'status_id == _sorted_stat_pack[_i].PrimaryKey');
+			   
+				_score = 0.0;
+				_counter = 0.0;
+				
+				for (_st in _st_pack)
+				{
+					_score = _score + (_st.counter > 0 ? _st.score / _st.counter: 0 );
+					_counter++;
+					
+					if (_sorted_stat_pack[_i].status_id != 'self')
+					{
+						_all_score = _all_score + (_st.counter > 0 ? _st.score / _st.counter: 0 );
+						_all_counter++;
+					}
+					
+				}
+				
+				_min = null;
+				_max = null;
+				
+				for(_ind in _comp.indicators)
+				{
+					_my_scores = ArraySelect(_ind.statuses, "status_id == _sorted_stat_pack[_i].PrimaryKey");
+					if (ArrayCount(_my_scores) > 0)
+					{
+						_my_min = ArrayFirstElem(ArraySort(_my_scores, "score", "+")).score;
+						_my_max = ArrayFirstElem(ArraySort(_my_scores, "score", "-")).score;
+						
+						if (_min == null || _my_min < _min)
+							_min = _my_min;
+						if (_max == null || _my_max > _max)
+							_max = _my_max;
+					}
+				}
+				
+				if (_sorted_stat_pack[_i].status_id != 'self')
+				{
+					_all_count = _all_count + _sorted_stat_pack[_i].count;
+					if ((_allmin == null && _min != null) || _allmin > _min)
+						_allmin = _min;
+					if ((_allmax == null && _max != null) || _allmax < _max)
+						_allmax = _max;
+				}
+				else
+				{
+					if(_counter > 0)
+						_self = _score / _counter;
+				}
+				
+				RES_STR = RES_STR + "<td class='net_datam' x:num>" + (_counter > 0 ? StrReal(_score / _counter, 1): 0 )+ "</td>";
+				_ALTER_STR = _ALTER_STR + "<td class='net_datam' x:num>" + (_counter > 0 ? StrReal(_score / _counter, 1): 0 )+ "</td>";
+				if (_sorted_stat_pack[_i].competence_str.HasValue)
+					_delim = ",";
+				else
+					_delim = "";
+				_sorted_stat_pack[_i].competence_str = _sorted_stat_pack[_i].competence_str + _delim + _comp.competence_name;
+				_sorted_stat_pack[_i].score_str = _sorted_stat_pack[_i].score_str + _delim  + (_counter > 0 ? StrReal(_score / _counter, 1): 0 );
+				
+				RES_STR = RES_STR + "<td class='pervorodniy_text'>" + _min + "-" + _max + "</td>";
+				_ALTER_STR = _ALTER_STR + "<td class='pervorodniy_text'>" + _min + "-" + _max + "</td>";
+				
+				RES_STR = RES_STR + "<td class='net_datam' x:num>" + StrReal( get_deviance( ArraySelect(_deviance, "status == _sorted_stat_pack[_i].status_id && competence_id == _comp.competence_id && indicator_id != null") ), 2 ) + "</td>";
+				_ALTER_STR = _ALTER_STR + "<td class='net_datam' x:num>" + StrReal( get_deviance( ArraySelect(_deviance, "status == _sorted_stat_pack[_i].status_id && competence_id == _comp.competence_id && indicator_id != null") ), 2 ) + "</td>";
+				
+				RES_STR = RES_STR + "<td>&nbsp;</td>";
+				_ALTER_STR = _ALTER_STR + "<td>&nbsp;</td>";
+				
+				RES_STR = RES_STR + "</tr>";
+				_ALTER_STR = _ALTER_STR + "</tr>";
+			}
+			
+			_score = (_all_counter > 0 ? _all_score / _all_counter : 0 );
+			
+			RES_STR = RES_STR + "<tr><td>"+tools_web.get_web_str("ass_report_all_export")+"</td><td>" +_all_count + "</td><td class='net_datam' x:num>" + StrReal(_score, 1) + "</td><td class='pervorodniy_text'>" +_allmin + "-" +_allmax  + "</td><td class='net_datam' x:num>" + StrReal( get_deviance( ArraySelect(_deviance, "status != 'self' && competence_id == _comp.competence_id && indicator_id != null") ), 2 ) + "</td><td class='net_datam' x:num>" + (_self != null ? StrReal(_self - _score, 2) : "" )+ "</td></tr>";
+			
+			_ALTER_STR = _ALTER_STR + "<tr bgcolor='lightgrey'><td>"+tools_web.get_web_str("ass_report_all_export")+"</td><td>" +_all_count + "</td><td class='net_datam' x:num>" + StrReal(_score, 1) + "</td><td class='pervorodniy_text'>" +_allmin + "-" +_allmax  + "</td><td class='net_datam' x:num>" + StrReal( get_deviance( ArraySelect(_deviance, "status != 'self' && competence_id == _comp.competence_id && indicator_id != null") ), 2 ) + "</td><td class='net_datam' x:num>" + (_self != null ? StrReal(_self - _score, 2) : "" )+ "</td></tr>";
+			
+			
+			
+			for(_ind in _comp.indicators)
+			{
+				_ALTER_STR = _ALTER_STR + "<tr><td rowspan='"+ _rowspan +"'>" + _ind.indicator_name + "</td>";
+				
+				_all_count = 0;
+				_all_score = 0.0;
+				_all_counter = 0.0;
+				_self = null;
+				
+				_allmin = null;
+				_allmax = null;
+				
+				for (_i = 0; _i < ArrayCount(_sorted_stat_pack); _i++ )
+				{
+					if (_i > 0)
+					{
+						_ALTER_STR = _ALTER_STR + "<tr>";
+					}
+					
+					
+					_ALTER_STR = _ALTER_STR + "<td>" + _sorted_stat_pack[_i].status_name + "</td>";
+					
+					_ALTER_STR = _ALTER_STR + "<td>" + _sorted_stat_pack[_i].count + "</td>";
+					
+					_st_pack = ArraySelect(_ind.statuses, 'status_id == _sorted_stat_pack[_i].PrimaryKey');
+					
+					
+					_score = 0.0;
+					_counter = 0.0;
+					
+					for (_st in _st_pack)
+					{
+						_score = _score + _st.score;
+						_counter++;
+						
+						if ( _sorted_stat_pack[_i].status_id != "self" )
+						{
+							_all_score = _all_score + _st.score ;
+							_all_counter++;
+							
+						}
+						else
+						{
+							if(_counter > 0)
+								_self = _score / _counter;
+						}
+						
+					}
+					
+					_min = null;
+					_max = null;
+					
+					_my_scores = ArraySelect(_ind.statuses, "status_id == _sorted_stat_pack[_i].PrimaryKey");
+					if (ArrayCount(_my_scores) > 0)
+					{
+						_min = ArrayFirstElem(ArraySort(_my_scores, "score", "+")).score;
+						_max = ArrayFirstElem(ArraySort(_my_scores, "score", "-")).score;
+					}
+					
+					if ((_allmin == null && _min != null) || _allmin > _min)
+						_allmin = _min;
+					if ((_allmax == null && _max != null) || _allmax < _max)
+						_allmax = _max;
+					
+					
+					_ALTER_STR = _ALTER_STR + "<td class='net_datam' x:num>" + (_counter > 0 ? StrReal(_score / _counter, 1): 0 )+ "</td>";
+					if (_sorted_stat_pack[_i].competence_str.HasValue)
+						_delim = ",";
+					else
+						_delim = "";
+					_sorted_stat_pack[_i].competence_str = _sorted_stat_pack[_i].competence_str + _delim + _comp.competence_name;
+					_sorted_stat_pack[_i].score_str = _sorted_stat_pack[_i].score_str + _delim  + (_counter > 0 ? StrReal(_score / _counter, 1): 0 );
+					
+					_ALTER_STR = _ALTER_STR + "<td class='pervorodniy_text'> " + _min + "-" + _max + "</td>";
+				
+					_ALTER_STR = _ALTER_STR + "<td class='net_datam' x:num>" + StrReal( get_deviance( ArraySelect(_deviance, "status == _sorted_stat_pack[_i].status_id && indicator_id == _ind.indicator_id") ), 2 ) + "</td>";
+					
+					_ALTER_STR = _ALTER_STR + "<td>&nbsp;</td>";
+					
+					
+					
+					
+					
+					_ALTER_STR = _ALTER_STR + "</tr>";
+				}
+				
+				_score = (_all_counter > 0 ? _all_score / _all_counter : 0 );
+				
+				_ALTER_STR = _ALTER_STR + "<tr><td>"+tools_web.get_web_str("ass_report_all_export")+"</td><td>" +_all_count + "</td><td class='net_datam' x:num>" + StrReal(_score, 1) + "</td><td class='pervorodniy_text'>" +_allmin + "-" +_allmax  + "</td><td class='net_datam' x:num>" + StrReal( get_deviance( ArraySelect(_deviance, "status != 'self' && indicator_id == _ind.indicator_id") ), 2 ) + "</td><td class='net_datam' x:num>" + (_self != null ? StrReal(_self - _score , 2) : "" )+ "</td></tr>";
+			
+			}
+			
+		}
+		
+		_ALTER_STR = _ALTER_STR + "</table>";
+		
+		RES_STR = RES_STR + "</table>" + _ALTER_STR;
+		
+		Response.Write(RES_STR);
+%>
+
+
+
+<BR/>
+<center><input type="button" value="<%=tools_web.get_web_str("c_export_to_excel")%>" onclick="modalWin=window.open('assessment_excel_export.html','','')" class="activateButton" onmouseover="this.className='activateButtonOver';" onmouseout="this.className='activateButton';"/></center>
+<BR/>
+
+<input type="radio" id="graph_type_selector0" name="graph_type_selector" value="Line" onclick="switch_xml_data(this.value); return true;" checked/> <%=tools_web.get_web_str("ass_report_graph_line")%> &nbsp;&nbsp;
+<input type="radio" id="graph_type_selector1" name="graph_type_selector" onclick="switch_xml_data(this.value); return true;" value="Radar"/> <%=tools_web.get_web_str("ass_report_graph_radar")%>
+
+
+
+
+<XML id="xml_data01">
+ <!--[if gte mso 9]>
+ <xml xmlns:v="urn:schemas-microsoft-com:vml"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <ChartSpace xmlns="urn:schemas-microsoft-com:office:excel">
+  <Palette>
+   <Entry>#000000</Entry>
+   <Entry>#FFFFFF</Entry>
+   <Entry>#FF0000</Entry>
+   <Entry>#00FF00</Entry>
+   <Entry>#0000FF</Entry>
+   <Entry>#FFFF00</Entry>
+   <Entry>#FF00FF</Entry>
+   <Entry>#00FFFF</Entry>
+   <Entry>#800000</Entry>
+   <Entry>#008000</Entry>
+   <Entry>#000080</Entry>
+   <Entry>#808000</Entry>
+   <Entry>#800080</Entry>
+   <Entry>#008080</Entry>
+   <Entry>#C0C0C0</Entry>
+   <Entry>#808080</Entry>
+   <Entry>#9999FF</Entry>
+   <Entry>#993366</Entry>
+   <Entry>#FFFFCC</Entry>
+   <Entry>#CCFFFF</Entry>
+   <Entry>#660066</Entry>
+   <Entry>#FF8080</Entry>
+   <Entry>#0066CC</Entry>
+   <Entry>#CCCCFF</Entry>
+   <Entry>#000080</Entry>
+   <Entry>#FF00FF</Entry>
+   <Entry>#FFFF00</Entry>
+   <Entry>#00FFFF</Entry>
+   <Entry>#800080</Entry>
+   <Entry>#800000</Entry>
+   <Entry>#008080</Entry>
+   <Entry>#0000FF</Entry>
+   <Entry>#00CCFF</Entry>
+   <Entry>#CCFFFF</Entry>
+   <Entry>#CCFFCC</Entry>
+   <Entry>#FFFF99</Entry>
+   <Entry>#99CCFF</Entry>
+   <Entry>#FF99CC</Entry>
+   <Entry>#CC99FF</Entry>
+   <Entry>#FFCC99</Entry>
+   <Entry>#3366FF</Entry>
+   <Entry>#33CCCC</Entry>
+   <Entry>#99CC00</Entry>
+   <Entry>#FFCC00</Entry>
+   <Entry>#FF9900</Entry>
+   <Entry>#FF6600</Entry>
+   <Entry>#666699</Entry>
+   <Entry>#969696</Entry>
+   <Entry>#003366</Entry>
+   <Entry>#339966</Entry>
+   <Entry>#003300</Entry>
+   <Entry>#333300</Entry>
+   <Entry>#993300</Entry>
+   <Entry>#993366</Entry>
+   <Entry>#333399</Entry>
+   <Entry>#333333</Entry>
+  </Palette>
+  <DataSource>
+   <Type>OSP</Type>
+   <Name>360_11065_Spreadsheet</Name>
+  </DataSource>
+  <Scaling>
+   <ScaleID>0</ScaleID>
+   <Orientation>MinMax</Orientation>
+  </Scaling>
+  <Scaling>
+   <ScaleID>1</ScaleID>
+   <Orientation>MinMax</Orientation>
+  </Scaling>
+  <Chart>
+   <Name>Chart 1</Name>
+   <Options>
+    <SizeWithWindow/>
+   </Options>
+   <PageSetup>
+    <ChartSize>FullPage</ChartSize>
+    <Layout Orientation="Landscape"/>
+   </PageSetup>
+   <Font>
+    <FontName>Arial Cyr</FontName>
+    <Size>8</Size>
+    <AutoScale/>
+   </Font>
+   <Left>0</Left>
+   <Top>0</Top>
+   <Width>8027.99560546875</Width>
+   <Height>4763.9794921875</Height>
+   <ChartGrowth>
+    <HorzGrowth>1</HorzGrowth>
+    <VertGrowth>1</VertGrowth>
+   </ChartGrowth>
+   <PlotArea>
+    <Border>
+     <ColorIndex>15</ColorIndex>
+     <LineStyle>Solid</LineStyle>
+     <Weight>Narrow</Weight>
+    </Border>
+    <Interior>
+     <ColorIndex>14</ColorIndex>
+     <BGColorIndex>Neutral</BGColorIndex>
+    </Interior>
+    <Font>
+     <FontName>Arial Cyr</FontName>
+     <Size>8</Size>
+     <AutoScale/>
+    </Font>
+    <Graph>
+     <Type>Line</Type>
+     <SubType>Standard</SubType>
+     <SubType>Marker</SubType>
+     <ScaleID>0</ScaleID>
+     <ScaleID>1</ScaleID>
+	 	 
+<%
+
+	
+	
+
+
+	_N = 1;
+	for (_cur_status in _sorted_stat_pack)
+	{
+	
+%>
+     <Series>
+      <Index><%=_N%></Index>
+      <Caption>
+       <DataSource>-1</DataSource>
+       <Data>&quot;<%=_cur_status.status_name%>&quot;</Data>
+      </Caption>
+      <Name><%=_cur_status.status_name%></Name>
+      <Marker>
+       <Size>5</Size>
+      </Marker>
+      <Category>
+       <DataSource>-1</DataSource>
+       <Data><%=_cur_status.competence_str%></Data>
+      </Category>
+      <Value>
+       <DataSource>-1</DataSource>
+       <Data><%=_cur_status.score_str%></Data>
+      </Value>
+     </Series> 
+<%
+		_N++;
+	}
+%>
+	 
+     <DataLabels>
+      <Border>
+       <ColorIndex>None</ColorIndex>
+      </Border>
+      <Font>
+       <FontName>Arial Cyr</FontName>
+       <Size>8</Size>
+       <AutoScale/>
+      </Font>
+      <Interior>
+       <ColorIndex>None</ColorIndex>
+      </Interior>
+      <Number>
+       <SourceLinked/>
+       <BuiltInFormat>0</BuiltInFormat>
+      </Number>
+      <ShowValue/>
+     </DataLabels>
+     <PlotVisible/>
+    </Graph>
+    <Axis>
+     <Placement>Bottom</Placement>
+     <AxisID>0</AxisID>
+     <ScaleID>0</ScaleID>
+     <CrossingAxis>1</CrossingAxis>
+     <Font>
+      <FontName>Arial Cyr</FontName>
+      <Size>8</Size>
+      <AutoScale/>
+     </Font>
+     <Number>
+      <SourceLinked/>
+      <BuiltInFormat>0</BuiltInFormat>
+     </Number>
+     <Type>Category</Type>
+    </Axis>
+    <Axis>
+     <Placement>Left</Placement>
+     <AxisID>1</AxisID>
+     <ScaleID>1</ScaleID>
+     <MajorGridlines/>
+     <CrossingAxis>0</CrossingAxis>
+     <CrossesAt>Minimum</CrossesAt>
+     <CrossBetween>Between</CrossBetween>
+     <Font>
+      <FontName>Arial Cyr</FontName>
+      <Size>8</Size>
+      <AutoScale/>
+     </Font>
+     <Number>
+      <SourceLinked/>
+      <BuiltInFormat>0</BuiltInFormat>
+     </Number>
+     <Type>Value</Type>
+    </Axis>
+   </PlotArea>
+   <Legend>
+    <Placement>Right</Placement>
+    <Font>
+     <FontName>Arial Cyr</FontName>
+     <Size>8</Size>
+     <AutoScale/>
+    </Font>
+   </Legend>
+  </Chart>
+ </ChartSpace>
+</xml><![endif]-->
+</XML>
+
+<script language="javascript">
+var clsidStr;
+var myProg;
+
+function findProgID(progId){ var testProgId = true;
+try { myProg = new ActiveXObject(progId); } catch(e){ testProgId= false; } finally { return testProgId; }
+}
+
+function mkObj(x){ document.write("<object id='repChart000' classid='"+ x +"' style='width:100%;height:500px' >"); }
+
+if(findProgID("OWC11.ChartSpace")) mkObj("clsid:0002E55D-0000-0000-C000-000000000046"); 
+else if(findProgID("OWC10.ChartSpace")) mkObj("clsid:0002E556-0000-0000-C000-000000000046"); 
+else mkObj("clsid:0002E500-0000-0000-C000-000000000046");
+</script>
+<!--
+<object id="repChart000" classid="CLSID:0002E556-0000-0000-C000-000000000046" width="100%" height="500px">
+-->
+ <param name=XMLData value="">
+ <p style='margin-top:100;font-family:Arial;font-size:8.0pt'>To use this Web
+ page interactively, you must have Microsoft® Internet Explorer 5.01 Service
+ Pack 2 (SP2) or later and the Microsoft Office 2003 Web Components.</p>
+ <p style='margin-top:100;font-family:Arial;font-size:8.0pt'>See the <a
+ href="http://r.office.microsoft.com/r/rlidmsowcpub?clid=1033&p1=Excel">Microsoft
+ Office Web site</a> for more information.</p>
+</object>
+
+<script language="javascript">
+<!--
+
+function switch_xml_data(_g_type)
+{
+	xml_data01.innerHTML = String(xml_data01.innerHTML).replace(/(<Graph>[\n\t\r\s]*<Type>)(\w+)(<\/Type>[\n\t\r\s]*<SubType>)/, "$1" + _g_type + "$3");
+	repChart000.XMLData = xml_data01.innerHTML;
+	repChart000.refresh();
+}
+
+repChart000.XMLData = xml_data01.innerHTML;
+ 
+-->
+</script>
+<%
+        }
+		
+    }
+  	
+  	Session.excel_html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><body>' + RES_STR + '</body></html>';
+%>

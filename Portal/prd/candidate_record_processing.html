@@ -1,0 +1,17 @@
+<%
+Server.Execute( "include/sid_access_init.html" );
+
+_post_param = MultipartFormEncode
+(
+	'candidate_eid', Request.Form.candidate_eid,
+	'record_eid', Request.Form.record_eid,
+	'type_id', 'client_resume_review',
+	'completion_id', Request.Form.completion_id,
+	'comment', Request.Form.comment
+);
+
+_url = ( StrBegins( global_settings.settings.recruitment.estaff_server_url, 'http://' ) || StrBegins( global_settings.settings.recruitment.estaff_server_url, 'https://' ) ? '' : tools_web.get_url_protocol( Request.Url ) ) + global_settings.settings.recruitment.estaff_server_url;
+resp = HttpRequest( UrlAppendPath( _url, '/change_candidate_record.xml' ) , 'post', undefined, _post_param );
+
+Response.Redirect( "view_dlg_candidate_record.html?close=1&doc_id=" + Request.Form.doc_id );
+%>

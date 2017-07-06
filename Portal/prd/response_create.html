@@ -1,0 +1,58 @@
+<%
+Server.Execute( "include/sid_access_init.html" );
+
+_id = ArrayOptFirstElem( XQuery( "for $doc in documents where $doc/code = 'responses' return $doc" ) );
+_id = _id == undefined ? curDocID : _id.id;
+curResponseTypeID = Int( Request.QueryString.response_type_id );
+
+if ( ArrayOptFirstElem( XQuery( "for $elem in responses where $elem/person_id = " + curUserID + " and $elem/response_type_id = " + curResponseTypeID + " and $elem/object_id = " + Request.QueryString.object_id + " return $elem" ) ) != undefined )
+{
+	Response.Redirect( "view_doc.html?mode=responses&m=3&doc_id=" + _id );
+}
+else
+{
+	responseTypeDoc = OpenDoc( UrlFromDocID( curResponseTypeID ) ).TopElem;
+	
+	responseDoc = OpenNewDoc( 'x-local://wtv/wtv_response.xmd' );
+	tools.common_filling( 'response_type', responseDoc.TopElem, curResponseTypeID, responseTypeDoc );
+	
+	responseDoc.TopElem.person_id = curUserID;
+	tools.common_filling( 'collaborator', responseDoc.TopElem, curUserID, curUser );
+
+	if ( Request.Query.HasProperty( 'comment' ) )
+	{
+		curComment = tools_web.convert_xss( Request.Query.comment );
+		switch ( curHostSettings.default_portal_type )
+		{
+			case 'sharepoint':
+				responseDoc.TopElem.comment = DecodeCharset( curComment, 'utf-8' );
+				break;
+			default:
+				responseDoc.TopElem.comment = curComment;
+				break;
+		}
+	}
+	
+	if ( responseDoc.TopElem.type.HasValue )
+	{
+		responseDoc.TopElem.object_id = curObjectID;
+		tools.object_filling( responseDoc.TopElem.type, responseDoc.TopElem, curObjectID, curObject );
+
+		tools.admin_access_copying( "", responseDoc.TopElem, curObjectID );
+	}
+	
+	try
+	{
+		tools_web.web_custom_elems_filling( 'response', null, responseDoc.TopElem, Request.Form );
+	}
+	catch ( e )
+	{
+		alert( e );
+	}
+	
+	responseDoc.BindToDb( DefaultDb );
+	responseDoc.Save();
+	
+	Response.Redirect( "view_doc.html?mode=responses&m=1&doc_id=" + _id + "&resp_id=" + responseDoc.DocID );
+}
+%>

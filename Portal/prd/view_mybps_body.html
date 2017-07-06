@@ -1,0 +1,33 @@
+<%
+	curView = new Object;
+	curView.SetProperty( 'id', '1' );
+	curView.SetProperty( 'catalog_name', 'bp' );
+	curView.SetProperty( 'disp_link', 'true' );
+	curView.SetProperty( 'link_field_index', 1 );
+	curView.SetProperty( 'sort_index', 1 );
+	curView.SetProperty( 'sort_direct', '-' );
+
+	curArray = Array();	
+	roleArray = XQuery( "for $elem in bprole_collaborators where $elem/person_id = " + curUserID + " return $elem" );
+	
+	tempArray = Array();
+	_counter = 0;
+
+	for ( _role in roleArray )
+	{
+	    tempArray = ArrayUnion( tempArray, XQuery( "for $elem in bprocess_roles where $elem/bprole_id = " + _role.bprole_id + " return $elem" ))
+	}
+		
+    curArray = ArraySelectDistinct( tempArray, 'bp_id' );
+    
+    _rolenames = Array();
+    _count = 0;
+    
+	curView.SetProperty( 'col_headers', Array(tools_web.get_web_str('c_roles')) );		
+	curView.SetProperty( 'col_cells', Array( "ArrayMerge( ArraySelect( tempArray, 'bp_id == ' + ListElem.bp_id ), 'This.role_name', ', ' ) "));
+	curView.SetProperty( 'link_object_field', 'bp_id' );
+	
+	curView.SetProperty( 'array', curArray );
+	
+	Server.Execute( 'view_catalog_list.html' );
+%>

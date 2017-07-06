@@ -1,0 +1,70 @@
+<%
+	_UNDER_CUT = 3;
+	_DAY_NUM = 10;
+	
+	try
+	{
+		if (_fully_opened)
+			_fully_opened = true;
+		else
+			_fully_opened = false;
+	}
+	catch(_ne_otkrito_)
+	{
+		_fully_opened = false;
+	}
+%>
+<div id="NewPersons">
+<table class="panelRightTable" width="100%" border="0" cellspacing="0" cellpadding="2">
+<tr>
+	<td class="tableVotingTop" colspan="2"><div class="VotingHeaderText"><%=tools.get_web_str('doc_new_persons')%></div></td>
+</tr>
+<%
+	lastDate = DateOffset( Date(), (0-1) * 86400 * _DAY_NUM );
+	personArray = XQuery( "for $elem in collaborators where $elem/hire_date > date('" + lastDate + "') order by $elem/hire_date descending return $elem" );
+	
+	if (_fully_opened)
+		_cutArray = personArray;
+	else
+		_cutArray = ArrayRange(personArray, 0 , _UNDER_CUT );
+	
+	for ( ListElem in _cutArray)
+	{
+	personDoc = OpenDoc( UrlFromDocID( ListElem.PrimaryKey ) ).TopElem;
+%>
+<tr>
+	<td rowspan="2" style="padding-left: 0px; padding-top: 4px; vertical-align: top">
+<%
+		if ( _fully_opened && personDoc.pict_url.HasValue )
+		{
+%>
+		<img src="<%=personDoc.pict_url%>" height="60" border="0"/>
+<%
+		}
+		else
+			Response.Write("&nbsp;");
+%>
+	</td>
+	<td class="PersonName" width="100%"><A HREF="view_doc.html?mode=person&object_id=<%=ListElem.id%>&doc_id=<%=curDocID%>"><%=ListElem.fullname%></A>
+	</td>
+</tr>
+<tr>
+	<td class="PersonPosition" align="left"><%=personDoc.position_name%></td>
+</tr>
+<%
+		}
+		
+		if (!_fully_opened && ArrayCount(personArray) > _UNDER_CUT)
+		{
+%>
+<tr>
+	<td align="right" colspan="2">
+		<A HREF="view_doc.html?mode=new_persons&doc_id=<%=curDocID%>"><%=tools.get_web_str('vnp_view_all')%> &raquo;</A>
+	</td>
+</tr>
+<%
+		}
+%>
+
+</table>
+</div>

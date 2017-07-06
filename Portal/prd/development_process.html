@@ -1,0 +1,82 @@
+<%
+	Server.Execute("include/user_init.html");
+	var __sMode = Request.Query.GetOptProperty("mode");
+	var __sReturnStr = '<?xml version="1.0" encoding="utf-8"?>';
+	var __aDevMethodsIDs = Array();
+	switch (__sMode)
+	{
+		case "get_development_method_list":
+			__sReturnStr += "<development_methods>";
+			var __sType = Request.Query.GetOptProperty("type");
+			if (__sType == "fx")
+			{
+				ASSESSMENT_ID = OptInt(Request.Query.GetOptProperty("assessment_id"));
+				PA_ID = OptInt(Request.Query.GetOptProperty("pa_id"));
+				COMPETENCE_ID = OptInt(Request.Query.GetOptProperty("competence_id"));
+				IS_SIMPLE = (Request.Query.GetOptProperty("is_simple", "0") == "1")
+				try
+				{
+					__aDevMethodsIDs = QueryCatalogByKeys("development_methods","id",eval(UrlDecode(Request.Query.GetOptProperty("formula"))));
+				}
+				catch(_X_)
+				{
+					alert("Development Process Error: invalid formula\n" + _X_);
+				}
+			}
+			else if (__sType == "competence")
+			{
+				var __docCompetence
+				try
+				{
+					__teCompetence = OpenDoc(UrlFromDocID(Int(Request.Query.GetOptProperty("competence_id")))).TopElem;
+				}
+				catch(_X_)
+				{
+					__teCompetence = null;
+				}
+				if (__teCompetence != null)
+				{
+					var __fldLevelElem;
+					for (__fldLevelElem in __teCompetence.levels)
+					{
+						__aDevMethodsIDs = ArrayUnion(__aDevMethodsIDs, ArrayExtract(__fldLevelElem.development_methods, "development_method_id"));
+					}
+					__aDevMethodsIDs = QueryCatalogByKeys("development_methods","id",__aDevMethodsIDs);
+				}
+			}
+			
+			var __catDevMethod;
+			for (__catDevMethod in __aDevMethodsIDs)
+			{
+				__sReturnStr += '<development_method id="' +__catDevMethod.PrimaryKey+ '" name="' +XmlAttrEncode(__catDevMethod.name)+ '"/>';
+			}
+			__sReturnStr += "</development_methods>";
+		break;
+		case "get_edu_method_list":
+			__sReturnStr += "<education_methods>";
+			var __docCompetence
+			try
+			{
+				__teCompetence = OpenDoc(UrlFromDocID(Int(Request.Query.GetOptProperty("competence_id")))).TopElem;
+			}
+			catch(_X_)
+			{
+				__teCompetence = null;
+			}
+			if (__teCompetence != null)
+			{
+				var __aEduMethodsIDs = Array();
+				var __fldLevelElem;
+				for (__fldLevelElem in __teCompetence.levels)
+				{
+					__aEduMethodsIDs = ArrayUnion(__aEduMethodsIDs, ArrayExtract(__fldLevelElem.education_methods, "PrimaryKey"));
+				}
+				for (__iEduMethIDElem in ArraySelectDistinct(__aEduMethodsIDs, "This"))
+					__sReturnStr += '<education_method id="' +__iEduMethIDElem+ '"/>';
+			}
+			__sReturnStr += "</education_methods>"
+		break;
+	}
+	Response.ContentType = "text/xml";
+	Response.Write(EncodeCharset(__sReturnStr, "utf-8"));
+%>

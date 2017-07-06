@@ -1,0 +1,377 @@
+<%
+//alert('start-	'+GetCurTicks())
+try
+{
+	numMonths = Int( Request.QueryString.num_months );
+	if ( numMonths < 1 )
+		numMonths = 1;
+}
+catch( dd )
+{
+	numMonths = 1;
+}
+try
+{
+	curDate = DateNewTime( Date( Request.QueryString.date ) );
+}
+catch ( rr )
+{
+	curDate = DateNewTime( Date() );
+}
+
+curPlaceID = null;
+try
+{
+	curPlaceID = Int( Request.QueryString.place_id );
+}
+catch ( rr )
+{
+}
+
+curEducationOrgID = null;
+try
+{
+	curEducationOrgID = Int( Request.QueryString.education_org_id );
+}
+catch ( rr )
+{
+}
+
+distEmptyRow = true;
+if ( Request.QueryString.HasProperty( 'disp_empty_row' ) && Request.QueryString.disp_empty_row == '0' )
+	distEmptyRow = false;
+	
+viewType = 'vert';
+if ( Request.QueryString.HasProperty( 'view_type' ) )
+	viewType = Request.QueryString.view_type;
+	
+curQueryString = tools_web.get_query_string( true, 'view_type;date;num_months;place_id;education_org_id' );
+
+
+_name_months = Array(tools.get_web_str('c_january'),tools.get_web_str('c_february'),tools.get_web_str('c_march'),tools.get_web_str('c_april'),tools.get_web_str('c_may'),tools.get_web_str('c_june'),tools.get_web_str('c_july'),tools.get_web_str('c_august'),tools.get_web_str('c_september'),tools.get_web_str('c_october'),tools.get_web_str('c_november'),tools.get_web_str('c_december'));
+_year = Year( curDate );
+_month = Month( curDate );
+_num_days = Array( 31, ( DateToRawSeconds( Date( _year, 3, 1 ) ) - DateToRawSeconds( Date( _year, 2, 1 ) ) )/86400, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 );
+
+
+_ost = ( _month + numMonths - 1 ) % 12;
+_month_end = ( _ost == 0 ? 12 : _ost );
+_year_end = _year + ( _month + numMonths - 1 ) / 12 + ( _ost == 0 ? 0-1 : 0 );
+%>
+
+<script type="text/javascript">
+var object_id = null;
+var SelTrainingArray = null;
+var SaveColorArray = null;
+var request_type_id = '';
+var dispRequest = false;
+
+function submit_ecc(_type,_id)
+{
+	if(_id) object_id=_id;
+
+    if( object_id == null )
+    {
+        alert("<%=tools.get_web_str('c_select_elem')%>");
+        return false;
+    }
+    
+	switch (_type)
+	{
+		case 'event':
+			document.location.href = "view_doc.html?mode=event&doc_id=<%=curDocID%>&object_id=" + object_id;
+			break;
+			
+		case 'request':
+			document.location.href = "view_doc.html?mode=request_create&type=event&doc_id=<%=curDocID%>&request_object_id=" + object_id + "&request_type_id=" + request_type_id;
+			break;
+	}
+}
+
+function onSelTraining(obj,training_id,_diap,_request_type_id,_disp_request)
+{
+	object_id = training_id;
+	request_type_id = _request_type_id;
+	dispRequest = ( _disp_request ? true : false );
+<%
+	if ( ! curUser.in_request_black_list )
+	{
+%>	
+	document.getElementById("request_button").style.visibility = ( dispRequest ? 'visible' : 'hidden' );
+<%
+	}
+%>
+    if(SelTrainingArray != null && SaveColorArray != null)
+		for ( var i=0; i<SelTrainingArray.length; i++ )
+        	SelTrainingArray[i].style.backgroundColor = SaveColorArray[i];
+			
+	var diapArray = String( _diap ).split("_");
+	var eduID = diapArray[0];
+	var startDiap = diapArray[1].split("-")[0];
+	var endDiap = diapArray[1].split("-")[1];
+	var startDay = parseInt( startDiap.split(".")[0] );
+	var startMonth = parseInt( startDiap.split(".")[1] );
+	var endDay = parseInt( endDiap.split(".")[0] );
+	var endMonth = parseInt( endDiap.split(".")[1] );
+	
+	var arrayCounter = 0;
+	SelTrainingArray = Array();
+    SaveColorArray = Array();
+	
+	var em = ( endMonth < startMonth ? 12 + endMonth : endMonth );
+	for ( var cm=startMonth; cm<=em; cm++ )
+	{
+		var m = ( cm > 12 ? cm - 12 : cm );
+		var s = ( m == startMonth ? startDay : 1 );
+		var e = ( m == endMonth ? endDay : 31 );
+		for ( var d=s; d<=e; d++ )
+		{
+			var elemArray = document.getElementsByName( eduID + "_" + d + "." + m );
+			for ( var ec=0; ec<elemArray.length; ec++ )
+			{
+				SelTrainingArray[ arrayCounter ] = elemArray[ec];
+				SaveColorArray[ arrayCounter ] = elemArray[ec].style.backgroundColor;
+				elemArray[ec].style.backgroundColor = "yellow";
+				arrayCounter++;
+			}
+		}
+	}
+}
+
+function update_ecc(_view_type)
+{
+    var num_month = <%=numMonths%>;
+	var start_month = parseInt( document.getElementById("start_month_select").value );
+	var start_year = parseInt( document.getElementById("start_year_select").value );
+	var end_month = parseInt( document.getElementById("end_month_select").value );
+	var end_year = parseInt( document.getElementById("end_year_select").value );
+
+	if ( end_year > start_year || ( end_year == start_year && end_month > start_month ) )
+		num_month = 1 + end_month - start_month + 12 * ( end_year - start_year );
+	
+	document.location.href = "<%=curQueryString%>date=1." + start_month + "." + start_year + "&num_months=" + num_month + "&view_type=" + ( _view_type ? _view_type : "<%=viewType%>" ) + ( document.getElementById("place_id_select") ? "&place_id=" + document.getElementById("place_id_select").value : "" ) + ( document.getElementById("education_org_id_select") ? "&education_org_id=" + document.getElementById("education_org_id_select").value : "" );
+}
+</script>
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0" class="activator">
+	<tr>
+		<TD ALIGN="CENTER" class="activator">
+
+			<NOBR><%=tools.get_web_str('c_period')%>:&nbsp;&nbsp;<select name="start_month" id="start_month_select">
+<%
+	for ( num=1; num<=12; num++ )
+	{
+%>
+				<option value="<%=num%>" <%=( num == _month ? 'selected="selected"' : '' )%>><%=_name_months[ num - 1 ]%></option>
+<%
+	}
+%>
+			</select>
+			<select name="start_year" id="start_year_select">
+<%
+	for ( num=_year-2; num<=_year+2; num++ )
+	{
+%>
+				<option value="<%=num%>" <%=( num == _year ? 'selected="selected"' : '' )%>><%=num%></option>
+<%
+	}
+%>
+			</select>&nbsp;-&nbsp;
+			<select name="end_month" id="end_month_select">
+<%
+	for ( num=1; num<=12; num++ )
+	{
+%>
+				<option value="<%=num%>" <%=( num == _month_end ? 'selected="selected"' : '' )%>><%=_name_months[ num - 1 ]%></option>
+<%
+	}
+%>
+			</select>
+			<select name="end_year" id="end_year_select">
+<%
+	for ( num=_year-2; num<=_year+2; num++ )
+	{
+%>
+				<option value="<%=num%>" <%=( num == _year_end ? 'selected="selected"' : '' )%>><%=num%></option>
+<%
+	}
+%>
+			</select></NOBR>
+
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<NOBR><%=tools.get_web_str('c_place')%>:&nbsp;&nbsp;
+			<select name="place_id" id="place_id_select">
+				<option value=""><%=tools_web.get_web_str("c_all")%></option>
+<%
+	for ( _elem in XQuery( 'for $elem in places order by $elem/Hier(), $elem/name return $elem' ) )
+	{
+		_otst = String('&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;').slice( 0, _elem.__hlevel * 24 );
+%>
+				<option value="<%=_elem.PrimaryKey%>"><%=( _otst + tools_web.get_cur_lng_name( _elem.name ) )%></option>
+<%
+	}
+%>
+			</select></NOBR>
+<SCRIPT language="JavaScript">
+selcur=document.getElementById("place_id_select");
+selcur.selectedIndex==-1;
+for (i=0;i<selcur.options.length;i++)
+    if (selcur.options[i].value=="<%=curPlaceID%>") {
+        selcur.selectedIndex=i;
+		break;
+    }
+</SCRIPT>
+
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<NOBR><%=tools_web.get_web_str("c_edu_org")%>:&nbsp;&nbsp;
+			<select name="education_org_id" id="education_org_id_select">
+				<option value=""><%=tools_web.get_web_str("c_all")%></option>
+<%
+	for ( _elem in XQuery( 'for $elem in education_orgs order by $elem/disp_name return $elem' ) )
+	{
+%>
+				<option value="<%=_elem.PrimaryKey%>"><%=tools_web.get_cur_lng_name( _elem.disp_name )%></option>
+<%
+	}
+%>
+			</select></NOBR>
+<SCRIPT language="JavaScript">
+selcur=document.getElementById("education_org_id_select");
+selcur.selectedIndex==-1;
+for (i=0;i<selcur.options.length;i++)
+    if (selcur.options[i].value=="<%=curEducationOrgID%>") {
+        selcur.selectedIndex=i;
+		break;
+    }
+</SCRIPT>
+			<br/><br/>
+			<input type="button" value="<%=tools.get_web_str('c_refresh')%>" onClick="update_ecc();" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';">
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			<input type="button" value="<%=tools.get_web_str('c_tip_event')%>" onClick="submit_ecc('event');return false;" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';">
+			<input type="button" id="request_button" value="<%=tools.get_web_str('c_text_create_request')%>" onClick="submit_ecc('request');return false;" class="inputButton" style="visibility:hidden" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';">
+		</TD>
+	</tr>
+</table>
+<br/>
+
+<style>
+.tab_td {
+	border-right: #d3d3d3 1px solid; border-top: #d3d3d3 1px solid; border-left: #d3d3d3 1px solid; border-bottom: #d3d3d3 1px solid; text-align: center;
+}
+.tab_td_sel {
+	border-right: #d3d3d3 1px solid; border-top: #d3d3d3 1px solid; border-left: #d3d3d3 1px solid; border-bottom: #d3d3d3 0px solid; text-align: center; font-weight:bold; height:24px;
+}
+.tab_td_empty {
+	border-bottom: #d3d3d3 1px solid;
+}
+</style>
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+	<tr>
+<%
+	tabTypes = Array('vert','gor','month');
+	tabNames = Array(tools.get_web_str('vecb_vert'),tools.get_web_str('vecb_gor'),tools.get_web_str('vecb_month'));
+	tabNum = 3;
+
+	for ( i=0; i<tabNum; i++ )
+	{
+		_class = ( tabTypes[i] == viewType ? '' : '' );
+%>
+		<td class="tab_td_empty"><img src="pics/1blank.gif" width="10" height="0"/></td>
+<%
+		if ( tabTypes[i] == viewType )
+		{
+%>
+		<td class="tab_td_sel"><img src="pics/1blank.gif" width="140" height="0"/><br/><%=tabNames[i]%></td>
+<%
+		}
+		else
+		{
+%>
+		<td class="tab_td"><img src="pics/1blank.gif" width="140" height="0"/><br/><a href="javascript: update_ecc('<%=tabTypes[i]%>')"><%=tabNames[i]%></a></td>
+<%
+		}
+	}
+%>
+		<td class="tab_td_empty" width="100%">&nbsp;</td>
+	</tr>
+</table>
+<br/>
+
+<%
+curObjectNum = 0;
+curObjectArray = Array();
+//arrEducatMethods = Array();
+if (curEducationOrgID != null)
+{
+  arrEducatMethods = XQuery("for $elem in education_methods where $elem/education_org_id=" + curEducationOrgID + " return $elem");
+}
+else
+{
+  arrEducatMethods = education_methods;
+}
+
+if ( global_settings.settings.check_access_on_lists && curUser.access.access_role != 'admin' )
+{
+//alert('s-	'+GetCurTicks())
+	for ( _elem in arrEducatMethods )
+		try
+		{
+//alert('st-	'+GetCurTicks())
+			if ( tools_web.check_access( OpenDoc( UrlFromDocID ( _elem.PrimaryKey ), 'form=x-local://wtv/wtv_form_doc_access.xmd;ignore-top-elem-name=1' ).TopElem, curUserID, curUser, Session ) == true )
+			{
+				curObjectArray[ curObjectNum ] = _elem;
+				curObjectNum++;
+			}
+		}
+		catch(_what_a_mess_)
+		{
+		}
+//alert('e-	'+GetCurTicks())
+}
+else
+{
+	curObjectArray = arrEducatMethods;
+	curObjectNum = ArrayCount( curObjectArray );
+}
+
+curObjectArray = ArraySort( curObjectArray, 'name', '+' );
+
+switch ( viewType )
+{
+	case 'vert':
+		for ( _cal_i=0; _cal_i<numMonths; _cal_i++ )
+		{
+			Server.Execute( "view_event_catalog_calendar.html" );
+			curDate = ( Month( curDate ) == 12 ? Date( Year( curDate ) + 1, 1, 1 ) : Date( Year( curDate ), Month( curDate ) + 1, 1 ) );
+		}
+		break;
+		
+	case 'month':
+		for ( _cal_i=0; _cal_i<numMonths; _cal_i++ )
+		{
+			Server.Execute( "view_event_calendar_month.html" );
+			curDate = ( Month( curDate ) == 12 ? Date( Year( curDate ) + 1, 1, 1 ) : Date( Year( curDate ), Month( curDate ) + 1, 1 ) );
+		}
+		break;
+
+	default:
+		Server.Execute( "view_event_catalog_calendar_gor.html" );
+		break;
+}
+%>
+
+<table cellpadding="0" cellspacing="3" border="0" width="100%">
+	<tr>
+		<td colspan="2"><b><%=tools.get_web_str('c_status')%>:</b></td>
+	</tr>
+<%
+	for ( _status in curLngCommon.event_status_types )
+	{
+%>
+	<tr>
+		<td bgcolor="#<%=StrHexColor( _status.bk_color )%>" width="30px"></td>
+		<td><%=_status.name%></td>
+	</tr>
+<%
+	}
+//alert('end-	'+GetCurTicks())
+%>
+</table>

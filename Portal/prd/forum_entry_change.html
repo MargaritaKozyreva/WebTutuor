@@ -1,0 +1,36 @@
+<%
+Server.Execute( 'include/sid_access_init.html' );
+
+curAction = Request.Query.HasProperty( 'action' ) ? Request.Query.action : 'save';
+bIsAjax = Request.Query.HasProperty( 'ajax' ) && Request.Query.ajax == '1';
+
+iForumEntry = Int( Request.Query.forum_entry_id );
+docForumEntry = OpenDoc( UrlFromDocID( iForumEntry ) );
+teForumEntry = docForumEntry.TopElem;
+
+curAccess = curAccess || curUser.access.access_role == 'admin';
+if ( curAccess )
+	curAccess = tools_web.check_forum_entry_access( teForumEntry, curUser, curUserID, curObject );
+
+if ( ! curAccess ) 
+{
+	Server.Execute( "view_access_panel.html" );
+	Cancel();
+}
+
+
+switch ( curAction )
+{
+	case 'remove':
+		if ( curObject.allow_user_delete )
+			tools_web.remove_forum_entry( iForumEntry );
+		break;
+		
+	case 'close':
+		tools_web.close_forum_entry( iForumEntry, docForumEntry );
+		break;
+}
+
+if ( ! bIsAjax )
+	Request.Redirect( 'view_doc.html?mode=forums&doc_id=' + curDocID + '&object_id=' + curObjectID + ( Request.Query.HasProperty( 'main_forum_entry_id' ) && Request.Query.main_forum_entry_id != '' ? '&entry_id=' + Request.Query.main_forum_entry_id : '' ) );
+%>

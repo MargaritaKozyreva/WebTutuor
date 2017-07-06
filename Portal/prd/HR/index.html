@@ -1,0 +1,36 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<title></title>
+<script type="text/javascript" src="swfobject.js"></script>
+<script type="text/javascript">
+var rootId = "";
+var parts = location.search.split("=");
+if (parts.length > 1) {
+	rootId = parts[1];
+}
+
+var flashvars = {
+	rootId: rootId
+};
+
+var params = {
+	quality: "best",
+	wmode: "window",
+	align: "middle",
+	allowScriptAccess: "sameDomain",
+	menu: "false"
+};
+
+swfobject.embedSWF("index.swf", "flashContent", "1024", "768", "9.0.0", "hr/expressinstall.swf", flashvars, params);
+
+</script>
+</head>
+<body>
+
+   <div align="center" id="flashContent" style="height: 100%; z-index:10">
+      <div style="background:#CC0000; width: 50%;padding: 10px;"><font color="#FFFFFFF">You do not have the Flash plugin installed, or your browser does not support Javascript (you should enable it, perhaps?)</font></div>
+   </div>
+ 
+</body>
+</html>

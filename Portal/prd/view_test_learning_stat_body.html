@@ -1,0 +1,48 @@
+<table width="100%" cellspacing="4" cellpadding="0">
+	<tr>
+		<td>
+
+		<table width="100%" cellspacing="0" cellpadding="4" class="tableBorder">
+		<tr>
+			<td width="140" align="RIGHT"><b><%=tools.get_web_str('c_act_date')%>:</b>&nbsp;</td>
+			<td style="font-weight:normal"><%=StrDate( curLearning.start_usage_date, true, false )%></td>
+		</tr>
+		<tr>
+			<td width="140" align="RIGHT"><b><%=tools.get_web_str('c_finish_date')%>:</b>&nbsp;</td>
+			<td style="font-weight:normal"><%=StrDate( curLearning.last_usage_date, true, false )%></td>
+		</tr>
+		<tr>
+			<td width="140" align="RIGHT"><b><%=tools.get_web_str('c_score')%>:</b>&nbsp;</td>
+			<td style="font-weight:normal"><%=curLearning.score%></td>
+		</tr>
+		<tr>
+			<td width="140" align="RIGHT"><b><%=tools.get_web_str('c_state')%>:</b>&nbsp;</td>
+			<td style="font-weight:normal"><%=curLngCommon.learning_states.GetChildByKey( curLearning.state_id ).name%></td>
+		</tr>
+<%
+if ( curObject.ChildExists( 'text_result' ) && curObject.text_result.HasValue )
+{
+%>
+		<tr>
+			<td width="140" align="RIGHT"><b><%=tools_web.get_web_str('c_result')%>:</b>&nbsp;</td>
+			<td style="font-weight:normal"><%=curLearning.text_result%></td>
+		</tr>
+<%
+}
+%>
+		</table>
+
+		</td>
+	</tr>
+</table>
+
+<%
+	if ( curAssessment.display_result_report && curUserID == curLearning.person_id && curLearning.lesson_report != '' )
+	{
+%>
+	<center>
+		<b><a href="view_test_report.html?doc_id=<%=curDocID%>&object_id=<%=curObjectID%>" target="_blank"><%=tools.get_web_str('c_stat')%></a></b>
+	</center>
+<%
+	}
+%>

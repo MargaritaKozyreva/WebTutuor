@@ -1,0 +1,268 @@
+<table width="100%">
+<tr>
+<%
+	if ( ! curWebCommon.disp_custom_left_panel )
+	{
+%>
+		<td width="200">
+			<%Server.Execute( "view_position_assessment_tree_body.html" )%>
+		</td>
+<%
+	}
+%>
+<td>
+	<%
+	
+	if (curAssessmentAppraise.web_display)
+	{
+
+		try
+		{
+			curPaID = Int(Request.QueryString.pa_id );
+			curPA=OpenDoc(UrlFromDocID( curPaID )).TopElem;
+			IS_DONE=Request.QueryString.is_done ;
+
+		}
+		catch(_fuck_)
+		{
+			curPaID = null;
+			IS_DONE = null;
+		}	
+		
+		is_post = '';
+		
+		try
+		{
+			is_post = Request.QueryString.is_post;
+		}
+		catch(_zapadlo_)
+		{}
+		
+			if (curPaID != null)
+			{
+				%>
+				<table width="100%" border="0" height="100%">
+					
+					<tr><td><b><%=tools_web.get_web_str('c_ass_appraise')%>:  </b><%=curAssessmentAppraise.name%></td></tr>
+					<tr><td><b><%=tools_web.get_web_str('vpaab_ass_position')%>: </b><%=curPA.position_common_id.ForeignElem.name%></td></tr>
+					<br/>
+					<br/>
+					<br/>
+								
+					<tr valign="top">
+				
+						<td>	
+					
+						</td>
+					</tr>
+					
+				</table>
+				
+				
+				<%
+				try
+				{
+					teGrade = OpenDoc(UrlFromDocID( curPA.grade_id )).TopElem;
+				}
+				catch(_x_)
+				{
+					teGrade = null;
+				}
+				
+				if (IS_DONE == '1')
+				{
+					%>
+					<table width="100%" border="0" height="100%">
+						<tr><td><b><%=tools_web.get_web_str('vpaab_sum_score')%>: </b><%=curPA.scale%></td></tr>
+						
+						<tr><td><b><%=tools_web.get_web_str('vpaab_grade')%>: </b><%=(teGrade != null ? teGrade.name : '?')%></td></tr>
+						
+					</table>	
+					<%
+				}
+				
+				if (is_post == '1')  //is_pos  start
+				{
+					%>
+					<p>
+					<center><b><%=tools_web.get_web_str('vpaab_form_save')%></b></center>
+					</p>
+					
+					<b><%=tools_web.get_web_str('vpaab_sum_score')%>: </b><%=curPA.scale%>
+					<br/>
+					<b><%=tools_web.get_web_str('vpaab_grade')%>: </b><%=(teGrade != null ? teGrade.name : '?')%>
+					<br/>
+					<FORM ACTION="position_assessment_close.html" NAME="position_assessment_close" METHOD="POST">
+					
+						<input type="hidden" name="doc_id" value="<%=curDocID%>">
+						<input type="hidden" name="assessment_appraise_id" value="<%=curAssessmentAppraiseID%>">
+						<input type="hidden" name="pa_id" value="<%=curPaID%>">
+						<input type="hidden" name="is_done" value="<%=IS_DONE%>">
+						<input type="hidden" name="is_post" value="0">
+						<input type="hidden" name="position_common_id" value="<%=Request.QueryString.position_common_id%>">
+						<center>
+							<input type=submit value="<%=tools_web.get_web_str('vpaab_ass_finish')%>" class="inputButton" onClick="" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';">
+						</center>
+					</FORM>
+				<%	
+					
+				}
+				else
+				{
+					
+					j = 0;		
+					if (ArrayCount(curPA.supplementary_questions) > 0)
+					{
+					%>	
+									
+					<FORM ACTION="position_assessment_save.html" NAME="position_assessment_save" METHOD="POST">	
+						<input type="hidden" name="doc_id" value="<%=curDocID%>">
+						<input type="hidden" name="assessment_appraise_id" value="<%=curAssessmentAppraiseID%>">
+						<input type="hidden" name="pa_id" value="<%=curPaID%>">
+						<input type="hidden" name="is_done" value="<%=IS_DONE%>">
+						<input type="hidden" name="is_post" value="0">
+						<input type="hidden" name="position_common_id" value="<%=Request.QueryString.position_common_id%>">
+						
+						
+						<center><b><%=tools.get_web_str('c_questions')%></b></center><br>
+					
+					
+									<table width=100% cellpadding=0 cellspacing=0 border=0 bgcolor="gray"><tr><td>
+										<table width=100% cellpadding=1 cellspacing=1>
+										
+										<tr bgcolor="silver">
+										<td><%=tools.get_web_str('c_question')%></td>
+										<td><%=tools.get_web_str('c_answer')%></td>
+										<td><%=tools_web.get_web_str('c_position_common_instruction')%></td>
+										</tr>
+										
+						<%
+							
+							for (_question in curPA.supplementary_questions)
+							{		
+						%>				
+								
+										<tr bgcolor="white">
+										<td>
+											<input type="hidden" name="<%=('stq_id_'+ j)%>" value="<%=_question.supplementary_question_id%>">
+											<a class="asLink" href="About" onClick="var id=window.open('view_window_indicator_info.html?type=supplementary_question&doc_id=<%=_question.supplementary_question_id%>','About','scrollbars,resizable,width=760,height=500');id.focus();return false;"><%=_question.supplementary_question_name%></a>
+										</td>
+										<td>
+							<%
+								if (_question.supplementary_question_type == '1')
+								{
+									
+							%>		
+								
+								<textarea name="<%=('stq_mark_'+ j)%>" cols="20" rows="2" class="commonTextarea"><%=_question.supplementary_question_mark%></textarea>
+								
+							<%	
+								}		
+								
+								else
+								
+								if (_question.supplementary_question_type == '2')
+								{
+								
+								questionDoc = null;
+								try
+								{
+									questionDoc = OpenDoc(UrlFromDocID(_question.supplementary_question_id)).TopElem;
+								}
+								catch(_damn_)
+								{
+									Response.Write(tools_web.get_web_str('vpaab_err_del_question'));
+								}
+								
+								
+								if(questionDoc != null)
+								{
+								
+									if (IS_DONE == '1')
+									{
+										for (_scale in questionDoc.scales )
+										{
+												if (_question.supplementary_question_mark == _scale.PrimaryKey)
+												{
+													Response.Write(_scale.name);
+												}
+										}
+									}
+									if (IS_DONE == '0')
+									{
+								
+							%>	
+								
+								<select name="<%=('stq_mark_'+ j)%>">
+									<option value=""> </option>
+							<%	
+					
+													
+										
+										for (_scale in questionDoc.scales )
+										{
+												if (_question.supplementary_question_mark == _scale.PrimaryKey)
+												{
+													_selected_flag = ' selected';
+												}
+												else
+												_selected_flag = '';
+													Response.Write('<option'+_selected_flag+' value="'+_scale.id+'">'+_scale.name+'</option>\n');
+										}
+										
+					
+							%>
+								</select>
+							<%	
+									}
+								}
+								}
+							%>					
+										
+										</td>
+										<td width="25%">
+											<%
+											if (questionDoc != null && ArrayCount(questionDoc.section_instructions) > 0)
+											{
+											%>
+												<a href="" onClick="var id=window.open('view_window_position_instruction_info.html?question_id=<%=_question.supplementary_question_id%>&position_common_id=<%=curPA.position_common_id%>','About','scrollbars,resizable,width=1000,height=600');id.focus();return false;"><%=tools_web.get_web_str('c_open')%></a>	
+											<%
+											}
+											%>
+											
+										</td>
+										</tr>
+						
+						<%			
+								j++;
+							}
+					
+						%>				
+									
+									</table>
+									</td></tr></table>
+						<%				
+						}			
+					%>			
+						<input type="hidden" name="stq_count" value="<%=j%>">
+						<%
+						if (IS_DONE == '0')
+						{	%>
+							<p><center><input type=submit value="<%=tools_web.get_web_str('vpaab_save_results')%>" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"></center></p>				
+						<%
+						} %>
+					</FORM>	
+		
+					<%
+				}	
+			
+		}
+	}
+	else
+	{
+		Response.Write("<center><table border='1' style='border-width: 10px' bordercolor='red' cellspacing='10' cellpadding='5'><tr><td><IMG SRC='pics/atten.jpg'></td><td><font color='maroon' size='+1'>"+tools_web.get_web_str("vpaab_mess_not_show")+"</font></td></tr></table></center>");
+	}	
+	%>
+	</td>
+	</tr>
+</table>

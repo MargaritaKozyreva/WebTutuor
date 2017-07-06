@@ -1,0 +1,2067 @@
+<%
+	Server.Execute( "include/user_init.html" );
+	Server.Execute( "include/access_init.html" );
+	
+	function go_back(_retreat)
+	{
+		Response.Redirect(_retreat);
+		Cancel();
+	}
+	
+	_mode = Request.Query.GetProperty("mode");
+	_href = Request.Query.GetProperty("href");
+	
+	switch(_mode)
+	{
+case "delete_elements":
+			_dead_object_ids = Request.Form.GetProperty("dead_object_ids");
+			_catalog_name = Request.Form.GetProperty("catalog_name");
+			_cardDoc = tools_web.get_my_person_object_link_card(_catalog_name,curUserID, true);
+			if (_cardDoc != undefined)
+			{
+				_deletableArr = Array();
+				_elems = String(_dead_object_ids).split(";");
+				_flag_save = false;
+				
+				for (_elem in _elems)
+				try
+				{
+					_i_can = false;
+					if (!_cardDoc.TopElem.all_can_delete)
+					{
+						_ob = _cardDoc.TopElem.objects.GetOptChildByKey(Int(_elem));
+						if (_ob != undefined && _ob.can_delete)
+						{
+							_i_can = true;
+							_ob.Delete();
+							_flag_save = true;
+						}
+					}
+					else
+						_i_can = true;
+					if (_i_can)
+						_deletableArr[ArrayCount(_deletableArr)] = Int(_elem);
+				}
+				catch(_x_)
+				{}
+				
+				_dead_ones = QueryCatalogByKeys(_catalog_name + "s", "id", _deletableArr);
+				_x = 0;
+				for (_elem in _dead_ones)
+				{
+					switch (_catalog_name)
+					{
+						case "role":
+							_xarrObjectPleaseForgetAboutMe = XQuery("for $elem in items where MatchSome($elem/role_id,(" + _elem.PrimaryKey.XQueryLiteral + ")) return $elem");
+							for (_catObjectPleaseForgetAboutMe in _xarrObjectPleaseForgetAboutMe)
+							{
+								_docObjectPleaseForgetAboutMe = OpenDoc(UrlFromDocID(_catObjectPleaseForgetAboutMe.PrimaryKey));
+								_fldDeadLastWill = ArrayOptFind(_docObjectPleaseForgetAboutMe.TopElem.role_id, "This.Value == " + _elem.PrimaryKey);
+								if (_fldDeadLastWill != undefined)
+								{
+									_fldDeadLastWill.Delete();
+									_docObjectPleaseForgetAboutMe.Save();
+								}
+							}
+							_xarrObjectPleaseForgetAboutMe = XQuery("for $elem in roles where $elem/parent_role_id = " + _elem.PrimaryKey.XQueryLiteral + " return $elem");
+							for (_catObjectPleaseForgetAboutMe in _xarrObjectPleaseForgetAboutMe)
+							{
+								_docObjectPleaseForgetAboutMe = OpenDoc(UrlFromDocID(_catObjectPleaseForgetAboutMe.PrimaryKey));
+								_docObjectPleaseForgetAboutMe.TopElem.parent_role_id.Clear();
+								_docObjectPleaseForgetAboutMe.Save();
+							}
+						break;
+					}
+					DeleteDoc(UrlFromDocID(_elem.PrimaryKey));
+					_x++;
+				}
+				
+				if (_flag_save)
+					_cardDoc.Save();
+				
+				Session.RETURN_MSG = StrReplace( StrReplace( tools_web.get_web_str('cpp_mess_odj_deleted'), '{PARAM1}', _catalog_name ), '{PARAM2}', _x );
+			}
+			else
+				Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_access_delete'), '{PARAM1}', _catalog_name );
+			go_back(_href);
+		break;
+		
+		
+		
+case "item":
+			_catalog_name = "item";
+			
+			try
+			{
+				//_role_id = Request.Form.role_id;
+				_sequence = String(Request.Form.sequence).split(";");
+				_title = Request.Form.title;
+				_question_text = Request.Form.question_text;
+				_type_id = Request.Form.type_id;
+				_order = Request.Form.order;
+				_item_id = Int(Request.Form.item_id);
+			}
+			catch(_x_)
+			{
+				Session.RETURN_MSG = tools_web.get_web_str('cpp_err_post');
+				go_back(_href);
+				Cancel();
+			}
+			_cardDoc = tools_web.get_my_person_object_link_card(_catalog_name,curUserID, true);
+			if (_cardDoc == undefined)
+			{
+				Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_access_delete'), '{PARAM1}', _catalog_name );
+				go_back(_href);
+			}
+			
+			try
+			{
+				curItemDoc = OpenDoc(UrlFromDocID(_item_id));
+				_i_can = false;
+				if (!_cardDoc.TopElem.all_can_edit)
+				{
+					_ob = _cardDoc.TopElem.objects.GetOptChildByKey(Int(_item_id));
+					if (_ob != undefined && _ob.can_edit)
+						_i_can = true;
+				}
+				else
+					_i_can = true;
+					
+				if (!_i_can)
+				{
+					Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_no_access_edit'), '{PARAM1}', _catalog_name );
+					go_back(_href);
+				}
+				_new = false;
+			}
+			catch(_x_)
+			{
+				if (!_cardDoc.TopElem.all_can_create)
+				{
+					Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_no_access_create'), '{PARAM1}', _catalog_name );
+					go_back(_href);
+				}
+				curItemDoc = OpenNewDoc("x-local://qti/qti_item.xmd");
+				curItemDoc.BindToDb(DefaultDb);
+				_href = _href + "&object_id=" + curItemDoc.DocID;
+				_new = true;
+			}
+			
+			curItemDoc.TopElem.title = _title;
+			
+			
+			//curItemDoc.TopElem.role_id = _role_id;
+			var iX = 0;
+			curItemDoc.TopElem.role_id.Clear();
+			while(Request.Form.HasProperty("role_id_" + iX))
+			{
+				fldStrangeRole = curItemDoc.TopElem.role_id.Add();
+				fldStrangeRole.Value = Int(Request.Form.GetProperty("role_id_" + iX));
+				iX++;
+			}
+			
+			curItemDoc.TopElem.question_text = _question_text;
+			curItemDoc.TopElem.type_id = _type_id;
+			try { curItemDoc.TopElem.question_points = Int(Request.Form.question_points); } catch(_x_){curItemDoc.TopElem.question_points.Clear()}
+			try { curItemDoc.TopElem.max_attempts_num = Int(Request.Form.max_attempts_num); } catch(_x_){curItemDoc.TopElem.max_attempts_num.Clear()}
+			try { curItemDoc.TopElem.duration = Int(Request.Form.duration); } catch(_x_){curItemDoc.TopElem.duration.Clear()}
+			
+			curItemDoc.TopElem.order = _order;
+			
+			if (Request.Form.HasProperty("display_correct_answer") && Request.Form.GetProperty("display_correct_answer") == "1") curItemDoc.TopElem.display_correct_answer = true; else curItemDoc.TopElem.display_correct_answer = false;
+			if (Request.Form.HasProperty("not_disp_last_attempt") && Request.Form.GetProperty("not_disp_last_attempt") == "1") curItemDoc.TopElem.not_disp_last_attempt = true; else curItemDoc.TopElem.not_disp_last_attempt = false;
+					
+			if (Request.Form.HasProperty("feedback_wrong")) curItemDoc.TopElem.feedback_wrong = Request.Form.feedback_wrong;
+			if (Request.Form.HasProperty("feedback_correct")) curItemDoc.TopElem.feedback_correct = Request.Form.feedback_correct;
+			
+			
+			curItemDoc.TopElem.answers.Clear();
+			_x = 1;
+			for (_cur_id in _sequence)
+			if (Request.Form.HasProperty("answer_question_text_" + _cur_id))
+			{
+				_cur_answer = curItemDoc.TopElem.answers.ObtainChildByKey(_x);
+				_cur_answer.text = Request.Form.GetProperty("answer_question_text_" + _cur_id);
+				if (Request.Form.HasProperty("answer_is_correct_answer_" + _cur_id) && Trim(Request.Form.GetProperty("answer_is_correct_answer_" + _cur_id )) == "1")
+					_cur_answer.is_correct_answer = true;
+				
+				_iSubCounter = 0;
+				if (Request.Form.HasProperty("gap_condition_count_" + _cur_id) && Request.Form.GetProperty("gap_condition_count_" + _cur_id) != "")
+					_iSubCounter = Int(Request.Form.GetProperty("gap_condition_count_" + _cur_id));
+				
+				_cur_answer.conditions.Clear();
+				
+				for (iSubX = 0; iSubX < _iSubCounter; iSubX++)
+				if (Request.Form.HasProperty("sentence_option_id_" + _cur_id + "_" + iSubX))
+				{
+					fldNewCondition = _cur_answer.conditions.AddChild();
+					fldNewCondition.sentence_option_id = Request.Form.GetProperty("sentence_option_id_" + _cur_id + "_" + iSubX);
+					if (Request.Form.HasProperty("gap_value_" + _cur_id + "_" + iSubX))
+						fldNewCondition.value = Request.Form.GetProperty("gap_value_" + _cur_id + "_" + iSubX);
+					
+					if (Request.Form.HasProperty("case_sensitive_" + _cur_id + "_" + iSubX) && Request.Form.GetProperty("case_sensitive_" + _cur_id + "_" + iSubX) == "1")
+						fldNewCondition.case_sensitive = true;
+					else
+						fldNewCondition.case_sensitive = false;
+				}
+				
+				_iSubCounter = 0;
+				if (Request.Form.HasProperty("answer_values_count_" + _cur_id) && Request.Form.GetProperty("answer_values_count_" + _cur_id) != "")
+					_iSubCounter = Int(Request.Form.GetProperty("answer_values_count_" + _cur_id));
+				_cur_answer.values.Clear();
+				for (iSubX = 0; iSubX < _iSubCounter; iSubX++)
+				if (Request.Form.HasProperty("answervalue_" + _cur_id + "_" + iSubX))
+				{
+					fldNewAnswerValue = _cur_answer.values.AddChild();
+					fldNewAnswerValue.text = Request.Form.GetProperty("answervalue_" + _cur_id + "_" + iSubX);
+				}
+				
+				_x++;
+			}
+			
+			curItemDoc.Save();
+			if (_new) //&& _cardDoc.TopElem.all_can_edit == false
+			{
+				_ob = _cardDoc.TopElem.objects.ObtainChildByKey(curItemDoc.DocID);
+				_ob.object_name = curItemDoc.TopElem.title;
+				_ob.can_edit = true;
+				_ob.can_delete = true;
+				_cardDoc.Save();
+			}
+			
+			Session.RETURN_MSG = tools_web.get_web_str('cpp_mess_info_save');
+			
+			go_back(_href);
+		break;
+		
+case "make_role":
+			_catalog_name = "role";
+			try
+			{
+				_role_name = Request.Form.role_name;
+				_parent_role_id = Request.Form.parent_role_id;
+			}
+			catch(_x_)
+			{
+				Response.Write(tools_web.get_web_str('cpp_err_post'));
+				go_back(_href);
+				Cancel();
+			}
+			
+			_cardDoc = tools_web.get_my_person_object_link_card(_catalog_name,curUserID, true);
+			if (_cardDoc == undefined)
+			{
+				Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_access_create'), '{PARAM1}', _catalog_name );
+				go_back(_href);
+			}
+			
+			if (!_cardDoc.TopElem.all_can_create)
+			{
+				Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_no_access_create'), '{PARAM1}', _catalog_name );
+				go_back(_href);
+			}
+			
+			curRoleDoc = OpenNewDoc("x-local://qti/qti_role.xmd");
+			curRoleDoc.TopElem.name = _role_name;
+			if (_parent_role_id != "") curRoleDoc.TopElem.parent_role_id = _parent_role_id;
+			curRoleDoc.BindToDb(DefaultDb);
+			curRoleDoc.Save();
+			
+			//if (_cardDoc.TopElem.all_can_edit == false)
+			{
+				_ob = _cardDoc.TopElem.objects.ObtainChildByKey(curRoleDoc.DocID);
+				_ob.object_name = curRoleDoc.TopElem.name;
+				_ob.can_edit = true;
+				_ob.can_delete = true;
+				_cardDoc.Save();
+			}
+			
+			Session.RETURN_MSG = tools_web.get_web_str('cpp_mess_info_save');
+			go_back(_href);
+		break;
+		
+case "assessment":
+			_catalog_name = "assessment";
+			try
+			{
+				curAssessmentID = Int(Request.Form.assessment_id);
+				_title = Request.Form.title;
+				_code = Request.Form.code;
+			}
+			catch(_x_)
+			{
+				Session.RETURN_MSG = tools_web.get_web_str('cpp_err_post');
+				go_back(_href);
+			}
+			_cardDoc = tools_web.get_my_person_object_link_card(_catalog_name,curUserID, true);
+			if (_cardDoc == undefined)
+			{
+				Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_access_create'), '{PARAM1}', _catalog_name );
+				go_back(_href);
+			}
+			
+			if (curAssessmentID > 0)
+			{
+				try
+				{
+					curAssessmentDoc = OpenDoc(UrlFromDocID(curAssessmentID));
+					_i_can = false;
+					if (!_cardDoc.TopElem.all_can_edit)
+					{
+						_ob = _cardDoc.TopElem.objects.GetOptChildByKey(curAssessmentID);
+						if (_ob != undefined && _ob.can_edit)
+							_i_can = true;
+					}
+					else
+						_i_can = true;
+						
+					if (!_i_can)
+					{
+						Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_no_access_edit'), '{PARAM1}', _catalog_name );
+						go_back(_href);
+					}
+					_new = false;
+				}
+				catch(_o_)
+				{
+					Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_obj_defective'), '{PARAM1}', _catalog_name );
+					go_back(_href);
+				}
+			}
+			else
+			{
+				if (!_cardDoc.TopElem.all_can_create)
+				{
+					Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_no_access_create'), '{PARAM1}', _catalog_name );
+					go_back(_href);
+				}
+				
+				curAssessmentDoc = OpenNewDoc("x-local://qti/qti_assessment.xmd");
+				curAssessmentDoc.BindToDb(DefaultDb);
+				curAssessmentID = curAssessmentDoc.DocID;
+				_href = _href+"&object_id=" + curAssessmentID;
+				_new = true;
+			}
+			if (Trim(_code) == "") _code = tools.random_string(6);
+			curAssessmentDoc.TopElem.code = _code;
+			
+			curAssessmentDoc.TopElem.title = _title;
+			if (Request.Form.HasProperty("duration")) curAssessmentDoc.TopElem.duration = Request.Form.duration;
+			if (Request.Form.HasProperty("passing_score")) curAssessmentDoc.TopElem.passing_score = Request.Form.passing_score;
+			if (Request.Form.HasProperty("attempts_num")) curAssessmentDoc.TopElem.attempts_num = Request.Form.attempts_num;
+			if (Request.Form.HasProperty("feedback_wrong")) curAssessmentDoc.TopElem.feedback_wrong = Request.Form.feedback_wrong;
+			if (Request.Form.HasProperty("feedback_correct")) curAssessmentDoc.TopElem.feedback_correct = Request.Form.feedback_correct;
+			if (Request.Form.HasProperty("feedback_passed")) curAssessmentDoc.TopElem.feedback_passed = Request.Form.feedback_passed;
+			if (Request.Form.HasProperty("feedback_failed")) curAssessmentDoc.TopElem.feedback_failed = Request.Form.feedback_failed;
+			
+			
+			curAssessmentDoc.TopElem.player.type = "v2";
+			if (Request.Form.HasProperty("language")) curAssessmentDoc.TopElem.player.language = Request.Form.GetProperty("language");
+			if (Request.Form.HasProperty("send_type")) curAssessmentDoc.TopElem.player.send_type = Request.Form.GetProperty("send_type");
+			if (Request.Form.HasProperty("display_type")) curAssessmentDoc.TopElem.player.display_type = Request.Form.GetProperty("display_type");
+			if (Request.Form.HasProperty("rubric_display_type")) curAssessmentDoc.TopElem.player.rubric_display_type = Request.Form.GetProperty("rubric_display_type");
+			
+			if (Request.Form.HasProperty("display_map") && Request.Form.GetProperty("display_map") == "1") curAssessmentDoc.TopElem.player.display_map = true; else curAssessmentDoc.TopElem.player.display_map = false;
+			if (Request.Form.HasProperty("navigate_map") && Request.Form.GetProperty("navigate_map") == "1") curAssessmentDoc.TopElem.player.navigate_map = true; else curAssessmentDoc.TopElem.player.navigate_map = false;
+			if (Request.Form.HasProperty("strict_navigation") && Request.Form.GetProperty("strict_navigation") == "1") curAssessmentDoc.TopElem.player.strict_navigation = true; else curAssessmentDoc.TopElem.player.strict_navigation = false;
+			if (Request.Form.HasProperty("navigate_progress") && Request.Form.GetProperty("navigate_progress") == "1") curAssessmentDoc.TopElem.player.navigate_progress = true; else curAssessmentDoc.TopElem.player.navigate_progress = false;
+			if (Request.Form.HasProperty("strict_timing") && Request.Form.GetProperty("strict_timing") == "1") curAssessmentDoc.TopElem.player.strict_timing = true; else curAssessmentDoc.TopElem.player.strict_timing = false;
+			if (Request.Form.HasProperty("accept_next") && Request.Form.GetProperty("accept_next") == "1") curAssessmentDoc.TopElem.player.accept_next = true; else curAssessmentDoc.TopElem.player.accept_next = false;
+			if (Request.Form.HasProperty("lock_result") && Request.Form.GetProperty("lock_result") == "1") curAssessmentDoc.TopElem.player.lock_result = true; else curAssessmentDoc.TopElem.player.lock_result = false;
+			if (Request.Form.HasProperty("connection_break") && Request.Form.GetProperty("connection_break") == "1") curAssessmentDoc.TopElem.player.connection_break = true; else curAssessmentDoc.TopElem.player.connection_break = false;
+			
+			if (Request.Form.HasProperty("rubric_candidate")) curAssessmentDoc.TopElem.rubric.candidate = Request.Form.GetProperty("rubric_candidate");
+			
+			_section = ArrayOptFirstElem(curAssessmentDoc.TopElem.sections);
+			if (_section == undefined)
+			{
+				_section = curAssessmentDoc.TopElem.sections.ObtainChildByKey("1");
+				_section.code = 1;
+				_section.title = "Section 1";
+			}
+			
+			_section.items.Clear();
+			if (Request.Form.HasProperty("item_ids") && Request.Form.GetProperty("item_ids") != "")
+			{
+				_item_ids = String(Request.Form.GetProperty("item_ids")).split(";");
+				for (_i = 0; _i < ArrayCount(_item_ids); _i++ ) _item_ids[_i] = Int(_item_ids[_i]);
+				_items = QueryCatalogByKeys("items", "id", _item_ids);
+				for (_item in _items)
+				{
+					_section.items.ObtainChildByKey(_item.PrimaryKey).title = _item.question_text;
+				}
+			}
+			
+			_section.selection_ordering.select_id = Request.Form.GetProperty("select_id");
+			if (_section.selection_ordering.select_id == "num_generate")
+				_section.selection_ordering.select_num = Request.Form.GetProperty("select_num");
+			else if (_section.selection_ordering.select_id == "point")
+			{
+				_point_bounder = Int(Request.Form.GetProperty("point_counter"));
+				for (_i=0;_i<_point_bounder;_i++)
+				{
+					_new_point_row = null;
+					if (Request.Form.HasProperty("point_num_" + _i))
+					{
+						if (_new_point_row == null) _new_point_row = _section.selection_ordering.points.AddChild();
+						_new_point_row.point_num = Request.Form.GetProperty("point_num_" + _i);
+					}
+					if (Request.Form.HasProperty("item_num_" + _i))
+					{
+						if (_new_point_row == null) _new_point_row = _section.selection_ordering.points.AddChild();
+						_new_point_row.item_num = Request.Form.GetProperty("item_num_" + _i);
+					}
+				}
+			}
+			
+			curAssessmentDoc.Save();
+			
+			//if (_cardDoc.TopElem.all_can_edit == false)
+			{
+				_ob = _cardDoc.TopElem.objects.ObtainChildByKey(curAssessmentDoc.DocID);
+				_ob.object_name = curAssessmentDoc.TopElem.title;
+				_ob.can_edit = true;
+				_ob.can_delete = true;
+				_cardDoc.Save();
+			}
+			
+			_res_str = qti_tools.pulish_assessment_by_id( curAssessmentDoc.DocID, curAssessmentDoc );
+			Session.RETURN_MSG = tools_web.get_web_str('cpp_mess_info_save') + "\n" + _res_str;
+			
+			go_back(_href);
+			
+		break;
+		
+		
+case "scorm_import":
+			if (Request.Form.HasProperty( "scorm_file_url"))
+			{
+				_catalog_name = "course";
+				_cardDoc = tools_web.get_my_person_object_link_card(_catalog_name,curUserID, true);
+				if (_cardDoc == undefined)
+				{
+					Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_access_create'), '{PARAM1}', _catalog_name );
+					go_back(_href);
+				}
+				
+				if (!_cardDoc.TopElem.all_can_create)
+				{
+					Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_no_access_create'), '{PARAM1}', _catalog_name );
+					go_back(_href);
+				}
+				
+				_str = Request.Form.GetProperty("scorm_file_url");
+				if (Trim(_str) != "" && _str.FileName.HasValue)
+				{
+				
+					_all_files = 1;
+					_success_files = 0;
+					_import_text = '';
+					_import_counter = 0;
+					_update_text = '';
+					_update_counter = 0;
+					_add_rep_text = '';
+					_temp_url = '';	
+					_crs_url = '';	
+				
+					_ext = UrlPathSuffix( _str.FileName);
+					try
+					{
+						_file = ObtainTempFile( _ext );
+					}
+					catch(_X_)
+					{
+						_file = "x-local://Temp/" + tools.random_string(10) + _ext;
+					}
+					_cur_file = "" + _file;
+					
+					PutUrlData( _file, _str );
+					
+					_zip_report = 0;
+					
+					if (_ext == ".zip")
+					{
+						try
+						{
+							_temp_url = ObtainTempFile();
+						}
+						catch(_0_)
+						{
+							_temp_url = "x-local://Temp/" + tools.random_string(10);
+						}
+						
+						ZipExtract( _file, _temp_url );
+						_url_array = ReadDirectory( _temp_url );
+						
+						_xml_url = '';				
+						for ( _url in _url_array )
+						{
+							if ( IsDirectory( _url ) )
+								continue;
+								
+							if ( UrlFileName( _url ) == 'imsmanifest.xml' )
+							{
+								_xml_url = _url;
+								break;
+							}
+								
+							if ( UrlPathSuffix( _url ) == '.crs' )
+								_crs_url = _url;
+						}
+					
+						if ( _xml_url != '' )
+						{
+							_file = _xml_url;
+							_crs_url = '';
+						}
+						else if ( _crs_url != '' )
+						{
+							_file = _crs_url;
+						}
+					}
+					
+					_continued_flag = false;
+					courseDoc = tools.load_course( _file );
+					
+					if (StrContains(courseDoc, '#false#'))
+					{
+						_add_rep_text = _add_rep_text + StrNonTitleCase( ms_tools.get_const('1nf4otx3w4') ) + ':\r\n' + StrReplace( courseDoc, '#false#', '' ) + '\r\n';
+						Session.RETURN_MSG = _add_rep_text;
+						if ( _temp_url != "" ) DeleteDirectory( _temp_url ); DeleteUrl(_cur_file);
+						go_back(_href);
+					}
+					
+					
+					course_arr = XQuery( 'for $course in courses where $course/code = ' + courseDoc.TopElem.code.XQueryLiteral + ' return $course' );
+					
+					//course_arr = ArraySelect(course_arr, "StrContains("+CodeLiteral(_my_course_list)+",PrimaryKey)")
+					
+					if ( ArrayOptFirstElem( course_arr ) != undefined )
+					{
+						curDoc = OpenDoc( UrlFromDocID( ArrayFirstElem( course_arr ).id ) );
+						curDoc.TopElem.AssignElem( courseDoc.TopElem );
+						_cur_zip_size = curDoc.TopElem.custom_elems.ObtainChildByKey("space");
+						if (_cur_zip_size.value.HasValue == false || _cur_zip_size.value == "0")
+							_cur_zip_size.value = _zip_report;
+						curDoc.Save();
+						
+						_update_text = _update_text + '   - ' + courseDoc.TopElem.code + ' ' + courseDoc.TopElem.name + '\r\n';
+						_update_counter++;
+						_add_rep_text = _add_rep_text + tools_web.get_web_str('cpp_course_update') + '\r\n';
+						Session.RETURN_MSG = _add_rep_text;
+						
+						if ( ! _continued_flag && UrlPathSuffix( _cur_file ) == '.zip' && courseDoc.TopElem.base_url != '' )
+						{
+							ZipExtract(_cur_file , UrlAppendPath( "x-local://wt/web", courseDoc.TopElem.base_url ));
+						}
+						
+						if ( _temp_url != "" ) DeleteDirectory( _temp_url ); DeleteUrl(_cur_file);
+						
+						go_back(_href);
+					}
+					else
+					{
+						courseDoc.BindToDb( DefaultDb );
+						courseDoc.Save();
+						
+						_import_text = _import_text + '   - ' + courseDoc.TopElem.code + ' ' + courseDoc.TopElem.name + '\r\n';
+						_import_counter++;
+						_add_rep_text = _add_rep_text + tools_web.get_web_str('cpp_course_import') + '\r\n';
+					}
+			
+					//if (_cardDoc.TopElem.all_can_edit == false)
+					{
+						_ob = _cardDoc.TopElem.objects.ObtainChildByKey(courseDoc.DocID);
+						_ob.object_name = courseDoc.TopElem.name;
+						_ob.can_edit = true;
+						_ob.can_delete = true;
+						_cardDoc.Save();
+					}
+			
+					_success_files++;
+					
+					if ( ! _continued_flag && UrlPathSuffix( _file ) == '.xml' )
+						tools.copy_manifest_resources( _file, courseDoc.TopElem.base_url );
+					
+					if ( ! _continued_flag && UrlPathSuffix( _cur_file ) == '.zip' && courseDoc.TopElem.base_url != '' )
+					{
+						ZipExtract(_cur_file , UrlAppendPath( "x-local://wt/web", courseDoc.TopElem.base_url ));
+					}
+					
+					if ( _temp_url != "" ) DeleteDirectory( _temp_url );
+					DeleteUrl(_cur_file);
+					
+					Session.RETURN_MSG = _add_rep_text;
+				}
+			}
+			
+			go_back(_href);
+		
+		break;
+case "course":
+		_catalog_name = "course";
+		
+		_cardDoc = tools_web.get_my_person_object_link_card(_catalog_name,curUserID, true);
+		if (_cardDoc == undefined)
+		{
+			Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_access_delete'), '{PARAM1}', _catalog_name );
+			go_back(_href);
+		}
+
+		try
+		{
+			curCourseID = Int(Request.Form.course_id);
+			curCourseDoc = OpenDoc(UrlFromDocID(curCourseID));
+			
+			if ( tools.check_access(curCourseDoc.TopElem, curUserID) == false ) throw "ne lez!";
+			
+			_win_width = Int(Request.Form.win_width);
+			_win_height = Int(Request.Form.win_height);
+		}
+		catch(_x_)
+		{
+			Session.RETURN_MSG = tools_web.get_web_str('cpp_err_post');
+			go_back(_href);
+		}
+		
+		if (Request.Form.HasProperty("name") && Trim(Request.Form.name) != "") curCourseDoc.TopElem.name = Request.Form.name;
+		if (Request.Form.HasProperty("status") && Trim(Request.Form.status) != "") curCourseDoc.TopElem.status = Request.Form.status;
+		try
+		{
+			curCourseDoc.TopElem.mastery_score = Int(Request.Form.mastery_score);
+			curCourseDoc.TopElem.max_score = Int(Request.Form.max_score);
+		}
+		catch(_O_)
+		{
+			curCourseDoc.TopElem.mastery_score.Clear();
+			curCourseDoc.TopElem.max_score.Clear();
+		}
+		
+		curCourseDoc.TopElem.win_width = _win_width;
+		curCourseDoc.TopElem.win_height = _win_height;
+		
+		if (Request.Form.HasProperty("desc")) curCourseDoc.TopElem.desc = Request.Form.desc;
+		if (Request.Form.HasProperty("duration")) curCourseDoc.TopElem.duration = Request.Form.duration;
+		if (Request.Form.HasProperty("view_type")) curCourseDoc.TopElem.view_type = Request.Form.view_type;
+		
+		if (Request.Form.HasProperty("yourself_start") && Request.Form.GetProperty("yourself_start") == "1") curCourseDoc.TopElem.yourself_start = true; else curCourseDoc.TopElem.yourself_start = false;
+		if (Request.Form.HasProperty("finish_without_mastery_score") && Request.Form.GetProperty("finish_without_mastery_score") == "1") curCourseDoc.TopElem.finish_without_mastery_score = true; else curCourseDoc.TopElem.finish_without_mastery_score = false;
+		
+		curCourseDoc.TopElem.persons.Clear();
+		_x = 0;
+		
+		while (Request.Form.HasProperty("expert_id_" + _x))
+		{
+			fldExpertNew = curCourseDoc.TopElem.persons.AddChild();
+			fldExpertNew.person_id = Request.Form.GetProperty("expert_id_" + _x);
+			tools.common_filling( "collaborator", fldExpertNew, fldExpertNew.person_id );
+			fldExpertNew.type = Request.Form.GetProperty("expert_type_" + _x);
+			
+			_x++;
+		}
+		
+		if (Request.Form.HasProperty("dead_part_name"))
+			sToDie = Request.Form.GetProperty("dead_part_name");
+		else
+			sToDie = "";
+		
+		_x = 0;
+		while (Request.Form.HasProperty("part_index_" + _x))
+		{
+			_pc = Request.Form.GetProperty("part_index_" + _x);
+			if (_pc != "")
+			{
+				_cur_part = curCourseDoc.TopElem.parts.ObtainChildByKey(_pc);
+				if (_pc == sToDie)
+					_cur_part.Delete();
+				else
+				{
+					_pc = StrLowerCase(_pc);
+					
+					if (Request.Form.HasProperty("part_"+_pc+"_name"))
+						_cur_part.name = Request.Form.GetProperty("part_"+_pc+"_name");
+					
+					if (Request.Form.HasProperty("part_"+_pc+"_type"))
+						_cur_part.type = Request.Form.GetProperty("part_"+_pc+"_type");
+					
+					try{_cur_part.max_score = Int(Request.Form.GetProperty("part_"+_pc+"_max_score"));}catch(_o_){_cur_part.max_score.Clear();}
+					
+					try{_cur_part.mastery_score = Int(Request.Form.GetProperty("part_"+_pc+"_mastery_score"));}catch(_o_){_cur_part.mastery_score.Clear();}
+					
+					try{_cur_part.score_factor = Int(Request.Form.GetProperty("part_"+_pc+"_score_factor"));}catch(_o_){_cur_part.score_factor.Clear();}
+					try{_cur_part.attempts_num = Int(Request.Form.GetProperty("part_"+_pc+"_attempts_num"));}catch(_o_){_cur_part.attempts_num.Clear();}
+					
+					if (Request.Form.HasProperty("part_"+_pc+"_desc"))
+						_cur_part.desc = Request.Form.GetProperty("part_"+_pc+"_desc");
+						
+					if (Request.Form.HasProperty("part_"+_pc+"_assessment_id") && Request.Form.GetProperty("part_"+_pc+"_assessment_id") != "")
+						try
+						{
+							docPartAssessment = OpenDoc(UrlFromDocID(Int(Request.Form.GetProperty("part_"+_pc+"_assessment_id"))));
+							sPartAssessmentURL = docPartAssessment.TopElem.publish_url;
+							if (Request.Form.HasProperty("part_"+_pc+"_url") && Request.Form.GetProperty("part_"+_pc+"_url") != "")
+								sPartAssessmentURL = Request.Form.GetProperty("part_"+_pc+"_url");
+								
+							_cur_part.url = sPartAssessmentURL
+							_cur_part.assessment_id = docPartAssessment.DocID;
+							//_cur_part.assessment_id = ArrayFirstElem(XQuery("for $elem in assessments where $elem/id = " + Int(Request.Form.GetProperty("part_"+_pc+"_assessment_id")) + "return $elem")).id;
+						}
+						catch(_o_)
+						{
+							_cur_part.assessment_id.Clear();
+							_cur_part.url.Clear();
+						}
+					
+					if (Request.Form.HasProperty("part_"+_pc+"is_mandatory") && Request.Form.GetProperty("part_"+_pc+"is_mandatory") == "1") _cur_part.is_mandatory = true; else _cur_part.is_mandatory = false;
+				}
+			}
+			_x++;
+		}
+		
+		if (Request.Form.HasProperty("new_part_name") && Request.Form.GetProperty("new_part_name") != "")
+		{
+			_cur_part = curCourseDoc.TopElem.parts.AddChild();
+			_cur_part.code = curCourseDoc.TopElem.get_part_code();
+			_cur_part.name = Request.Form.GetProperty("new_part_name");
+		}
+		
+		curCourseDoc.Save();
+		
+		//if (_cardDoc.TopElem.all_can_edit == false)
+		{
+			_ob = _cardDoc.TopElem.objects.ObtainChildByKey(curCourseDoc.DocID);
+			_ob.object_name = curCourseDoc.TopElem.name;
+			_ob.can_edit = true;
+			_ob.can_delete = true;
+			_cardDoc.Save();
+		}
+		
+		Session.RETURN_MSG = tools_web.get_web_str('cpp_mess_info_save');
+		
+		go_back(_href);
+		
+		break;	
+case "forum":
+			_catalog_name = "forum";
+			
+			try
+			{
+				curForumID = Int(Request.Form.forum_id);
+				_name = Request.Form.name;
+			}
+			catch(_x_)
+			{
+				Session.RETURN_MSG = tools_web.get_web_str('cpp_err_post');
+				go_back(_href);
+				Cancel();
+			}
+			_cardDoc = tools_web.get_my_person_object_link_card(_catalog_name,curUserID, true);
+			if (_cardDoc == undefined)
+			{
+				Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_access_delete'), '{PARAM1}', _catalog_name );
+				go_back(_href);
+			}
+			
+			if (curForumID > 0)
+			{
+				try
+				{
+					curForumDoc = OpenDoc(UrlFromDocID(curForumID));
+					_i_can = false;
+					if (!_cardDoc.TopElem.all_can_edit)
+					{
+						_ob = _cardDoc.TopElem.objects.GetOptChildByKey(curForumID);
+						if (_ob != undefined && _ob.can_edit)
+							_i_can = true;
+					}
+					else
+						_i_can = true;
+						
+					if (!_i_can)
+					{
+						Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_no_access_edit'), '{PARAM1}', _catalog_name );
+						go_back(_href);
+					}
+					_new = false;
+				}
+				catch(_o_)
+				{
+					Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_obj_defective'), '{PARAM1}', _catalog_name );
+					go_back(_href);
+				}
+			}
+			else
+			{
+				if (!_cardDoc.TopElem.all_can_create)
+				{
+					Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_no_access_create'), '{PARAM1}', _catalog_name );
+					go_back(_href);
+				}
+				
+				curForumDoc = OpenNewDoc("x-local://wtv/wtv_forum.xmd");
+				curForumDoc.BindToDb(DefaultDb);
+				curForumID = curForumDoc.DocID;
+				_href = _href+"&object_id=" + curForumID;
+				_new = true;
+			}
+			
+			curForumDoc.TopElem.name = _name;
+			
+			if (Request.Form.HasProperty("default_view_type")) curForumDoc.TopElem.default_view_type = Request.Form.GetProperty("default_view_type");
+			
+			if (Request.Form.HasProperty("comment")) curForumDoc.TopElem.comment = Request.Form.GetProperty("comment");
+			if (Request.Form.HasProperty("course_id")) curForumDoc.TopElem.course_id = Request.Form.GetProperty("course_id"); else curForumDoc.TopElem.course_id.Clear();
+			
+			if (Request.Form.HasProperty("permit_subscription") && Request.Form.GetProperty("permit_subscription") == "1") curForumDoc.TopElem.permit_subscription = true; else curForumDoc.TopElem.permit_subscription = false;
+			if (Request.Form.HasProperty("allow_anonymous_message") && Request.Form.GetProperty("allow_anonymous_message") == "1") curForumDoc.TopElem.allow_anonymous_message = true; else curForumDoc.TopElem.allow_anonymous_message = false;
+					
+			if (Request.Form.HasProperty("allow_create_closed_theme") && Request.Form.GetProperty("allow_create_closed_theme") == "1") curForumDoc.TopElem.allow_create_closed_theme = true; else curForumDoc.TopElem.allow_create_closed_theme = false;
+			if (Request.Form.HasProperty("allow_create_closed_theme") && Request.Form.GetProperty("allow_create_closed_theme") == "1") curForumDoc.TopElem.allow_create_closed_theme = true; else curForumDoc.TopElem.allow_create_closed_theme = false;
+			if (Request.Form.HasProperty("allow_user_delete") && Request.Form.GetProperty("allow_user_delete") == "1") curForumDoc.TopElem.allow_user_delete = true; else curForumDoc.TopElem.allow_user_delete = false;
+			if (Request.Form.HasProperty("allow_create_pinned_theme") && Request.Form.GetProperty("allow_create_pinned_theme") == "1") curForumDoc.TopElem.allow_create_pinned_theme = true; else curForumDoc.TopElem.allow_create_pinned_theme = false;
+			if (Request.Form.HasProperty("disp_user_status") && Request.Form.GetProperty("disp_user_status") == "1") curForumDoc.TopElem.disp_user_status = true; else curForumDoc.TopElem.disp_user_status = false;
+			if (Request.Form.HasProperty("disp_user_avatar") && Request.Form.GetProperty("disp_user_avatar") == "1") curForumDoc.TopElem.disp_user_avatar = true; else curForumDoc.TopElem.disp_user_avatar = false;
+			if (Request.Form.HasProperty("disp_foto") && Request.Form.GetProperty("disp_foto") == "1") curForumDoc.TopElem.disp_foto = true; else curForumDoc.TopElem.disp_foto = false;
+			
+			curForumDoc.TopElem.moderators.Clear();
+			_muder = curForumDoc.TopElem.moderators.ObtainChildByKey(curUserID);
+			_muder.person_fullname = curUser.fullname;
+			_muder.person_position_name = curUser.position_name;
+			_muder.person_org_name = curUser.org_name;
+			_muder.person_subdivision_name = curUser.position_parent_name;
+			
+			_x = 0;
+			while (Request.Form.HasProperty("moderator_id_" + _x))
+			{
+				fldNewModer = curForumDoc.TopElem.moderators.ObtainChildByKey(Int(Request.Form.GetProperty("moderator_id_" + _x)));
+				tools.common_filling( "collaborator", fldNewModer, fldNewModer.moderator_id );
+				_x++;
+			}
+			
+			curForumDoc.Save();
+			//if (_new && _cardDoc.TopElem.all_can_edit == false)
+			if (_new)
+			{
+				_ob = _cardDoc.TopElem.objects.ObtainChildByKey(curForumDoc.DocID);
+				_ob.object_name = curForumDoc.TopElem.name;
+				_ob.can_edit = true;
+				_ob.can_delete = true;
+				_cardDoc.Save();
+			}
+			
+			Session.RETURN_MSG = tools_web.get_web_str('cpp_mess_info_save');
+			
+			go_back(_href);
+		break;
+case "blog":
+			_catalog_name = "blog";
+			
+			try
+			{
+				curBlogID = Int(Request.Form.blog_id);
+				_name = Request.Form.name;
+			}
+			catch(_x_)
+			{
+				Session.RETURN_MSG = tools_web.get_web_str('cpp_err_post');
+				go_back(_href);
+				Cancel();
+			}
+			_cardDoc = tools_web.get_my_person_object_link_card(_catalog_name,curUserID, true);
+			if (_cardDoc == undefined)
+			{
+				Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_access_delete'), '{PARAM1}', _catalog_name );
+				go_back(_href);
+			}
+			
+			if (curBlogID > 0)
+			{
+				try
+				{
+					curBlogDoc = OpenDoc(UrlFromDocID(curBlogID));
+					_i_can = false;
+					if (!_cardDoc.TopElem.all_can_edit)
+					{
+						_ob = _cardDoc.TopElem.objects.GetOptChildByKey(curBlogID);
+						if (_ob != undefined && _ob.can_edit)
+							_i_can = true;
+					}
+					else
+						_i_can = true;
+						
+					if (!_i_can)
+					{
+						Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_no_access_edit'), '{PARAM1}', _catalog_name );
+						go_back(_href);
+					}
+					_new = false;
+				}
+				catch(_o_)
+				{
+					Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_obj_defective'), '{PARAM1}', _catalog_name );
+					go_back(_href);
+				}
+			}
+			else
+			{
+				if (!_cardDoc.TopElem.all_can_create)
+				{
+					Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_no_access_create'), '{PARAM1}', _catalog_name );
+					go_back(_href);
+				}
+				
+				curBlogDoc = OpenNewDoc("x-local://wtv/wtv_blog.xmd");
+				curBlogDoc.BindToDb(DefaultDb);
+				curBlogID = curBlogDoc.DocID;
+				_href = _href+"&object_id=" + curBlogID;
+				_new = true;
+			}
+			
+			curBlogDoc.TopElem.name = _name;
+			
+			try { curBlogDoc.TopElem.num_message_in_list = Int(Request.Form.num_message_in_list); } catch(_x_){curBlogDoc.TopElem.num_message_in_list.Clear()}
+						
+			if (Request.Form.HasProperty("permit_subscription") && Request.Form.GetProperty("permit_subscription") == "1") curBlogDoc.TopElem.permit_subscription = true; else curBlogDoc.TopElem.permit_subscription = false;
+			if (Request.Form.HasProperty("allow_anonymous_comment") && Request.Form.GetProperty("allow_anonymous_comment") == "1") curBlogDoc.TopElem.allow_anonymous_comment = true; else curBlogDoc.TopElem.allow_anonymous_comment = false;
+			
+			if (Request.Form.HasProperty("comment")) curBlogDoc.TopElem.comment = Request.Form.GetProperty("comment");
+			
+			curBlogDoc.TopElem.authors.Clear();
+			if (Request.Form.HasProperty("author_ids") && Request.Form.GetProperty("author_ids") != "")
+			{
+				_author_ids = String(Request.Form.GetProperty("author_ids")).split(";");
+				for (_i = 0; _i < ArrayCount(_author_ids); _i++ ) _author_ids[_i] = Int(_author_ids[_i]);
+				if (ArrayOptFind(_author_ids, "This == " + curUserID) == undefined)
+					_author_ids[ArrayCount(_author_ids)] = curUserID;
+				
+				_authors = QueryCatalogByKeys("collaborators", "id", _author_ids);
+				for (_author in _authors)
+				{
+					_blogger = curBlogDoc.TopElem.authors.ObtainChildByKey(_author.PrimaryKey);
+					_blogger.person_fullname = _author.fullname;
+					_blogger.person_position_name = _author.position_name;
+					_blogger.person_org_name = _author.org_name
+					_blogger.person_subdivision_name = _author.position_parent_name;
+					if (Request.Form.HasProperty("is_full_moderator_" + _author.PrimaryKey) && Request.Form.GetProperty("is_full_moderator_" + _author.PrimaryKey) == "1")
+						_blogger.is_full_moderator = true;
+					else
+						_blogger.is_full_moderator = false;
+				}
+			}
+			
+			curBlogDoc.Save();
+			
+			//if (_new && _cardDoc.TopElem.all_can_edit == false)
+			if (_new)
+			{
+				_ob = _cardDoc.TopElem.objects.ObtainChildByKey(curBlogDoc.DocID);
+				_ob.object_name = curBlogDoc.TopElem.name;
+				_ob.can_edit = true;
+				_ob.can_delete = true;
+				_cardDoc.Save();
+			}
+			
+			Session.RETURN_MSG = tools_web.get_web_str('cpp_mess_info_save');
+			
+			go_back(_href);
+		break;
+case "education_method":
+			_catalog_name = "education_method";
+			
+			try
+			{
+				curEducationMethodID = Int(Request.Form.education_method_id);
+				_name = Request.Form.name;
+				_type = Request.Form.type;
+			}
+			catch(_x_)
+			{
+				Session.RETURN_MSG = tools_web.get_web_str('cpp_err_post');
+				go_back(_href);
+				Cancel();
+			}
+			_cardDoc = tools_web.get_my_person_object_link_card(_catalog_name,curUserID, true);
+			if (_cardDoc == undefined)
+			{
+				Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_access_delete'), '{PARAM1}', _catalog_name );
+				go_back(_href);
+			}
+			
+			if (curEducationMethodID > 0)
+			{
+				try
+				{
+					curEducationMethodDoc = OpenDoc(UrlFromDocID(curEducationMethodID));
+					_i_can = false;
+					if (!_cardDoc.TopElem.all_can_edit)
+					{
+						_ob = _cardDoc.TopElem.objects.GetOptChildByKey(curEducationMethodID);
+						if (_ob != undefined && _ob.can_edit)
+							_i_can = true;
+					}
+					else
+						_i_can = true;
+						
+					if (!_i_can)
+					{
+						Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_no_access_edit'), '{PARAM1}', _catalog_name );
+						go_back(_href);
+					}
+					_new = false;
+				}
+				catch(_o_)
+				{
+					Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_obj_defective'), '{PARAM1}', _catalog_name );
+					go_back(_href);
+				}
+			}
+			else
+			{
+				if (!_cardDoc.TopElem.all_can_create)
+				{
+					Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_no_access_create'), '{PARAM1}', _catalog_name );
+					go_back(_href);
+				}
+				
+				curEducationMethodDoc = OpenNewDoc("x-local://wtv/wtv_education_method.xmd");
+				curEducationMethodDoc.BindToDb(DefaultDb);
+				curEducationMethodID = curEducationMethodDoc.DocID;
+				_href = _href+"&object_id=" + curEducationMethodID;
+				_new = true;
+			}
+			
+			curEducationMethodDoc.TopElem.name = _name;
+			
+			if (Request.Form.HasProperty("comment")) curEducationMethodDoc.TopElem.comment = Request.Form.GetProperty("comment");
+			
+			curEducationMethodDoc.TopElem.type = _type;
+			curEducationMethodDoc.TopElem.course_id.Clear();
+			curEducationMethodDoc.TopElem.education_org_id.Clear();
+			if (Request.Form.HasProperty("type_object_id"))
+				if (_type == "course") curEducationMethodDoc.TopElem.course_id = Request.Form.GetProperty("type_object_id");
+				else if (_type == "org") curEducationMethodDoc.TopElem.education_org_id = Request.Form.GetProperty("type_object_id");
+			
+			if (Request.Form.HasProperty("duration_days"))
+				curEducationMethodDoc.TopElem.duration_days = Request.Form.GetProperty("duration_days");
+			if (Request.Form.HasProperty("duration"))
+				curEducationMethodDoc.TopElem.duration = Request.Form.GetProperty("duration");
+			if (Request.Form.HasProperty("person_num"))
+				curEducationMethodDoc.TopElem.person_num = Request.Form.GetProperty("person_num");
+			if (Request.Form.HasProperty("cost"))
+				curEducationMethodDoc.TopElem.cost = Request.Form.GetProperty("cost");
+			if (Request.Form.HasProperty("currency"))
+				curEducationMethodDoc.TopElem.currency = Request.Form.GetProperty("currency");
+			if (Request.Form.HasProperty("cost_type"))
+				curEducationMethodDoc.TopElem.cost_type = Request.Form.GetProperty("cost_type");
+			
+			curEducationMethodDoc.TopElem.lectors.Clear();
+			_x = 0;
+			while (Request.Form.HasProperty("lector_id_" + _x))
+			{
+				fldNewLector = curEducationMethodDoc.TopElem.lectors.ObtainChildByKey(Int(Request.Form.GetProperty("lector_id_" + _x)));
+				_x++;
+			}
+			
+			curEducationMethodDoc.Save();
+			
+			//if (_new && _cardDoc.TopElem.all_can_edit == false)
+			if (_new)
+			{
+				_ob = _cardDoc.TopElem.objects.ObtainChildByKey(curEducationMethodDoc.DocID);
+				_ob.object_name = curEducationMethodDoc.TopElem.name;
+				_ob.can_edit = true;
+				_ob.can_delete = true;
+				_cardDoc.Save();
+			}
+			
+			Session.RETURN_MSG = tools_web.get_web_str('cpp_mess_info_save');
+			
+			go_back(_href);
+		break;
+case "education_org":
+			_catalog_name = "education_org";
+			
+			try
+			{
+				curEducationOrgID = Int(Request.Form.education_org_id);
+				_name = Request.Form.name;
+				_disp_name = Request.Form.disp_name;
+			}
+			catch(_x_)
+			{
+				Session.RETURN_MSG = tools_web.get_web_str('cpp_err_post');
+				go_back(_href);
+				Cancel();
+			}
+			_cardDoc = tools_web.get_my_person_object_link_card(_catalog_name,curUserID, true);
+			if (_cardDoc == undefined)
+			{
+				Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_access_delete'), '{PARAM1}', _catalog_name );
+				go_back(_href);
+			}
+			
+			if (curEducationOrgID > 0)
+			{
+				try
+				{
+					curEducationOrgDoc = OpenDoc(UrlFromDocID(curEducationOrgID));
+					_i_can = false;
+					if (!_cardDoc.TopElem.all_can_edit)
+					{
+						_ob = _cardDoc.TopElem.objects.GetOptChildByKey(curEducationOrgID);
+						if (_ob != undefined && _ob.can_edit)
+							_i_can = true;
+					}
+					else
+						_i_can = true;
+						
+					if (!_i_can)
+					{
+						Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_no_access_edit'), '{PARAM1}', _catalog_name );
+						go_back(_href);
+					}
+					_new = false;
+				}
+				catch(_o_)
+				{
+					Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_obj_defective'), '{PARAM1}', _catalog_name );
+					go_back(_href);
+				}
+			}
+			else
+			{
+				if (!_cardDoc.TopElem.all_can_create)
+				{
+					Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_no_access_create'), '{PARAM1}', _catalog_name );
+					go_back(_href);
+				}
+				
+				curEducationOrgDoc = OpenNewDoc("x-local://wtv/wtv_education_org.xmd");
+				curEducationOrgDoc.BindToDb(DefaultDb);
+				curEducationOrgID = curEducationOrgDoc.DocID;
+				_href = _href+"&object_id=" + curEducationOrgID;
+				_new = true;
+			}
+			
+			curEducationOrgDoc.TopElem.name = _name;
+			curEducationOrgDoc.TopElem.disp_name = _disp_name;
+			
+			if (Request.Form.HasProperty("comment")) curEducationOrgDoc.TopElem.comment = Request.Form.GetProperty("comment");
+			
+			if (Request.Form.HasProperty("postal_address"))
+				curEducationOrgDoc.TopElem.postal_address = Request.Form.GetProperty("postal_address");
+			if (Request.Form.HasProperty("phone"))
+				curEducationOrgDoc.TopElem.phone = Request.Form.GetProperty("phone");
+			if (Request.Form.HasProperty("fax"))
+				curEducationOrgDoc.TopElem.fax = Request.Form.GetProperty("fax");
+			if (Request.Form.HasProperty("email"))
+				curEducationOrgDoc.TopElem.email = Request.Form.GetProperty("email");
+			if (Request.Form.HasProperty("web"))
+				curEducationOrgDoc.TopElem.web = Request.Form.GetProperty("web");
+			
+			curEducationOrgDoc.TopElem.lectors.Clear();
+			_x = 0;
+			while (Request.Form.HasProperty("lector_id_" + _x))
+			{
+				fldNewLector = curEducationOrgDoc.TopElem.lectors.ObtainChildByKey(Int(Request.Form.GetProperty("lector_id_" + _x)));
+				_x++;
+			}
+			
+			curEducationOrgDoc.Save();
+			
+			//if (_new && _cardDoc.TopElem.all_can_edit == false)
+			if (_new)
+			{
+				_ob = _cardDoc.TopElem.objects.ObtainChildByKey(curEducationOrgDoc.DocID);
+				_ob.object_name = curEducationOrgDoc.TopElem.name;
+				_ob.can_edit = true;
+				_ob.can_delete = true;
+				_cardDoc.Save();
+			}
+			
+			Session.RETURN_MSG = tools_web.get_web_str('cpp_mess_info_save');
+			
+			go_back(_href);
+		break;
+case "lector":
+			_catalog_name = "lector";
+			
+			try
+			{
+				curLectorID = Int(Request.Form.lector_id);
+				sType = Request.Form.type;
+			}
+			catch(_x_)
+			{
+				Session.RETURN_MSG = tools_web.get_web_str('cpp_err_post');
+				go_back(_href);
+				Cancel();
+			}
+			_cardDoc = tools_web.get_my_person_object_link_card(_catalog_name,curUserID, true);
+			if (_cardDoc == undefined)
+			{
+				Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_access_delete'), '{PARAM1}', _catalog_name );
+				go_back(_href);
+			}
+			
+			if (curLectorID > 0)
+			{
+				try
+				{
+					curLectorDoc = OpenDoc(UrlFromDocID(curLectorID));
+					_i_can = false;
+					if (!_cardDoc.TopElem.all_can_edit)
+					{
+						_ob = _cardDoc.TopElem.objects.GetOptChildByKey(curLectorID);
+						if (_ob != undefined && _ob.can_edit)
+							_i_can = true;
+					}
+					else
+						_i_can = true;
+						
+					if (!_i_can)
+					{
+						Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_no_access_edit'), '{PARAM1}', _catalog_name );
+						go_back(_href);
+					}
+					_new = false;
+				}
+				catch(_o_)
+				{
+					Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_obj_defective'), '{PARAM1}', _catalog_name );
+					go_back(_href);
+				}
+			}
+			else
+			{
+				if (!_cardDoc.TopElem.all_can_create)
+				{
+					Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_no_access_create'), '{PARAM1}', _catalog_name );
+					go_back(_href);
+				}
+				
+				curLectorDoc = OpenNewDoc("x-local://wtv/wtv_lector.xmd");
+				curLectorDoc.BindToDb(DefaultDb);
+				curLectorID = curLectorDoc.DocID;
+				_href = _href+"&object_id=" + curLectorID;
+				_new = true;
+			}
+			
+			
+			curLectorDoc.TopElem.type = sType;
+			
+			if (Request.Form.HasProperty("lastname"))
+				curLectorDoc.TopElem.lastname = Request.Form.GetProperty("lastname");
+			if (Request.Form.HasProperty("firstname"))
+				curLectorDoc.TopElem.firstname = Request.Form.GetProperty("firstname");
+			if (Request.Form.HasProperty("middlename"))
+				curLectorDoc.TopElem.middlename = Request.Form.GetProperty("middlename");
+			
+			if (Request.Form.HasProperty("birth_date"))
+			{
+				try
+				{
+					curLectorDoc.TopElem.birth_date = Date(Request.Form.GetProperty("birth_date"));
+				}
+				catch(_errorDueBirth_)
+				{
+					curLectorDoc.TopElem.birth_date.Clear();
+				}
+			}
+			
+			if (Request.Form.HasProperty("sex"))
+				curLectorDoc.TopElem.sex = Request.Form.GetProperty("sex");
+			
+			if (Request.Form.HasProperty("person_id"))
+			{
+				curLectorDoc.TopElem.person_id = Request.Form.GetProperty("person_id");
+				tools.common_filling("collaborator", curLectorDoc.TopElem, curLectorDoc.TopElem.person_id);
+			}
+			if (Request.Form.HasProperty("allow_publication") && Request.Form.GetProperty("allow_publication") == "1") curLectorDoc.TopElem.allow_publication = true; else curLectorDoc.TopElem.allow_publication = false;
+			
+			if (Request.Form.HasProperty("desc"))
+				curLectorDoc.TopElem.desc = Request.Form.GetProperty("desc");
+			
+			
+			curLectorDoc.Save();
+			
+			//if (_new && _cardDoc.TopElem.all_can_edit == false)
+			if (_new)
+			{
+				_ob = _cardDoc.TopElem.objects.ObtainChildByKey(curLectorDoc.DocID);
+				if (curLectorDoc.TopElem.type == "invitee")
+					_ob.object_name = Trim(curLectorDoc.TopElem.lastname + " " + curLectorDoc.TopElem.firstname + " " + curLectorDoc.TopElem.middlename);
+				else
+					_ob.object_name = curLectorDoc.TopElem.person_fullname;
+				_ob.can_edit = true;
+				_ob.can_delete = true;
+				_cardDoc.Save();
+			}
+			
+			Session.RETURN_MSG = tools_web.get_web_str('cpp_mess_info_save');
+			
+			go_back(_href);
+			
+			break;
+case "doc_type_document":
+			try
+			{
+				teDocType = OpenDoc(UrlFromDocID(Int(Request.Form.doc_type_id))).TopElem;
+				_catalog_name = teDocType.object_name;
+				curDocumentID = Int(Request.Form.object_id);
+			}
+			catch(_x_)
+			{
+				alert(_x_)
+				Session.RETURN_MSG = tools_web.get_web_str('cpp_err_post');
+				go_back(_href);
+				Cancel();
+			}
+			_cardDoc = tools_web.get_my_person_object_link_card(_catalog_name,curUserID, true);
+			if (_cardDoc == undefined)
+			{
+				Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_access_delete'), '{PARAM1}', _catalog_name );
+				go_back(_href);
+			}
+			
+			if (curDocumentID > 0)
+			{
+				try
+				{
+					curDocumentDoc = OpenDoc(UrlFromDocID(curDocumentID));
+					_i_can = false;
+					if (!_cardDoc.TopElem.all_can_edit)
+					{
+						_ob = _cardDoc.TopElem.objects.GetOptChildByKey(curDocumentID);
+						if (_ob != undefined && _ob.can_edit)
+							_i_can = true;
+					}
+					else
+						_i_can = true;
+						
+					if (!_i_can)
+					{
+						Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_no_access_edit'), '{PARAM1}', _catalog_name );
+						go_back(_href);
+					}
+					_new = false;
+				}
+				catch(_o_)
+				{
+					Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_obj_defective'), '{PARAM1}', _catalog_name );
+					go_back(_href);
+				}
+			}
+			else
+			{
+				if (!_cardDoc.TopElem.all_can_create)
+				{
+					Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_no_access_create'), '{PARAM1}', _catalog_name );
+					go_back(_href);
+				}
+				
+				curDocumentDoc = OpenNewDoc("x-local://udt/udt_" + teDocType.object_name + ".xmd");
+				curDocumentDoc.BindToDb(DefaultDb);
+				curDocumentID = curDocumentDoc.DocID;
+				_href = _href+"&object_id=" + curDocumentID;
+				_new = true;
+			}
+
+			for (fldField in teDocType.fields)
+			{
+				if (fldField.is_multiple)
+				{
+					curDocumentDoc.TopElem.EvalPath(fldField.name + "s").Clear();
+					try
+					{
+						iCount = Int(Request.Form.GetProperty("i_"+ fldField.name + "_count"));
+					}
+					catch(_wtf_)
+					{
+						continue;
+					}
+					
+					for (j =0; j < iCount; j++)
+					{
+						
+						if (Request.Form.HasProperty("pse_"+fldField.name+"_" + j) && Request.Form.GetProperty("pse_"+fldField.name+"_" + j) != "")
+							iIndexElement = Int(Request.Form.GetProperty("pse_"+fldField.name+"_" + j));
+						else
+							continue;
+						
+						if (fldField.type == "foreign_elem")
+							fldSubNewChild = curDocumentDoc.TopElem.EvalPath(fldField.name + "s").ObtainChildByKey(iIndexElement);
+						else
+							fldSubNewChild = curDocumentDoc.TopElem.EvalPath(fldField.name + "s").AddChild();
+						
+						for (fldSubField in fldField.sub_fields)
+						{
+							if (Request.Form.HasProperty("se_"+fldField.name+"_"+fldSubField.name+"_" + j))
+								_sFieldValue = Request.Form.GetProperty("se_"+fldField.name+"_"+fldSubField.name+"_" + j);
+							else
+								_sFieldValue = "";
+							
+							//alert(fldSubField.name + " (" + fldSubField.type + ") = " + _sFieldValue);
+							
+							switch(fldSubField.type)
+							{
+								case "integer":
+								case "foreign_elem":
+								case "file":
+									try{fldSubNewChild.EvalPath(fldSubField.name).Value = Int(_sFieldValue);}catch(_wtferr_){fldSubNewChild.EvalPath(fldSubField.name).Clear();}
+									break;
+								case "real":
+									try{fldSubNewChild.EvalPath(fldSubField.name).Value = Real(_sFieldValue);}catch(_wtferr_){fldSubNewChild.EvalPath(fldSubField.name).Clear();}
+									break;
+								case "bool":
+									fldSubNewChild.EvalPath(fldSubField.name).Value = (_sFieldValue == "1");
+									break;
+								case "date":
+									try{fldSubNewChild.EvalPath(fldSubField.name).Value = Date(_sFieldValue);}catch(_wtferr_){fldSubNewChild.EvalPath(fldSubField.name).Clear();};
+									break;
+								case "string":
+								case "text":
+								case "combo":
+									fldSubNewChild.EvalPath(fldSubField.name).Value = _sFieldValue;
+								break;
+							}
+							
+						}
+						
+					}
+				}
+				else
+				{
+					if (Request.Form.HasProperty("e_" + fldField.name))
+						_sFieldValue = Request.Form.GetProperty("e_" + fldField.name);
+					else
+						_sFieldValue = "";
+
+					switch(fldField.type)
+					{
+						case "integer":
+						case "foreign_elem":
+						case "file":
+							try{curDocumentDoc.TopElem.EvalPath(fldField.name).Value = Int(_sFieldValue);}catch(_wtferr_){curDocumentDoc.TopElem.EvalPath(fldField.name).Clear();};
+							break;
+						case "real":
+							try{curDocumentDoc.TopElem.EvalPath(fldField.name).Value = Real(_sFieldValue);}catch(_wtferr_){curDocumentDoc.TopElem.EvalPath(fldField.name).Clear();};
+							break;
+						case "date":
+							try{curDocumentDoc.TopElem.EvalPath(fldField.name).Value = Date(_sFieldValue);}catch(_wtferr_){curDocumentDoc.TopElem.EvalPath(fldField.name).Clear();};
+							break;
+						case "bool":
+							curDocumentDoc.TopElem.EvalPath(fldField.name).Value = (_sFieldValue == "1");
+							break;
+						case "string":
+						case "text":
+						case "combo":
+							curDocumentDoc.TopElem.EvalPath(fldField.name).Value = _sFieldValue;
+						break;
+					}
+				}
+			}
+			
+			
+			curDocumentDoc.Save();
+			
+			//if (_new && _cardDoc.TopElem.all_can_edit == false)
+			if (_new)
+			{
+				_ob = _cardDoc.TopElem.objects.ObtainChildByKey(curDocumentDoc.DocID);
+				_ob.object_name = curDocumentDoc.TopElem.EvalPath(teDocType.disp_name).Value;
+				_ob.can_edit = true;
+				_ob.can_delete = true;
+				_cardDoc.Save();
+			}
+			Session.RETURN_MSG = tools_web.get_web_str('cpp_mess_info_save');
+			go_back(_href);
+			break;
+case "assessment_appraise":
+			_catalog_name = "assessment_appraise";
+			
+			try
+			{
+				curAssessmentAppraiseID = Int(Request.Form.assessment_appraise_id);
+				sName = Request.Form.name;
+				iAuditoryCount = Int(Request.Form.auditory_count);
+			}
+			catch(_x_)
+			{
+				Session.RETURN_MSG = tools_web.get_web_str('cpp_err_post');
+				go_back(_href);
+				Cancel();
+			}
+			_cardDoc = tools_web.get_my_person_object_link_card(_catalog_name,curUserID, true);
+			if (_cardDoc == undefined)
+			{
+				Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_access_delete'), '{PARAM1}', _catalog_name );
+				go_back(_href);
+			}
+			
+			if (curAssessmentAppraiseID > 0)
+			{
+				try
+				{
+					curAssessmentAppraiseDoc = OpenDoc(UrlFromDocID(curAssessmentAppraiseID));
+					_i_can = false;
+					if (!_cardDoc.TopElem.all_can_edit)
+					{
+						_ob = _cardDoc.TopElem.objects.GetOptChildByKey(curAssessmentAppraiseID);
+						if (_ob != undefined && _ob.can_edit)
+							_i_can = true;
+					}
+					else
+						_i_can = true;
+						
+					if (!_i_can)
+					{
+						Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_no_access_edit'), '{PARAM1}', _catalog_name );
+						go_back(_href);
+					}
+					_new = false;
+				}
+				catch(_o_)
+				{
+					Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_obj_defective'), '{PARAM1}', _catalog_name );
+					go_back(_href);
+				}
+			}
+			else
+			{
+				if (!_cardDoc.TopElem.all_can_create)
+				{
+					Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_no_access_create'), '{PARAM1}', _catalog_name );
+					go_back(_href);
+				}
+				
+				try
+				{
+					_teModelProcedure = OpenDoc(UrlFromDocID(Int(Request.Form.standard_appraise_id))).TopElem;
+					if (!_teModelProcedure.is_model)
+						throw "FaKE!";
+				}
+				catch(_o_)
+				{
+					Session.RETURN_MSG = StrReplace( tools_web.get_web_str('cpp_err_obj_defective'), '{PARAM1}', _catalog_name );
+					go_back(_href);
+				}
+				curAssessmentAppraiseDoc = OpenNewDoc("x-local://wtv/wtv_assessment_appraise.xmd");
+				curAssessmentAppraiseDoc.BindToDb(DefaultDb);
+				curAssessmentAppraiseID = curAssessmentAppraiseDoc.DocID;
+				curAssessmentAppraiseDoc.TopElem.AssignElem(_teModelProcedure);
+				_href = _href+"&object_id=" + curAssessmentAppraiseID;
+				_new = true;
+			}
+			
+			curAssessmentAppraiseDoc.TopElem.name = sName;
+			curAssessmentAppraiseDoc.TopElem.is_model = false;
+			try{curAssessmentAppraiseDoc.TopElem.start_date = Date(Request.Form.start_date);}catch(_x_){curAssessmentAppraiseDoc.TopElem.start_date.Clear();}
+			try{curAssessmentAppraiseDoc.TopElem.end_date = Date(Request.Form.end_date);}catch(_x_){curAssessmentAppraiseDoc.TopElem.end_date.Clear();}
+			try{curAssessmentAppraiseDoc.TopElem.person_id = Int(Request.Form.person_id);}catch(_x_){curAssessmentAppraiseDoc.TopElem.person_id.Clear();}
+			try{curAssessmentAppraiseDoc.TopElem.start_date = Date(Request.Form.start_date);}catch(_x_){curAssessmentAppraiseDoc.TopElem.start_date.Clear();}
+			if (Request.Form.HasProperty("web_display") && Request.Form.web_display == "1")
+				curAssessmentAppraiseDoc.TopElem.web_display = true;
+			else
+				curAssessmentAppraiseDoc.TopElem.web_display = false;
+			
+			curAssessmentAppraiseDoc.TopElem.auditorys.Clear();
+			_aAuditorys = Array();
+			for (_i = 0;_i<iAuditoryCount;_i++)
+			if (Request.Form.HasProperty("auditory_id_"+_i))
+				try{_aAuditorys[ArrayCount(_aAuditorys)] = Int(Request.Form.GetProperty("auditory_id_"+_i));}catch(_x_){}
+			for (_catCollaboratorElem in QueryCatalogByKeys("collaborators", "id", _aAuditorys))
+			{
+				fldAuditoryChild = curAssessmentAppraiseDoc.TopElem.auditorys.ObtainChildByKey(_catCollaboratorElem.PrimaryKey);
+				fldAuditoryChild.person_name = _catCollaboratorElem.fullname;
+				fldAuditoryChild.position_name = _catCollaboratorElem.position_name;
+			}
+			
+			if (Request.Form.HasProperty("comment"))
+				curAssessmentAppraiseDoc.TopElem.comment = Request.Form.GetProperty("comment");
+		
+			curAssessmentAppraiseDoc.Save();
+			
+			//if (_new && _cardDoc.TopElem.all_can_edit == false)
+			if (_new)
+			{
+				_ob = _cardDoc.TopElem.objects.ObtainChildByKey(curAssessmentAppraiseDoc.DocID);
+				_ob.object_name = curAssessmentAppraiseDoc.TopElem.name;
+				_ob.can_edit = true;
+				_ob.can_delete = true;
+				_cardDoc.Save();
+			}
+			Session.RETURN_MSG = tools_web.get_web_str('cpp_mess_info_save');
+			go_back(_href);
+			break;
+case "assessment_appraise_generate_plan":
+			try
+			{
+				iAssessmentAppraiseID = Int(Request.QueryString.assessment_appraise_id);
+			}
+			catch(x)
+			{
+				_sResponseText = '{"operation_status_result": 0, "operation_status_result_message":"' + tools_web.get_web_str('cpp_err_ass_app_bad') + '"}';
+				Response.Write(EncodeCharset(_sResponseText,"utf-8"));
+				Cancel();
+			}
+			
+			bResult = tools_ass.generate_procedure_plan(iAssessmentAppraiseID);
+			
+			if (!bResult)
+			{
+				_sResponseText = '{"operation_status_result": 0, "operation_status_result_message":"' + tools_web.get_web_str('cpp_err_proc_plan') + '"}';
+				Response.Write(EncodeCharset(_sResponseText,"utf-8"));
+				Cancel();
+			}
+			
+			try
+			{
+				teReport = OpenDoc(UrlFromDocID(OpenDoc(UrlFromDocID(iAssessmentAppraiseID)).TopElem.report_id)).TopElem;
+				_sResponseText = teReport.report_text;
+			}
+			catch(_ne_pishem_)
+			{
+				_sResponseText = "";
+			}
+			
+			_sResponseText = '{"operation_status_result": 1, "operation_status_result_message":"' + HtmlEncode(_sResponseText) + '"}';
+			
+			Response.Write(EncodeCharset(_sResponseText,"utf-8"));
+			
+			Cancel();
+			break;
+case "assessment_appraise_get_pas_list":
+			//Response.AddHeader( "Content-Type", "text/xml; charset=windows-1251" );
+			Response.ContentType = "text/xml";
+			_sResponseText = '<?xml version="1.0" encoding="windows-1251"?><data>';
+			try
+			{
+				_iPersonID = Int(Request.QueryString.person_id);
+				_iAssessmentAppraiseID = Int(Request.QueryString.assessment_appraise_id);
+			}
+			catch(_X_)
+			{
+				_iAssessmentAppraiseID = 0
+				_iPersonID = 0;
+			}
+			
+			for (catPAElem in ArrayUnion(XQuery("for $elem in pas where $elem/person_id = "+_iPersonID + " and $elem/assessment_appraise_id = " + _iAssessmentAppraiseID + " return $elem"),XQuery("for $elem in development_plans where $elem/person_id = "+_iPersonID + " and $elem/assessment_appraise_id = " + _iAssessmentAppraiseID + " return $elem")))
+			{
+				_sResponseText+=catPAElem.Xml;
+			}
+			
+			_sResponseText+="</data>"
+			Response.Write(_sResponseText);
+			Cancel();
+			break;
+case "assessment_appraise_pa_killorsave":
+			_catalog_name = "assessment_appraise";
+			try
+			{
+				curAssessmentAppraiseID = Int(Request.Form.assessment_appraise_id);
+				iDeadPaID = Int(Request.Form.pa_id);
+				sAction = Request.Form.action;
+			}
+			catch(_x_)
+			{
+				_sResponseText = tools_web.get_web_str('cpp_err_post');
+				_sResponseText = '{"operation_status_result": 0, "operation_status_result_message":"' + HtmlEncode(_sResponseText) + '"}';
+				Response.Write(EncodeCharset(_sResponseText,"utf-8"));
+				Cancel();
+			}
+			_cardDoc = tools_web.get_my_person_object_link_card(_catalog_name,curUserID, true);
+			if (_cardDoc == undefined)
+			{
+				_sResponseText = StrReplace( tools_web.get_web_str('cpp_err_access_delete'), '{PARAM1}', _catalog_name );
+				_sResponseText = '{"operation_status_result": 0, "operation_status_result_message":"' + HtmlEncode(_sResponseText) + '"}';
+				Response.Write(EncodeCharset(_sResponseText,"utf-8"));
+				Cancel();
+			}
+			_fldObjectEntry = _cardDoc.TopElem.objects.GetChildByKey(curAssessmentAppraiseID);
+			
+			if (sAction == "kill")
+			if (!_cardDoc.TopElem.all_can_edit && !_cardDoc.TopElem.all_can_delete && (_fldObjectEntry == undefined || (!_fldObjectEntry.can_edit && !_fldObjectEntry.can_delete)))
+			{
+				_sResponseText = StrReplace( tools_web.get_web_str('cpp_err_no_access_delete'), '{PARAM1}', _catalog_name );
+				_sResponseText = '{"operation_status_result": 0, "operation_status_result_message":"' + HtmlEncode(_sResponseText) + '"}';
+				Response.Write(EncodeCharset(_sResponseText,"utf-8"));
+				Cancel();
+			}
+			
+			if (sAction == "save")
+			if (!_cardDoc.TopElem.all_can_edit && (_fldObjectEntry == undefined || !_fldObjectEntry.can_edit))
+			{
+				_sResponseText = StrReplace( tools_web.get_web_str('cpp_err_no_access_edit'), '{PARAM1}', _catalog_name );
+				_sResponseText = '{"operation_status_result": 0, "operation_status_result_message":"' + HtmlEncode(_sResponseText) + '"}';
+				Response.Write(EncodeCharset(_sResponseText,"utf-8"));
+				Cancel();
+			}
+			
+			if (sAction == "kill")
+			try
+			{
+				DeleteDoc(UrlFromDocID(iDeadPaID));
+				_sResponseText = StrReplace( StrReplace( tools_web.get_web_str('cpp_mess_odj_deleted'), '{PARAM1}', _catalog_name ), '{PARAM2}', 1 );
+				_sResponseText = '{"operation_status_result": 1, "operation_status_result_message":"' + HtmlEncode(_sResponseText) + '"}';
+			}
+			catch(_still_not_dead_)
+			{
+				_sResponseText = tools_web.get_web_str('cpp_err_obj_delete');
+				_sResponseText = '{"operation_status_result": 0, "operation_status_result_message":"' + HtmlEncode(_sResponseText) + '"}';
+				Response.Write(EncodeCharset(_sResponseText,"utf-8"));
+				Cancel();
+			}
+			
+			if (sAction == "save")
+			{
+				try
+				{
+					docPA = OpenDoc(UrlFromDocID(iDeadPaID));
+					iExpert = Int(Request.Form.expert_person_id);
+					
+					if (docPA.TopElem.expert_person_id != iExpert)
+					{
+						docPA.TopElem.expert_person_id = iExpert;
+						tools_ass.assessment_person_filling(docPA.TopElem.expert_person_id, docPA.TopElem.expert_person_id.Value);
+						docPA.Save();
+					}
+					
+					/*
+					catAssessmentPlan = ArrayOptFirstElem(XQuery("for $elem in assessment_plans where $elem/person_id = " + iUserId + " and $elem/assessment_appraise_id = " + curAssessmentAppraiseID + " return $elem"));
+					generate_participant_by_plan(curAssessmentAppraiseID, sStatus, catAssessmentPlan.PrimaryKey, iExpert);
+					*/
+					_sResponseText = tools_web.get_web_str('cpp_mess_info_save');
+					_sResponseText = '{"operation_status_result": 1, "operation_status_result_message":"' + HtmlEncode(_sResponseText) + '"}';
+				}
+				catch(_still_not_dead_)
+				{
+					_sResponseText = tools_web.get_web_str('cpp_err_obj_save');
+					_sResponseText = '{"operation_status_result": 0, "operation_status_result_message":"' + HtmlEncode(_sResponseText) + '"}';
+					Response.Write(EncodeCharset(_sResponseText,"utf-8"));
+					Cancel();
+				}
+				
+				
+				
+			}
+			Response.Write(EncodeCharset(_sResponseText,"utf-8"));
+			Cancel();
+			break;
+case "assessment_appraise_pa_generate":
+			
+			_catalog_name = "assessment_appraise";
+			try
+			{
+				curAssessmentAppraiseID = Int(Request.Form.assessment_appraise_id);
+				iPersonaID = Int(Request.Form.person_id);
+				sAction = Request.Form.action;
+				arrExperts = String(Request.Form.selected_expert_ids).split(";");
+				for (i=0; i< ArrayCount(arrExperts); i++)
+					arrExperts[i] = Int(arrExperts[i]);
+				if (sAction == "regenerate")
+				{
+					curAssessmentAppraiseDoc = OpenDoc(UrlFromDocID(curAssessmentAppraiseID));
+				}
+				else if (sAction == "rebuild_by_status")
+				{
+					sStatus = Request.Form.status;
+					catAssessmentPlan = ArrayOptFirstElem(XQuery("for $elem in assessment_plans where $elem/person_id = " + iPersonaID + " and $elem/assessment_appraise_id = " + curAssessmentAppraiseID + " return $elem"));
+				}
+				else throw "Some unindentified shit";
+			}
+			catch(_x_)
+			{
+				_sResponseText = tools_web.get_web_str('cpp_err_post');
+				_sResponseText = '{"operation_status_result": 0, "operation_status_result_message":"' + HtmlEncode(_sResponseText) + '"}';
+				Response.Write(EncodeCharset(_sResponseText,"utf-8"));
+				Cancel();
+			}
+			_cardDoc = tools_web.get_my_person_object_link_card(_catalog_name,curUserID, true);
+			if (_cardDoc == undefined)
+			{
+				_sResponseText = StrReplace( tools_web.get_web_str('cpp_err_access_create'), '{PARAM1}', _catalog_name );
+				_sResponseText = '{"operation_status_result": 0, "operation_status_result_message":"' + HtmlEncode(_sResponseText) + '"}';
+				Response.Write(EncodeCharset(_sResponseText,"utf-8"));
+				Cancel();
+			}
+			_fldObjectEntry = _cardDoc.TopElem.objects.GetChildByKey(curAssessmentAppraiseID);
+			if (!_cardDoc.TopElem.all_can_edit && (_fldObjectEntry == undefined || !_fldObjectEntry.can_edit))
+			{
+				_sResponseText = StrReplace( tools_web.get_web_str('cpp_err_no_access_edit'), '{PARAM1}', _catalog_name );
+				_sResponseText = '{"operation_status_result": 0, "operation_status_result_message":"' + HtmlEncode(_sResponseText) + '"}';
+				Response.Write(EncodeCharset(_sResponseText,"utf-8"));
+				Cancel();
+			}
+			
+			if (sAction == "regenerate")
+			{
+				for (_catCollaboratorElem in QueryCatalogByKeys("collaborators", "id", arrExperts))
+				{
+					if (curAssessmentAppraiseDoc.TopElem.auditorys.GetChildByKey(_catCollaboratorElem.PrimaryKey) != undefined)
+					{
+						xarrDeadPas = ArrayUnion(XQuery("for $elem in pas where $elem/person_id = " + iPersonaID + " and $elem/assessment_appraise_id = " + curAssessmentAppraiseID + " return $elem"),XQuery("for $elem in development_plans where $elem/person_id = " + iPersonaID + " and $elem/assessment_appraise_id = " + curAssessmentAppraiseID + " return $elem"));
+						xarrDeadPas = ArrayUnion(xarrDeadPas, XQuery("for $elem in assessment_plans where $elem/person_id = " + iPersonaID + " and $elem/assessment_appraise_id = " + curAssessmentAppraiseID + " return $elem"));
+						for (catDeadPAElem in xarrDeadPas)
+							DeleteDoc(UrlFromDocID(catDeadPAElem.id));
+					}
+					else
+					{
+						fldAuditoryChild = curAssessmentAppraiseDoc.TopElem.auditorys.ObtainChildByKey(_catCollaboratorElem.PrimaryKey);
+						fldAuditoryChild.person_name = _catCollaboratorElem.fullname;
+						fldAuditoryChild.position_name = _catCollaboratorElem.position_name;
+					}
+					
+					//?????
+					
+					
+				}
+			}
+			else if (sAction == "rebuild_by_status")
+			{
+				xarrDeadPas = ArrayUnion(XQuery("for $elem in pas where $elem/person_id = " + iPersonaID + " and $elem/assessment_appraise_id = " + curAssessmentAppraiseID + " and $elem/status = " + XQueryLiteral(sStatus) + " return $elem"),XQuery("for $elem in development_plans where $elem/person_id = " + iPersonaID + " and $elem/assessment_appraise_id = " + curAssessmentAppraiseID + " and $elem/status = " + XQueryLiteral(sStatus) + " return $elem"));
+				for (catDeadPAElem in xarrDeadPas)
+					DeleteDoc(UrlFromDocID(catDeadPAElem.id));
+				iCount = 0;
+				for (iExpertID in arrExperts)
+				{
+					if (tools_ass.generate_participant_by_plan(curAssessmentAppraiseID, sStatus, catAssessmentPlan.id, iExpertID)) iCount++;
+				}
+			}
+			_sResponseText = tools_web.get_web_str('cpp_mess_success');
+			_sResponseText = '{"operation_status_result": 1, "operation_status_result_message":"' + HtmlEncode(_sResponseText) + '"}';
+			
+			Response.Write(EncodeCharset(_sResponseText,"utf-8"));
+			Cancel();
+			break;
+case "cl_course":
+			_catalog_name = "cl_course";
+			
+			try
+			{
+				curCLCourseID = Int(Request.Form.cl_course_id);
+				sName = Request.Form.name;
+				//iAuditoryCount = Int(Request.Form.auditory_count);
+				//iRepoCount = Int(Request.Form.repositoriums_count);
+			}
+			catch(_x_)
+			{
+				Session.RETURN_MSG = tools_web.get_web_str("cpp_err_post");
+				go_back(_href);
+				Cancel();
+			}
+			_cardDoc = tools_web.get_my_person_object_link_card(_catalog_name,curUserID, true);
+			if (_cardDoc == undefined)
+			{
+				Session.RETURN_MSG = StrReplace(tools_web.get_web_str("cpp_err_access_delete"), "{PARAM1}", _catalog_name);
+				go_back(_href);
+			}
+						
+			if (curCLCourseID > 0)
+			{
+				try
+				{
+					curCLCourseDoc = OpenDoc(UrlFromDocID(curCLCourseID));
+					_i_can = false;
+					if (!_cardDoc.TopElem.all_can_edit)
+					{
+						_ob = _cardDoc.TopElem.objects.GetOptChildByKey(curCLCourseID);
+						if (_ob != undefined && _ob.can_edit)
+							_i_can = true;
+					}
+					else
+						_i_can = true;
+						
+					if (!_i_can)
+					{
+						Session.RETURN_MSG = StrReplace(tools_web.get_web_str("cpp_err_no_access_edit"), "{PARAM1}", _catalog_name);
+						go_back(_href);
+					}
+					_new = false;
+				}
+				catch(_o_)
+				{
+					Session.RETURN_MSG = StrReplace(tools_web.get_web_str("cpp_err_obj_defective"), "{PARAM1}", _catalog_name);
+					go_back(_href);
+				}
+			}
+			else
+			{
+				if (!_cardDoc.TopElem.all_can_create)
+				{
+					Session.RETURN_MSG = StrReplace(tools_web.get_web_str("cpp_err_no_access_create"), "{PARAM1}", _catalog_name);
+					go_back(_href);
+				}
+				
+				curCLCourseDoc = OpenNewDoc("x-local://wtv/wtv_cl_course.xmd");
+				curCLCourseDoc.BindToDb(DefaultDb);
+				curCLCourseID = curCLCourseDoc.DocID;
+				_href = _href+"&object_id=" + curCLCourseID;
+				_new = true;
+			}
+						
+			if (Request.Form.HasProperty("code") && Request.Form.GetProperty("code") != "")
+				curCLCourseDoc.TopElem.code = Request.Form.GetProperty("code");
+			else if (!curCLCourseDoc.TopElem.code.HasValue)
+				curCLCourseDoc.TopElem.code = StrUpperCase(tools.random_string(5));
+			
+			curCLCourseDoc.TopElem.name = sName;
+			if (Request.Form.HasProperty("state_id"))
+				curCLCourseDoc.TopElem.state_id = Request.Form.GetOptProperty("state_id");
+			try{curCLCourseDoc.TopElem.start_date = Date(Request.Form.start_date);}catch(_x_){curCLCourseDoc.TopElem.start_date.Clear();}
+			try{curCLCourseDoc.TopElem.end_date = Date(Request.Form.end_date);}catch(_x_){curCLCourseDoc.TopElem.end_date.Clear();}
+			try{curCLCourseDoc.TopElem.forum_id = Int(Request.Form.forum_id);}catch(_x_){curCLCourseDoc.TopElem.forum_id.Clear();}
+			/*
+			curCLCourseDoc.TopElem.authors.Clear();
+			_aAuditorys = Array();
+			for (_i = 0;_i<iAuditoryCount;_i++)
+			if (Request.Form.HasProperty("auditory_id_"+_i))
+				try{_aAuditorys[ArrayCount(_aAuditorys)] = Int(Request.Form.GetProperty("auditory_id_"+_i));}catch(_x_){}
+			for (_catCollaboratorElem in QueryCatalogByKeys("collaborators", "id", _aAuditorys))
+			{
+				fldAuditoryChild = curCLCourseDoc.TopElem.authors.ObtainChildByKey(_catCollaboratorElem.PrimaryKey);
+				tools.common_filling("collaborator", fldAuditoryChild, _catCollaboratorElem.PrimaryKey, _catCollaboratorElem);
+				fldAuditoryChild.types.ObtainChildByKey(1);
+			}
+			*/
+			fldAuditoryChild = curCLCourseDoc.TopElem.authors.GetOptChildByKey(curUserID);
+			if (fldAuditoryChild == undefined)
+			{
+				fldAuditoryChild = curCLCourseDoc.TopElem.authors.ObtainChildByKey(curUserID);
+				tools.common_filling("collaborator", fldAuditoryChild, curUserID, curUser);
+			}
+			fldAuditoryChild.types.ObtainChildByKey(1);
+			
+			/*
+			curCLCourseDoc.TopElem.repositoriums.Clear();
+			_aRepositoriums = Array();
+			for (_i = 0;_i<iRepoCount;_i++)
+				if (Request.Form.HasProperty("repositorium_id_"+_i))
+					try{_aRepositoriums[ArrayCount(_aRepositoriums)] = Int(Request.Form.GetProperty("repositorium_id_"+_i));}catch(_x_){}
+			
+			for (_catRepoElem in QueryCatalogByKeys("repositoriums", "id", _aRepositoriums))
+			{
+				curCLCourseDoc.TopElem.repositoriums.ObtainChildByKey(_catRepoElem.PrimaryKey);
+			}
+			*/
+			
+			curCLCourseDoc.Save();
+			
+			if (_new)
+			{
+				_ob = _cardDoc.TopElem.objects.ObtainChildByKey(curCLCourseDoc.DocID);
+				_ob.object_name = curCLCourseDoc.TopElem.name;
+				_ob.can_edit = true;
+				_ob.can_delete = true;
+				_cardDoc.Save();
+			}
+			Session.RETURN_MSG = tools_web.get_web_str("cpp_mess_info_save");
+			go_back(_href);
+			break;
+case "repositorium":
+			_catalog_name = "repositorium";
+			try
+			{
+				curRepositoriumID = Int(Request.Form.repositorium_id);
+				sName = Request.Form.name;
+				iAuditoryCount = Int(Request.Form.auditory_count);
+			}
+			catch(_x_)
+			{
+				Session.RETURN_MSG = tools_web.get_web_str("cpp_err_post");
+				go_back(_href);
+				Cancel();
+			}
+			_cardDoc = tools_web.get_my_person_object_link_card(_catalog_name,curUserID, true);
+			if (_cardDoc == undefined)
+			{
+				Session.RETURN_MSG = StrReplace(tools_web.get_web_str("cpp_err_access_delete"), "{PARAM1}", _catalog_name);
+				go_back(_href);
+			}
+						
+			if (curRepositoriumID > 0)
+			{
+				try
+				{
+					curRepositoriumDoc = OpenDoc(UrlFromDocID(curRepositoriumID));
+					_i_can = false;
+					if (!_cardDoc.TopElem.all_can_edit)
+					{
+						_ob = _cardDoc.TopElem.objects.GetOptChildByKey(curRepositoriumID);
+						if (_ob != undefined && _ob.can_edit)
+							_i_can = true;
+					}
+					else
+						_i_can = true;
+						
+					if (!_i_can)
+					{
+						Session.RETURN_MSG = StrReplace(tools_web.get_web_str("cpp_err_no_access_edit"), "{PARAM1}", _catalog_name);
+						go_back(_href);
+					}
+					_new = false;
+				}
+				catch(_o_)
+				{
+					Session.RETURN_MSG = StrReplace(tools_web.get_web_str("cpp_err_obj_defective"), "{PARAM1}", _catalog_name);
+					go_back(_href);
+				}
+			}
+			else
+			{
+				if (!_cardDoc.TopElem.all_can_create)
+				{
+					Session.RETURN_MSG = StrReplace(tools_web.get_web_str("cpp_err_no_access_create"), "{PARAM1}", _catalog_name);
+					go_back(_href);
+				}
+				
+				curRepositoriumDoc = OpenNewDoc("x-local://wtv/wtv_repositorium.xmd");
+				curRepositoriumDoc.BindToDb(DefaultDb);
+				curRepositoriumID = curRepositoriumDoc.DocID;
+				_href = _href+"&object_id=" + curRepositoriumID;
+				_new = true;
+			}
+						
+			curRepositoriumDoc.TopElem.code = Request.Form.GetOptProperty("code", "");
+			if (!curRepositoriumDoc.TopElem.code.HasValue)
+				curRepositoriumDoc.TopElem.code = StrUpperCase(tools.random_string(5));
+			
+			curRepositoriumDoc.TopElem.name = sName;
+			curRepositoriumDoc.TopElem.comment = Request.Form.GetOptProperty("comment", "");
+			
+			curRepositoriumDoc.TopElem.authors.Clear();
+			_aAuditorys = Array();
+			for (_i = 0;_i<iAuditoryCount;_i++)
+			if (Request.Form.HasProperty("auditory_id_"+_i))
+				try{_aAuditorys[ArrayCount(_aAuditorys)] = Int(Request.Form.GetProperty("auditory_id_"+_i));}catch(_x_){}
+			for (_catCollaboratorElem in QueryCatalogByKeys("collaborators", "id", _aAuditorys))
+			{
+				fldAuditoryChild = curRepositoriumDoc.TopElem.authors.ObtainChildByKey(_catCollaboratorElem.PrimaryKey);
+				tools.common_filling("collaborator", fldAuditoryChild, _catCollaboratorElem.PrimaryKey, _catCollaboratorElem);
+			}
+			
+			fldAuditoryChild = curRepositoriumDoc.TopElem.authors.GetOptChildByKey(curUserID);
+			if (fldAuditoryChild == undefined)
+			{
+				fldAuditoryChild = curRepositoriumDoc.TopElem.authors.ObtainChildByKey(curUserID);
+				tools.common_filling("collaborator", fldAuditoryChild, curUserID, curUser);
+			}
+			tools_web.web_files_process(curRepositoriumDoc.TopElem);
+			curRepositoriumDoc.Save();
+			
+			if (_new)
+			{
+				_ob = _cardDoc.TopElem.objects.ObtainChildByKey(curRepositoriumDoc.DocID);
+				_ob.object_name = curRepositoriumDoc.TopElem.name;
+				_ob.can_edit = true;
+				_ob.can_delete = true;
+				_cardDoc.Save();
+			}
+			Session.RETURN_MSG = tools_web.get_web_str("cpp_mess_info_save");
+			go_back(_href);
+			break;
+	}
+	
+	Response.Write("IF YOU SEE THIS MESSAGE, IT MEANS YOUR PROCESSING IS A HOLES-FULL $#!+");	
+	Cancel();
+%>

@@ -1,0 +1,18 @@
+<%
+	Server.Execute( "view_document_4_cur_user.html" ); // Check - show some documents to some users
+
+	try
+	{
+		if ( Session.main_blok_cache == undefined )
+			throw '=undefined';
+	}
+	catch ( ff )
+	{
+		Session.main_blok_cache = EvalCodePageUrl( 'view_home_blok.html' );
+	}
+	
+	
+	Response.Write( Session.main_blok_cache );
+%>
+<%tools_web.place_zone_html("view_recommend_courses.html", "homecentertop")%>
+<%tools_web.place_zone_html("view_active_course_list.html", "homecenterbottom")%>

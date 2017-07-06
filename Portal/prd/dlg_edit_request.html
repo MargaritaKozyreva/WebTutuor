@@ -1,0 +1,601 @@
+<%
+Server.Execute( "include/user_init.html" )
+Server.Execute( "include/head.html" )
+if (Request.QueryString.HasProperty("template_req_type_id"))
+{
+		try
+		{
+			template_req_type_id=Int(Request.QueryString.GetProperty("template_req_type_id"))
+		}
+		catch(ex)
+		{
+			
+			Response.Write("<font color='red' stle='font-weight: boldest'>"+tools_web.get_web_str('der_err_type')+"</font><br/>");
+			Cancel();
+		}
+}
+else
+{
+		template_req_type='request_education_method';
+		try
+		{
+			template_req_type_id=ArrayFirstElem(XQuery("for $elem in request_types where $elem/code='"+template_req_type+"' return $elem")).id
+		}
+		catch(ex)
+		{
+			Response.Write("<font color='red' stle='font-weight: boldest'>"+tools_web.get_web_str('der_err_type')+"</font><br/>");
+			Cancel();
+		}
+}
+
+req_id=undefined;
+if (Request.QueryString.HasProperty("req_id"))
+{
+	try
+	{
+		req_id=Int(Request.QueryString.GetProperty("req_id"))
+	}
+	catch(ex)
+	{
+	}
+}
+
+if (req_id==undefined)
+{
+	Response.Write("<font color='red' stle='font-weight: boldest'>"+tools.get_web_str('c_deleted')+"</font><br/>");
+	Cancel();
+}
+
+curDocID=Request.QueryString.GetProperty("doc_id")
+
+readOnly = true;
+curObjectDoc=OpenDoc(UrlFromDocID(req_id))
+curObject=curObjectDoc.TopElem;
+curObject.request_type_id=template_req_type_id
+curObjectID=req_id;
+DocSaved=false;
+if ( Request.Form.HasProperty( 'is_posted' ) )
+{
+	_is_posted = Request.Form.GetProperty( 'is_posted' );
+	
+	if (_is_posted=="1")
+	{
+		try
+		{
+			tools_web.web_custom_elems_filling( 'request', null, curObject, Request.Form );
+		}
+		catch ( e )
+		{
+			alert( e );
+		}
+		
+		try
+		{
+			curObjectDoc.Save();
+			DocSaved=true;
+
+		}
+		catch(ex)
+		{
+			Response.Write("<font color='red' stle='font-weight: boldest'>" + tools_web.get_web_str('der_err1_mess') + "</font><br/>");
+		}
+	}
+}	
+
+%>
+<HTML>
+<HEAD>
+<base target=_self>
+<meta http-equiv="Content-Type" content="text/html;" charset="windows-1251"/>
+<title><%=tools_web.get_web_str('der_title')%></title>
+<!--<script>-->
+<script type='text/javascript' charset='windows-1251'>
+
+jQuery.extend({
+	
+
+    createUploadIframe: function(id, uri)
+	{
+			//create frame
+            var frameId = 'jUploadFrame' + id;
+            
+            if(window.ActiveXObject) {
+                var io = document.createElement('<iframe id="' + frameId + '" name="' + frameId + '" />');
+                if(typeof uri== 'boolean'){
+                    io.src = 'javascript:false';
+                }
+                else if(typeof uri== 'string'){
+                    io.src = uri;
+                }
+            }
+            else {
+                var io = document.createElement('iframe');
+                io.id = frameId;
+                io.name = frameId;
+            }
+            io.style.position = 'absolute';
+            io.style.top = '-1000px';
+            io.style.left = '-1000px';
+
+            document.body.appendChild(io);
+
+            return io			
+    },
+    createUploadForm: function(id, fileElementIds)
+	{
+		//create form	
+		var formId = 'jUploadForm' + id;
+		var fileId = 'jUploadFile' + id;
+		var form = $('<form  action="" method="POST" name="' + formId + '" id="' + formId + '" enctype="multipart/form-data"></form>');	
+		
+		var elemArray = fileElementIds.split(';')
+		for ( var i=0; i<elemArray.length; i++ )
+		{
+			try
+			{
+				var fileElementId=elemArray[i];
+				var oldElement = $('#' + fileElementId);
+				var newElement = $(oldElement).clone();
+				$(oldElement).attr('id', fileId);
+				$(oldElement).before(newElement);
+				$(oldElement).appendTo(form)
+			}
+			catch(ex)
+			{
+			}
+		}
+		
+/*		var oldElement = $('#' + fileElementId);
+		var newElement = $(oldElement).clone();
+		$(oldElement).attr('id', fileId);
+		$(oldElement).before(newElement);
+		$(oldElement).appendTo(form);*/
+		//set attributes
+		$(form).css('position', 'absolute');
+		$(form).css('top', '-1200px');
+		$(form).css('left', '-1200px');
+		$(form).appendTo('body');
+		return form;
+    },
+
+    ajaxFileUpload: function(s) {
+        // TODO introduce global settings, allowing the client to modify them for all requests, not only timeout		
+        s = jQuery.extend({}, jQuery.ajaxSettings, s);
+        var id = new Date().getTime()        
+		var form = jQuery.createUploadForm(id, s.fileElementIds);
+		var io = jQuery.createUploadIframe(id, s.secureuri);
+		var frameId = 'jUploadFrame' + id;
+		var formId = 'jUploadForm' + id;		
+        // Watch for a new set of requests
+        if ( s.global && ! jQuery.active++ )
+		{
+			jQuery.event.trigger( "ajaxStart" );
+		}            
+        var requestDone = false;
+        // Create the request object
+        var xml = {}   
+        if ( s.global )
+            jQuery.event.trigger("ajaxSend", [xml, s]);
+        // Wait for a response to come back
+        var uploadCallback = function(isTimeout)
+		{			
+			var io = document.getElementById(frameId);
+            try 
+			{				
+				if(io.contentWindow)
+				{
+					 xml.responseText = io.contentWindow.document.body?io.contentWindow.document.body.innerHTML:null;
+                	 xml.responseXML = io.contentWindow.document.XMLDocument?io.contentWindow.document.XMLDocument:io.contentWindow.document;
+					 
+				}else if(io.contentDocument)
+				{
+					 xml.responseText = io.contentDocument.document.body?io.contentDocument.document.body.innerHTML:null;
+                	xml.responseXML = io.contentDocument.document.XMLDocument?io.contentDocument.document.XMLDocument:io.contentDocument.document;
+				}						
+            }catch(e)
+			{
+				jQuery.handleError(s, xml, null, e);
+			}
+/*			alert(xml.responseText)
+			alert(xml.responseXML)*/
+            if ( xml || isTimeout == "timeout") 
+			{				
+                requestDone = true;
+                var status;
+                try {
+                    status = isTimeout != "timeout" ? "success" : "error";
+                    // Make sure that the request was successful or notmodified
+                    if ( status != "error" )
+					{
+                        // process the data (runs the xml through httpData regardless of callback)
+						var has_msg=false
+                        var data = jQuery.uploadHttpData( xml, s.dataType ); 
+						try
+						{
+							if (data.msg!=undefined)
+							{
+								has_msg=true
+							}
+						}
+						catch(ex)
+						{
+						}
+						if (!has_msg)
+						{
+							data.msg=xml.responseText;
+						}
+                        // If a local callback was specified, fire it and pass it the data
+                        if ( s.success )
+                            s.success( data, status );
+    
+                        // Fire the global callback
+                        if( s.global )
+                            jQuery.event.trigger( "ajaxSuccess", [xml, s] );
+                    } else
+                        jQuery.handleError(s, xml, status);
+                } catch(e) 
+				{
+                    status = "error";
+                    jQuery.handleError(s, xml, status, e);
+                }
+
+                // The request was completed
+                if( s.global )
+                    jQuery.event.trigger( "ajaxComplete", [xml, s] );
+
+                // Handle the global AJAX counter
+                if ( s.global && ! --jQuery.active )
+                    jQuery.event.trigger( "ajaxStop" );
+
+                // Process result
+                if ( s.complete )
+                    s.complete(xml, status);
+
+                jQuery(io).unbind()
+
+                setTimeout(function()
+									{	try 
+										{
+											$(io).remove();
+											$(form).remove();	
+											
+										} catch(e) 
+										{
+											jQuery.handleError(s, xml, null, e);
+										}									
+
+									}, 100)
+
+                xml = null
+
+            }
+        }
+        // Timeout checker
+        if ( s.timeout > 0 ) 
+		{
+            setTimeout(function(){
+                // Check to see if the request is still happening
+                if( !requestDone ) uploadCallback( "timeout" );
+            }, s.timeout);
+        }
+        try 
+		{
+           // var io = $('#' + frameId);
+			var form = $('#' + formId);
+			$(form).attr('action', s.url);
+			$(form).attr('method', 'POST');
+			$(form).attr('target', frameId);
+            if(form.encoding)
+			{
+                form.encoding = 'multipart/form-data';				
+            }
+            else
+			{				
+                form.enctype = 'multipart/form-data';
+            }			
+            $(form).submit();
+
+        } catch(e) 
+		{			
+            jQuery.handleError(s, xml, null, e);
+        }
+        if(window.attachEvent){
+            document.getElementById(frameId).attachEvent('onload', uploadCallback);
+        }
+        else{
+            document.getElementById(frameId).addEventListener('load', uploadCallback, false);
+        } 		
+        return {abort: function () {}};	
+
+    },
+
+    uploadHttpData: function( r, type ) {
+        var data = !type;
+        data = type == "xml" || data ? r.responseXML : r.responseText;
+        // If the type is "script", eval it in global context
+        if ( type == "script" )
+            jQuery.globalEval( data );
+        // Get the JavaScript object, if JSON is used.
+        if ( type == "json" )
+            eval( "data = " + data );
+        // evaluate scripts within html
+        if ( type == "html" )
+            jQuery("<div>").html(data).evalScripts();
+			//alert($('param', data).each(function(){alert($(this).attr('value'));}));
+        return data;
+    }
+})
+//----------------------------------------------------------------------------------------------------------------------------------------------------//
+function fill_in_files_links( _msg )
+{
+	try
+	{
+		//alert(_msg)
+		arrNames=String(_msg).split('#@#');
+		arrNemesLength=arrNames.length	
+		for (jj=0;jj<arrNemesLength;jj++)
+		{
+			arrNamesAndLinks=arrNames[jj].split('|@#@|')
+			id=arrNamesAndLinks[0];
+			Flink=decodeURIComponent(arrNamesAndLinks[1]);
+			arrFilesLength=arrFiles.length
+			//alert(id+' '+Flink)
+			for (zz=0;zz<arrFilesLength;zz++)
+			{
+				if (id==arrFiles[zz][0])
+				{
+					arrFiles[zz][1]=Flink
+					break;
+				}
+			}
+		}
+	}
+	catch(ex)
+	{
+		//alert(ex)
+	}
+	//alert('arrFiles.length='+arrFiles.length)
+/*	for (i=0;i<arrFiles.length;i++)
+	{
+		alert(arrFiles[i][0]+' '+ arrFiles[i][1])
+	}*/
+}
+function doSubmit( _action, _id )
+{
+	if ( ! check_required() )
+		return false;
+	
+	var tobj=document.all['secretArea']; 
+	var input = $("input:file")
+	has_files=false
+	if (input.length>=1)
+	{
+		//alert(input.length)
+		ids_str='';
+		for (i=0;i<input.length;i++)
+		{
+			//alert(input[i].id+'='+input[i].value)
+			if (input[i].value!='')
+			{
+				has_files=true;
+				if (ids_str!='')
+				{
+					ids_str=ids_str+';'
+				}
+				file_name_id=input[i].id+"_file_name"
+				file_name_value=String(input[i].value)
+				index=file_name_value.lastIndexOf('\\')
+				file_name_value=file_name_value.slice(index+1)
+				file_name_value=encodeURIComponent(file_name_value)
+				ids_str=ids_str+input[i].id+";"+file_name_id
+				var hidin=document.createElement("input");
+				hidin.setAttribute("type","hidden");
+				hidin.setAttribute("name",file_name_id);
+				hidin.setAttribute("id",file_name_id);
+				hidin.setAttribute("value",file_name_value);
+				tobj.insertAdjacentElement('beforeEnd',hidin);
+			}
+		}
+	}
+	
+	
+	var dataString = $("#custom_templates_form").serialize() ;
+$.post("dlg_edit_request_save.html", dataString,function(data)
+		{
+			//alert("Data Loaded: " + data);
+			if (data.indexOf("err:") ==0)
+			{
+				alert(<%=CodeLiteral( tools_web.get_web_str('der_err2_mess') )%> + "\n" + data );
+				return false;
+			}
+			else
+			{
+				if (has_files)	
+				{
+					ids_str='template_req_type_id;req_id;'+ids_str
+					//alert(ids_str)
+					$.ajaxFileUpload
+					(
+						{
+							url:'dlg_edit_request_save.html', 
+							secureuri:false,
+							fileElementIds:ids_str,
+							success: function (data, status)
+							{
+								//alert(data.msg)
+								fill_in_files_links( data.msg )
+								CloseWin();
+							},
+							error: function (data, status, e)
+							{
+								alert(e);
+								//doPost()
+							}
+						}
+					)
+				}
+				else
+				{
+					fill_in_files_links( data )
+					CloseWin();
+				}
+			}
+
+		}
+	)
+
+		
+}
+//----------------------------------------------------------------------------------------------------------------------------------------------------//
+</script>
+</head>
+
+<BODY>
+<form action="" name="custom_templates_form" id="custom_templates_form" method="POST" enctype="multipart/form-data" lang="ru">	
+<input type=hidden name="template_req_type_id" id="template_req_type_id" value="<%=template_req_type_id%>"/>
+<input type=hidden name="req_id" id="req_id" value="<%=req_id%>"/>
+<%
+	Server.Execute( "view_custom_templates.html" );
+	
+%>
+</form>
+		
+<script>
+<!--
+arrFiles=Array()
+<%
+	fileFieldArray=ArraySelect( fieldArray, 'type=="file"')
+	i=0;
+	for (iFileFieldElem in fileFieldArray)
+	{
+		%>
+			var temp_arr=Array();
+			arrFiles[<%=i%>]=temp_arr;
+			arrFiles[<%=i%>][0]='<%=iFileFieldElem.name%>';
+			arrFiles[<%=i%>][1]=''
+		<%
+		i++
+	}
+%>
+function CloseWin()
+{
+
+	try
+	{
+		arrFields=dialogArguments.arrFields
+	}
+	catch(ex)
+	{
+		arrFields=Array()
+	}
+	arr_length=arrFields.length
+	for (i=0;i<arr_length;i++)
+	{
+		id=arrFields[i][0]
+		value=''
+		type=arrFields[i][2]
+		disp_value=''
+		try
+		{
+			switch ( type )
+			{
+				case 'bool':
+					value=document.getElementById(id).checked
+					break;
+				case 'foreign_elem':
+					value=document.getElementById(id).value
+					disp_value=document.getElementById(id+"_disp").value
+					break;	
+				case 'file':
+/*					try
+					{
+						value=decodeURIComponent(document.getElementById(id+"_file_name").value)
+					}
+					catch(ex)
+					{
+					
+					}*/
+					arrFilesLength=arrFiles.length
+					for (kk=0;kk<arrFilesLength;kk++)
+					{
+						if (id==arrFiles[kk][0])
+						{
+							value=arrFiles[kk][1];
+							break;
+						}
+					}
+					break;	
+				default:
+					value=document.getElementById(id).value;
+			}
+		}
+		catch(ex)
+		{
+			//alert(ex)
+		}
+		arrFields[i][1]=value;
+		arrFields[i][3]=disp_value;
+	}
+	try
+	{
+		window.parent.dialogArguments.arrFields=arrFields
+	}
+	catch(ex)
+	{
+		alert(ex)
+	}
+			try
+	{
+	window.parent.dialogArguments.handle=true;
+			}
+	catch(ex)
+	{
+		alert(ex)
+	}
+	window.parent.close();
+
+}
+//-->	
+</script>
+
+</table>
+	<table  align="center" width="100%" cellspacing="0" cellpadding="4">
+		<tr>
+			<td align="right">
+	<input type="button" value="<%=tools.get_web_str('c_save')%>" onClick="doSubmit('save');" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+			</td>
+			<td align="left">
+				<input type="button" value="<%=tools.get_web_str('c_cancel')%>" onClick="dialogArguments.handle=false; window.parent.close();" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+			</td>
+		</tr>
+	</table>
+<div name="secretArea" id="secretArea">
+
+</div>
+</form>
+<%
+dispGroup=curObject.is_group;
+if ( dispGroup )
+{
+
+	if ( ArrayCount( curObject.persons ) != 0 )
+	{
+		curPersonsArray = ArrayExtract( ArraySort(curObject.persons,'person_fullname','+'), 'PrimaryKey' );	
+		curPersonsArray = QueryCatalogByKeys( 'collaborators', 'id', curPersonsArray );
+
+		curView = new Object;
+		curView.SetProperty( 'catalog_name', 'collaborator' );
+		curView.SetProperty( 'disp_link', 'false' );
+		curView.SetProperty( 'title', tools.get_web_str('c_group') );
+		curView.SetProperty( 'disp_check_box', 'false' );
+		curView.SetProperty( 'array', curPersonsArray );
+		curView.SetProperty( 'disp_filter', 'false' );
+		curView.SetProperty( 'disp_search', 'false' );
+		curView.SetProperty( 'disp_sort', 'false' );
+		Server.Execute( "view_catalog_list.html" );
+	}
+}
+	
+%>
+</body>
+</html>

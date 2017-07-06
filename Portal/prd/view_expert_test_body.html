@@ -1,0 +1,123 @@
+<%
+teAnnals = OpenNewDoc( 'x-local://wtv/wtv_form_annals_text.xmd' ).TopElem;
+sLessonReport = tools.report_decrypt( curObject, '', curObject.qti_text, null, teAnnals );
+//alert(teAnnals.Xml);
+
+arrQuestions = Array();
+if ( sLessonReport != '' )
+{
+	sectionArray = ArrayOptFirstElem( teAnnals.au.history.objects );
+	if ( sectionArray != undefined )
+	{
+		for ( fldSectionElem in sectionArray.section )
+			for ( fldQuestionElem in fldSectionElem.question )
+				if ( fldQuestionElem.ws_eval == 'expert' )
+					arrQuestions[ ArrayCount( arrQuestions ) ] = fldQuestionElem;
+	}
+}
+%>
+<table width="100%" cellspacing="0" cellpadding="4" class="tableBorder">
+	<tr>
+		<td width="140" align="right"><b><%=tools.get_web_str('c_coll')%>:</b>&nbsp;</td>
+		<td style="font-weight:normal"><%=curObject.person_fullname%></td>
+	</tr>
+	<tr>
+		<td width="140" align="right"><b><%=tools.get_web_str('c_act_date')%>:</b>&nbsp;</td>
+		<td style="font-weight:normal"><%=StrDate( curObject.start_usage_date, true, false )%></td>
+	</tr>
+	<tr>
+		<td width="140" align="right"><b><%=tools.get_web_str('c_finish_date')%>:</b>&nbsp;</td>
+		<td style="font-weight:normal"><%=StrDate( curObject.last_usage_date, true, false )%></td>
+	</tr>
+	<tr>
+		<td width="140" align="right"><b><%=tools.get_web_str('c_score')%>:</b>&nbsp;</td>
+		<td style="font-weight:normal"><%=curObject.score%></td>
+	</tr>
+	<tr>
+		<td width="140" align="right"><b><%=tools.get_web_str('c_state')%>:</b>&nbsp;</td>
+		<td style="font-weight:normal"><%=curLngCommon.learning_states.GetChildByKey( curObject.state_id ).name%></td>
+	</tr>
+<%
+if ( curObject.ChildExists( 'text_result' ) && curObject.text_result.HasValue )
+{
+%>
+	<tr>
+		<td width="140" align="right"><b><%=tools_web.get_web_str('c_result')%>:</b>&nbsp;</td>
+		<td style="font-weight:normal"><%=curObject.text_result%></td>
+	</tr>
+<%
+}
+%>
+</table>
+<br/>
+<br/>
+
+<h1><%=tools_web.get_web_str('c_questions_expert')%>:</h1>
+<form name="expert_marks" id="expert_marks" action="test_expert_change.html" method="post">
+<input type="hidden" name="doc_id" value="<%=curDocID%>">
+<input type="hidden" name="sid" value="<%=curDocSid%>">
+<input type="hidden" name="object_id" value="<%=curObjectID%>">
+<%
+for ( fldQuestionElem in arrQuestions )
+{
+%>
+<table width="100%" cellspacing="0" cellpadding="4" class="tableBorder">
+	<tr>
+		<td width="140" align="right"><b><%=tools.get_web_str('c_question')%>:</b>&nbsp;</td>
+		<td style="font-weight:normal"><%=fldQuestionElem.text%></td>
+	</tr>
+<%
+	for ( fldVariantElem in fldQuestionElem.variant )
+	{
+%>
+	<tr>
+		<td width="140" align="right"><b><%=tools_web.get_web_str('c_remark')%>:</b>&nbsp;</td>
+		<td style="font-weight:normal"><%=fldVariantElem.text%></td>
+	</tr>
+	<tr>
+		<td width="140" align="right"><b><%=tools.get_web_str('c_state')%>:</b>&nbsp;</td>
+		<td style="font-weight:normal"><%=curLngCommon.annals_states.GetChildByKey( fldQuestionElem.state ).name%></td>
+	</tr>
+	<tr>
+		<td width="140" align="right"><b><%=tools.get_web_str('c_answer')%>:</b>&nbsp;</td>
+		<td style="font-weight:normal"><%=fldVariantElem.value%></td>
+	</tr>
+<%
+	}
+	
+	if ( fldQuestionElem.ws_eval_type == 'input_from_interval' )
+	{
+%>
+	<tr>
+		<td width="140" align="right"><b><%=tools.get_web_str('c_score')%>:</b>&nbsp;</td>
+		<td style="font-weight:normal"><input type="text" name="<%=fldQuestionElem.PrimaryKey%>" size="10"/>&nbsp;<%=tools_web.get_web_str('vetb_less_than')%>&nbsp;<%=fldQuestionElem.ws_question_points%></td>
+	</tr>
+<%
+	}
+	else
+	{
+%>
+	<tr>
+		<td width="140" align="right"><b><%=tools.get_web_str('c_score')%>:</b>&nbsp;</td>
+		<td style="font-weight:normal">0<input type="radio" name="<%=fldQuestionElem.PrimaryKey%>" value="0"/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<%=fldQuestionElem.ws_question_points%><input type="radio" name="<%=fldQuestionElem.PrimaryKey%>" value="<%=fldQuestionElem.ws_question_points%>"/></td>
+	</tr>
+<%
+	}
+%>
+	<tr>
+		<td width="140" align="right"><b><%=tools.get_web_str('c_comment')%>:</b>&nbsp;</td>
+		<td style="font-weight:normal"><textarea name="comment_<%=fldQuestionElem.PrimaryKey%>" cols="40" rows="5"></textarea></td>
+	</tr>
+</table>
+<br/>
+<%
+}
+%>
+<table width="100%" border="0" cellspacing="0" cellpadding="0" class="activator">
+	<tr valign="middle">
+		<td class="activator" align="center">
+			<input type="submit" value="<%=XmlAttrEncode( tools.get_web_str('c_save') )%>" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';">
+		</td>
+	</tr>
+</table>
+</form>

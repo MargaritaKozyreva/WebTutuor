@@ -1,0 +1,168 @@
+<%
+	Server.Execute( "include/access_init.html" );
+
+	try
+	{
+		_is_post = Request.Form.post;
+	}
+	catch(_nea_)
+	{
+		_is_post = "0";
+	}
+
+
+	
+if (_is_post == "1")
+{
+	try
+	{
+		if ( Int( Request.Form.user_id ) != curUserID )
+			throw '_user_fuck_';
+		
+		curSid = Request.Form.sid;
+		if ( ! tools.check_sum_sid( curUserID, curSid ) )
+			throw '_crack_fuck_';
+	}
+	catch ( ehuu )
+	{
+		Server.Execute( "view_access_panel.html" );
+		Cancel();
+	}
+
+	if ( Request.Form.password == "")
+	{
+		errStr = tools.get_web_str('uc_error2');
+	}
+	else if ( Request.Form.password != Request.Form.password2 )
+	{
+		errStr = tools.get_web_str('uc_error4');
+	}
+	else
+	{	
+		userDoc = OpenDoc( UrlFromDocID( curUserID ) );
+		userDoc.TopElem.password = tools.make_password(Request.Form.password,true)
+		userDoc.TopElem.change_password = false;
+		userDoc.Save();
+		Response.Redirect("enter.html");
+	}
+
+
+
+}
+
+
+
+
+	curUser = OpenDoc( UrlFromDocID( curUserID ) ).TopElem;
+	_sid = tools.get_sum_sid( curUserID );
+
+
+	_login = curUser.login;
+	_phone = curUser.phone;
+	_email = curUser.email;
+	_fullname = curUser.fullname;
+
+%>
+<HTML XMLNS="http://www.w3.org/1999/xhtml">
+<HEAD>
+<TITLE><%=tools.get_web_str('title_register')%></TITLE>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=windows-1251" />
+<%Server.Execute( "include/head.html" )%>
+</HEAD>
+
+<BODY>
+
+<TABLE ID="loginBodyTable" CLASS="loginBodyTable" CELLPADDING="0" CELLSPACING="0" BORDER="0" ALIGN="center">
+<TR>
+<TD ID="docBodyTableTop" CLASS="bgTopUnder">
+	<TABLE WIDTH="100%" CELLPADDING="0" CELLSPACING="0" BORDER="0">
+		<TR>
+		  <TD><DIV ID="bg_left_top" CLASS="loginLeftTop"><IMG SRC="pics/1blank.gif" BORDER="0" CLASS="bgLeftTopTangle"/></DIV></TD>
+		  <TD><DIV ID="header_main" CLASS="loginHeader"><IMG SRC="pics/1blank.gif"/></DIV></TD>
+		</TR>
+	</TABLE>
+</TD>
+</TR>
+<TR>
+	<TD>
+		<TABLE WIDTH="100%"  border="0" CELLSPACING="0" CELLPADDING="0">
+			<TR>
+				<TD CLASS="mainMenuTop"><IMG SRC="pics/1blank.gif" WIDTH="1" HEIGHT="1" /></TD>
+			</TR>
+			<TR>
+				<TD CLASS="mainMenuCenter"><IMG SRC="pics/1blank.gif" WIDTH="1" HEIGHT="15" /></TD>
+			</TR>
+			<TR>
+				<TD CLASS="mainMenuBottom"><IMG SRC="pics/1blank.gif" WIDTH="1" HEIGHT="1" /></TD>
+			</TR>
+		</TABLE>
+		
+      	<TABLE WIDTH="100%"  border="0" CELLSPACING="0" CELLPADDING="0" ALIGN="center"  class="registerTable">
+      	<FORM NAME="form1" METHOD="post" ACTION="user_form_short.html">
+		  <INPUT TYPE="HIDDEN" NAME="user_id" VALUE="<%=curUserID%>"/>
+		  <INPUT TYPE="HIDDEN" NAME="sid" VALUE="<%=_sid%>"/>
+		  <INPUT TYPE="HIDDEN" NAME="post" VALUE="1"/>
+          <TR>
+            <TD VALIGN="top" CLASS="registerTD">
+				<TABLE WIDTH="100%" BORDER="0" CELLSPACING="2" CELLPADDING="0">
+					<TR>
+					  <TD CLASS="registerLeftTD"><%=tools.get_web_str('uf_last_name')%>*:</TD>
+					  <TD CLASS="registerRightTD"><B><%=_fullname%></B></TD>
+					</TR>
+					<TR>
+					<TR>
+					  <TD CLASS="registerLeftTD"><%=tools.get_web_str('uf_login')%>*:</TD>
+					  <TD CLASS="registerRightTD"><%=_login%> </TD>
+					</TR>
+					<TR>
+					  <TD CLASS="registerLeftTD"><%=tools.get_web_str('uf_pass')%>*:</TD>
+					  <TD CLASS="registerRightTD"><INPUT TYPE="password" NAME="password" SIZE="12" STYLE="width:100px;" CLASS="inputEdit">
+					  </TD>
+					</TR>
+					<TR>
+					  <TD CLASS="registerLeftTD"><%=tools.get_web_str('uf_pass_ret')%>*:</TD>
+					  <TD CLASS="registerRightTD"><INPUT TYPE="password" NAME="password2" SIZE="12" STYLE="width:100px;" CLASS="inputEdit">
+					  </TD>
+					</TR>
+			
+              <TR>
+                  <TD COLSPAN="2">&nbsp;</TD>
+                </TR>
+                <TR>
+                  <TD CLASS="registerLeftTD"><%=tools.get_web_str('uf_phone')%>:</TD>
+                  <TD CLASS="registerRightTD"><INPUT TYPE="text" NAME="phone" STYLE="width:150px;" CLASS="inputEdit" VALUE="<%=HtmlEncode( _phone )%>"></TD>
+                </TR>
+                <TR>
+                  <TD CLASS="registerLeftTD"><%=tools.get_web_str('uf_email')%>:</TD>
+                  <TD CLASS="registerRightTD"><INPUT TYPE="text" NAME="email" STYLE="width:150px;" CLASS="inputEdit" VALUE="<%=HtmlEncode( _email )%>">
+                  </TD>
+                </TR>	
+
+                <TR>
+                  <TD COLSPAN="2">&nbsp;</TD>
+                </TR>			
+                <TR>
+                  <TD>&nbsp;</TD>
+                  <TD><INPUT TYPE="submit" NAME="go" VALUE="<%=tools.get_web_str('c_save')%>" STYLE="width:150px;" CLASS="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';">
+                  </TD>
+                </TR>
+
+				<TR>
+                  <TD COLSPAN="2" ALIGN="center"><%=tools.get_web_str('c_text_required_filds')%></TD>
+                </TR>
+
+              </TABLE>
+			 </TD>
+          </TR>
+		 </FORM>
+		 </TABLE>
+	</TD>
+</TR>
+<TR>
+	<TD>
+      <%Server.Execute( "include/user_footer.html" )%>
+    </TD>
+</TR>
+</TABLE>
+</BODY>
+</HTML>

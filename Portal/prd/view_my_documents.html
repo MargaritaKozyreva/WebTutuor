@@ -1,0 +1,25 @@
+<%
+	parentAllDocumentArray = XQuery( "for $elem in document_collaborators where $elem/person_id = " + curUserID + " return $elem" );
+	
+	selectFirstDocumentFlag = curObjectID == null && Request.Query.HasProperty( 'select_first_document' ) && Request.Query.select_first_document == '1';
+	parentAllDocumentArrayFirstElem = ArrayOptFirstElem( parentAllDocumentArray );
+	if ( selectFirstDocumentFlag && parentAllDocumentArrayFirstElem != undefined && parentAllDocumentArrayFirstElem.document_id.HasValue )
+		try
+		{
+			curObject = OpenDoc( UrlFromDocID( parentAllDocumentArrayFirstElem.document_id ) ).TopElem;
+			curObjectID = parentAllDocumentArrayFirstElem.document_id.Value;
+		}
+		catch( err )
+		{
+			alert( err );
+		}
+	curRefMode = curMode + "&tab=document";
+%>
+<table><tr>
+<td>
+<%Server.Execute("view_documents_panel.html");%>
+</td>
+<td>
+<%Server.Execute("view_documents_body.html");%>
+</td>
+</tr></table>

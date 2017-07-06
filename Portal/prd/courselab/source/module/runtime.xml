@@ -1,0 +1,14 @@
+<% Server.Execute("../../../include/user_init.html"); %><?xml version="1.0" encoding="utf-8"?>
+<%
+	try
+	{
+		i_module_id = Int(Request.QueryString.GetProperty("module_id"));
+	}
+	catch(_x_)
+	{
+		i_module_id = null;
+	}
+	
+	if (i_module_id != null)
+		Response.Write(EvalCodePage(tools_cl.generate_runtime_xml(i_module_id,null,curUserID)));
+%>

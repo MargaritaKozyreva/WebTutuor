@@ -1,0 +1,110 @@
+<%
+	try
+	{
+		curWebDesign = global_settings.settings.web_designs.GetChildByKey( global_settings.settings.default_web_design );
+		curWebDesignUrl = curWebDesign.url;
+		curWebCommon = web_commons.GetChildByKey( global_settings.settings.default_web_design );
+	}
+	catch ( ooh )
+	{
+		try
+		{
+			curWebDesign = global_settings.settings.web_designs.GetChildByKey( 'default' );
+			curWebDesignUrl = curWebDesign.url;
+			curWebCommon = web_commons.GetChildByKey( 'default' );
+		}
+		catch ( rtf )
+		{
+			curWebDesignUrl = '';
+		}
+	}	
+	
+	_win_width = 750;
+	_win_height = 530;	
+%>
+<HTML XMLNS="http://www.w3.org/1999/xhtml">
+<HEAD>
+<TITLE><%=tools.get_web_str('title_register')%></TITLE>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=windows-1251" />
+<%Server.Execute( "include/head.html" )%>
+</HEAD>
+<BODY>
+
+<SCRIPT LANGUAGE="JAVASCRIPT">
+//<!--
+	function test_launch( _width, _height )
+	{
+		if( screen.availWidth < _width || screen.availHeight < _height )
+			alert("<%=tools.get_web_str('vcplb_message1')%>");
+		
+		var curCode = document.getElementById("code_input").value;
+			
+		win = window.open( 'test_launch_by_code.html?code=' + curCode, 'win' + curCode, 'toolbar=no,location=no,status=no,menubar=no,resizable=yes,directories=no,scrollbars=no,width=' + _width + ',height=' + _height );
+		win.moveTo( 0, 0 );
+	}
+//-->
+</SCRIPT>
+
+<TABLE ID="loginBodyTable" CLASS="loginBodyTable" CELLPADDING="0" CELLSPACING="0" BORDER="0" ALIGN="center">
+  <TR>
+    <TD ID="docBodyTableTop" CLASS="bgTopUnder">
+		<TABLE WIDTH="100%" CELLPADDING="0" CELLSPACING="0" BORDER="0">
+			<TR>
+			  <TD><DIV ID="bg_left_top" CLASS="loginLeftTop"><IMG SRC="pics/1blank.gif" BORDER="0" CLASS="bgLeftTopTangle"/></DIV></TD>
+			  <TD><DIV ID="header_main" CLASS="loginHeader"><IMG SRC="pics/1blank.gif"/></DIV></TD>
+			</TR>
+      	</TABLE>
+	</TD>
+  </TR>
+  <TR>
+    <TD>
+		<TABLE WIDTH="100%"  border="0" CELLSPACING="0" CELLPADDING="0">
+			<TR>
+				<TD CLASS="mainMenuTop"><IMG SRC="pics/1blank.gif" WIDTH="1" HEIGHT="1" /></TD>
+			</TR>
+			<TR>
+				<TD CLASS="mainMenuCenter"><IMG SRC="pics/1blank.gif" WIDTH="1" HEIGHT="15" /></TD>
+			</TR>
+			<TR>
+				<TD CLASS="mainMenuBottom"><IMG SRC="pics/1blank.gif" WIDTH="1" HEIGHT="1" /></TD>
+			</TR>
+		</TABLE>
+		
+        <TABLE WIDTH="100%"  border="0" CELLSPACING="0" CELLPADDING="0" ALIGN="center"  class="registerTable">
+        <FORM NAME="form1" METHOD="post" ACTION="test_launch_by_code.html">
+          <TR>
+            <TD VALIGN="top" CLASS="registerTD">
+				<TABLE WIDTH="100%" BORDER="0" CELLSPACING="2" CELLPADDING="0">
+					<TR>
+					  <TD COLSPAN="2">&nbsp;</TD>
+					</TR>
+	
+					<TR>
+					  <TD ALIGN="right"><%=tools.get_web_str('tl_activation_code')%></TD>
+					  <TD><INPUT ID="code_input" TYPE="password" NAME="code" SIZE="12" STYLE="width:100px;" CLASS="inputEdit" VALUE="<%try{ Response.Write( Request.QueryString.code ) }catch(ee){}%>">
+					  </TD>
+					</TR>				
+	
+					<TR>
+					  <TD COLSPAN="2">&nbsp;</TD>
+					</TR>			
+					<TR>
+					  <TD>&nbsp;</TD>
+					  <TD><INPUT TYPE="button" NAME="go" VALUE="<%=tools.get_web_str('vtlpb_start')%>" STYLE="width:150px;" CLASS="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onClick="test_launch( '<%=_win_width%>', '<%=_win_height%>' );">
+					  </TD>
+					</TR>
+              </TABLE>
+			</TD>
+         </TR>
+		</FORM>
+	</TABLE>
+	</TD>
+</TR>
+<TR>
+	<TD>
+		<%Server.Execute( "include/user_footer.html" )%>
+	</TD>
+</TR>
+</TABLE>
+</BODY>
+</HTML>

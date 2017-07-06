@@ -1,0 +1,136 @@
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+	<tr valign="top">
+<%
+	if ( ! curWebCommon.disp_custom_left_panel )
+	{
+%>
+		<td width="200">
+			<%Server.Execute( "view_manager_persons_tree.html" )%>
+		</td>
+<%
+	}
+%>
+	
+		<td>
+<%
+	curSubdivisionID = null;
+	if ( Request.QueryString.HasProperty( 'subdivision_id' ) && Request.QueryString.subdivision_id != '' )
+	{
+		curSubdivisionID = Int( Request.QueryString.subdivision_id );
+		curSubdivision = OpenDoc( UrlFromDocID( curSubdivisionID ) ).TopElem;
+	}
+
+	if ( curSubdivisionID == null )
+	{
+		curPersonsArray = tools.get_sub_persons_by_func_manager_id( curUserID );
+	}
+	else
+	{
+		positionArray = XQuery( "CatalogHierSubset('subs'," + curSubdivisionID + ")" );
+		positionArray = ArraySelect( positionArray, 'basic_collaborator_id.HasValue' );
+		curPersonsArray = ArrayExtract( positionArray, 'basic_collaborator_id' );
+		curPersonsArray = QueryCatalogByKeys( 'collaborators', 'id', curPersonsArray );
+	}
+
+	curView = new Object;
+	curView.SetProperty( 'catalog_name', 'collaborator' );
+	curView.SetProperty( 'disp_link', 'true' );
+	curView.SetProperty( 'disp_check_box', 'true' );
+	curView.SetProperty( 'title', curSubdivisionID == null ? tools.get_web_str('vmpb_all_subordinates') : curSubdivision.name );
+	curView.SetProperty( 'array', curPersonsArray );
+
+	Server.Execute( "view_catalog_list.html" );
+%>
+		</td>
+	</tr>
+</table>
+<br/>
+<script language="JavaScript">
+function doSubmit( type )
+{
+	var strAttr="status:no;dialogWidth:700px;dialogHeight:550px;help:no;resizable:1";
+	var pars = new Object();
+	pars.xquery_qual = "$elem/status='publish'";
+	pars.check_access = <%=global_settings.settings.check_access_on_lists%>;
+	
+	switch ( type )
+	{
+		case 'course':
+			if ( filling_selected_object_ids() == 0 )
+				return null;
+			
+			xShowModalDialog('dlg_select.html?catalog_name=course&doc_id=<%=curDocID%>&typein=0&rand='+ Math.random(), pars, strAttr);
+			if ( ! pars.handle ) 
+				return null;
+		
+			document.action_form.course_id.value = pars.element_id;
+			document.action_form.action = 'course_activate_admin.html';
+			document.action_form.submit();
+			break;
+			
+		case 'test':
+			if ( filling_selected_object_ids() == 0 )
+				return null;
+			
+			xShowModalDialog('dlg_select.html?catalog_name=assessment&doc_id=<%=curDocID%>&typein=0&rand='+ Math.random(), pars, strAttr);
+			if ( ! pars.handle ) 
+				return null;
+		
+			document.action_form.assessment_id.value = pars.element_id;
+			document.action_form.action = 'test_activate_admin.html';
+			document.action_form.submit();
+			break;
+			
+		case 'new_person':
+			document.action_form.action = 'user_form.html?view=new&sub_id=<%=curSubdivisionID%>&doc_id=<%=curDocID%>&redirect=manager_persons';
+			document.action_form.submit();
+			break;
+			
+		case 'new_event':
+			filling_selected_object_ids();
+		
+			document.action_form.mode.value = 'manager_persons';
+			document.action_form.action = 'event_create.html?doc_id=<%=curDocID%>';
+			document.action_form.submit();
+			break;
+	}
+}
+</script>
+<form action="" name="action_form" method="POST">
+<input type="hidden" name="doc_id" value="<%=curDocID%>">
+<input type="hidden" name="mode" value="1">
+<input type="hidden" name="redirect" value="manager_persons">
+<input type="hidden" name="sid" value="<%=tools.get_sum_sid( curDocID )%>">
+<input type="hidden" name="course_id" value="">
+<input type="hidden" name="assessment_id" value="">
+<input type="hidden" name="attempts_num" value="1"/>
+<input type="hidden" name="selected_object_ids" id="selected_object_ids" value=""/>
+
+<table>
+	<tr>
+		<td width="150px"> <%=tools.get_web_str('c_start_learning_date')%>: </td>
+		<td>
+			<INPUT TYPE="TEXT" name="start_learning_date" id="start_learning_date_id" VALUE="<%=StrDate( Date(), false )%>" CLASS="inputEdit" style="width:100">
+			<INPUT TYPE="TEXT" name="start_learning_time" id="start_learning_time_id" VALUE="<%=StrTime( Date() )%>" CLASS="inputEdit" style="width:40">
+		</td>
+	</tr>
+	<tr>
+		<td width="150px"> <%=tools.get_web_str('vscb_day_num')%>:</td>
+		<td>
+			<input type="text" name="day_num" value=""/>
+		</td>
+	</tr>
+</table>
+
+<input type="button" value="<%=tools.get_web_str('vmpb_create_active_course')%>" onclick="doSubmit('course');" class="inputButton" onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';">
+<input type="button" value="<%=tools.get_web_str('vmpb_create_active_ass')%>" onclick="doSubmit('test');" class="inputButton" onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';">
+<%
+	if ( curSubdivisionID != null )
+	{
+%>
+<input type="button" value="<%=tools.get_web_str('vmpb_create_person')%>" onclick="doSubmit('new_person');" class="inputButton" onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';">
+<input type="button" value="<%=tools.get_web_str('vmpb_create_event')%>" onclick="doSubmit('new_event');" class="inputButton" onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';">
+<%
+	}
+%>
+</form>

@@ -1,0 +1,31 @@
+<%
+Server.Execute( "include/access_init.html" );
+
+HREF = Request.Form.href;
+try
+{
+	_soi = String(Request.Form.selected_resume_ids).split(";");
+	SELECTED_OBJECT_IDS = Array();
+	for (_s in _soi) 
+	{
+		try
+		{
+			SELECTED_OBJECT_IDS[ArrayCount(SELECTED_OBJECT_IDS)] = Int(_s);
+		}
+		catch(ex)
+		{}
+	}
+			
+	for (iElem in SELECTED_OBJECT_IDS)
+	{
+		DeleteDoc( UrlFromDocID( iElem ) );
+	}
+}
+catch(ex)
+{
+	alert(ex);
+}
+	
+Response.Redirect( HREF );
+Cancel();
+%>

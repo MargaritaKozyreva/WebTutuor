@@ -1,0 +1,44 @@
+<%
+	
+	try
+	{
+		customWebTemplateID = Int(Request.Query.object_id);
+		customWebTemplate = OpenDoc(UrlFromDocID(customWebTemplateID)).TopElem;
+	}
+	catch(_ne_dali_)
+	{
+		try
+		{
+			customWebTemplateID = ArrayFirstElem(XQuery("for $elem in custom_web_templates where $elem/code =" + XQueryLiteral(Request.Query.object_code) +" return $elem")).id;
+			customWebTemplate = OpenDoc(UrlFromDocID(customWebTemplateID)).TopElem;
+		}		
+		catch(_opyat_ne_dali_)
+		{
+			customWebTemplate = null;
+			customWebTemplateID = null;
+			Response.Write("*Error: no custom web template specified*");
+		}
+	}
+		
+	if (customWebTemplate != null)
+	{
+		if ( !customWebTemplate.is_anonymous )
+			Server.Execute( "include/user_init.html" );
+		/*		
+		_anti_str = "";
+		for (_wvar in customWebTemplate.wvars)	_anti_str = _anti_str + _wvar.name + " = '" + HtmlEncode(_wvar.value) + "'; ";
+		
+		Response.Write(EvalCodePage( "<" + "%" + _anti_str + "%" + ">" + customWebTemplate.html.Value));
+		*/
+		var __sResponseStr = tools_web.insert_custom_code(customWebTemplateID, customWebTemplate);
+		var __sParamStr = Request.Query.GetOptProperty("content_type");
+		if (__sParamStr != undefined)
+			Response.ContentType = UrlDecode(__sParamStr);
+		__sParamStr = Request.Query.GetOptProperty("encoding");
+		if (__sParamStr != undefined && __sParamStr != "windows-1251")
+			__sResponseStr = EncodeCharset(__sResponseStr, __sParamStr);
+		Response.Write(__sResponseStr);
+		Cancel();
+	}
+	
+%>

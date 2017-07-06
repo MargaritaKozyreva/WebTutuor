@@ -1,0 +1,266 @@
+<%
+	Server.Execute( "include/user_init.html" );
+	
+	_pollResultID = Int(Request.Form.poll_result_id);
+	_pollResultDoc = OpenDoc(UrlFromDocID(_pollResultID));
+	_pollProcedure = OpenDoc(UrlFromDocID(_pollResultDoc.TopElem.poll_procedure_id));
+	_pollProcedure.WriteDocInfo = false;
+	FLAG_SKIP = false;
+	_href = "view_doc.html?mode=" +Request.Form.mode+ "&doc_id=" + Request.Form.doc_id +"&object_id=" +_pollResultDoc.TopElem.poll_procedure_id;
+	
+	if (_pollProcedure.TopElem.additional.custom_post_web_template_id.HasValue)
+	try
+	{
+		tools_web.insert_custom_code(_pollProcedure.TopElem.additional.custom_post_web_template_id, null,true,true);
+	}
+	catch(_oi_)
+	{}
+	
+		
+	if (!FLAG_SKIP)
+	{
+		if (Request.Form.HasProperty("change_status") && Request.Form.GetProperty("change_status") != "")
+		{
+			if (Request.Form.GetProperty("change_status") == "ok" && Request.Form.HasProperty("responsible_type"))
+			{
+				_responsible_type = Int(Request.Form.GetProperty("responsible_type"));
+				if (_responsible_type == 0)
+				{
+					_cur_sub = ArraySelect(_pollProcedure.TopElem.subdivisions, "person_id == " + curUserID);
+					for (_cs in _cur_sub) _cs.confirmation = true;
+					
+					_pollProcedure.TopElem.doc_info.modification.date = Date();
+					_pollProcedure.Save();
+					
+					if (_pollProcedure.TopElem.additional.confirmation_template_id.HasValue)
+						tools.create_notification(_pollProcedure.TopElem.additional.confirmation_template_id,_pollResultDoc.TopElem.poll_procedure_id, "", _pollResultID);
+					
+					if (ArrayOptFind(_pollProcedure.TopElem.subdivisions, "confirmation == false") == undefined && ArrayOptFind(_pollProcedure.TopElem.auditorys, "responsible_person_id.HasValue == false") == undefined)
+					{
+						_pollProcedure.TopElem.status = 1;
+						_pollProcedure.TopElem.doc_info.modification.date = Date();
+						_pollProcedure.Save();
+						
+						if (_pollProcedure.TopElem.additional.completion_template_id.HasValue)
+							tools.create_notification(_pollProcedure.TopElem.additional.completion_template_id,_pollResultDoc.TopElem.poll_procedure_id, "" ,_pollResultID);
+						
+					}
+				}
+				if (_responsible_type == 1)
+				{
+					_pollProcedure.TopElem.status = 1;
+					_pollProcedure.TopElem.doc_info.modification.date = Date();
+					_pollProcedure.Save();
+					if (_pollProcedure.TopElem.additional.completion_template_id.HasValue)
+						tools.create_notification(_pollProcedure.TopElem.additional.completion_template_id,_pollResultDoc.TopElem.poll_procedure_id, "" ,_pollResultID);
+				}
+			}
+			else
+			if (Request.Form.GetProperty("change_status") == "enough" && curUserID == _pollProcedure.TopElem.person_id)
+			{
+				for (catPollResult in XQuery("for $elem in poll_results where $elem/poll_procedure_id = " + _pollProcedure.DocID + " and $elem/is_done = false() return $elem"))
+				{
+					docPollResult = OpenDoc(UrlFromDocID(catPollResult.PrimaryKey));
+					docPollResult.TopElem.status = 1;
+					docPollResult.Save();
+				}
+				_pollProcedure.TopElem.status = 1;
+				_pollProcedure.TopElem.doc_info.modification.date = Date();
+				_pollProcedure.Save();
+			}
+			else if (Request.Form.GetProperty("change_status") == "close")
+			{
+				_cur_sub = ArraySelect(_pollProcedure.TopElem.subdivisions, "person_id == " + curUserID);
+				for (_cs in _cur_sub) _cs.confirmation = true;
+				_pollProcedure.TopElem.doc_info.modification.date = Date();
+				_pollProcedure.Save();
+				_ma_people = ArrayMerge(ArraySelect(_pollProcedure.TopElem.auditorys,"responsible_person_id == " + curUserID), "This.person_id", ";");
+				if (_pollProcedure.TopElem.additional.confirmation_template_id.HasValue)
+						tools.create_notification(_pollProcedure.TopElem.additional.confirmation_template_id,_pollResultDoc.TopElem.poll_procedure_id, "", _pollResultID);
+				for (catPollResult in XQuery("for $elem in poll_results where $elem/poll_procedure_id = " +_pollProcedure.DocID+ " and contains(" + XQueryLiteral(_ma_people) + ", $elem/person_id) and $elem/is_done = false() and $elem/status = 0 return $elem"))
+				{
+					docPollResult = OpenDoc(UrlFromDocID(catPollResult.PrimaryKey));
+					docPollResult.TopElem.status = 1;
+					docPollResult.Save();
+				}
+			}
+			else
+			{
+				try
+				{
+					_change_status = Int(Request.Form.GetProperty("change_status"));
+					_pollResultDoc.TopElem.status = _change_status;
+				}
+				catch(_fuuu_)
+				{
+					_change_status = 0-1;
+				}
+				if (Request.Form.HasProperty("comment") )
+					_pollResultDoc.TopElem.comment = Request.Form.GetProperty("comment");
+				_pollResultDoc.Save();
+				
+				
+				
+				if (_change_status == 1 && _pollProcedure.TopElem.additional.reject_web_template_id.HasValue)
+					try
+					{
+						tools.create_notification(_pollProcedure.TopElem.additional.reject_web_template_id, _pollResultID, "" ,_pollResultDoc.TopElem.poll_procedure_id);
+					}
+					catch(_x_)
+					{}
+				
+				if (_change_status == 0 && _pollProcedure.TopElem.additional.return_web_template_id.HasValue)
+					try
+					{
+						tools.create_notification(_pollProcedure.TopElem.additional.return_web_template_id, _pollResultID, "" ,_pollResultDoc.TopElem.poll_procedure_id);
+					}
+					catch(_x_)
+					{}
+				
+			}
+			_href = "view_doc.html?mode=" +Request.Form.mode+ "&doc_id=" + Request.Form.doc_id +"&object_id=" +_pollResultDoc.TopElem.poll_procedure_id+"&poll_id=" + Request.Form.poll_id + "&poll_result_id=" + _pollResultID;
+		}
+		else
+		{
+			bIsFlawed = Request.Form.HasProperty("isflawed") && Request.Form.GetProperty("isflawed") == "1";
+			pollDoc = OpenDoc(UrlFromDocID(_pollResultDoc.TopElem.poll_id)).TopElem;
+			_pollResultDoc.TopElem.questions.Clear();
+			_counter = 0;	
+			for ( _question in pollDoc.questions )
+			{
+				if ( _question.type == "title" )
+					continue;
+			
+				_str = "";
+				if ( _question.type == "select" )
+				{
+					for ( _entry in _question.entries )
+						if (Request.Form.HasProperty("q" + _question.id + "_" + _entry.id ))
+						{
+							_str = _str + _entry.id + ";";
+							_counter++;
+						}
+				}
+				else
+				{
+					try
+					{
+						_str = Request.Form.GetProperty("q" + _question.id );
+						_counter++;
+					}
+					catch ( ee )
+					{
+						//alert(ee);
+					}
+				}
+				
+				if ( _str != "" )
+				{
+					_save_question = _pollResultDoc.TopElem.questions.ObtainChildByKey( _question.id );
+					_save_question.value = _str;
+					if (_question.add_comment)
+					{
+						if (Request.Form.HasProperty("q" + _question.id +"_comment"))
+							_save_question.comment = Request.Form.GetProperty("q" + _question.id +"_comment");
+					}
+					else
+						_save_question.comment.Clear();
+				}
+			}
+			
+			_pollResultDoc.TopElem.save_date = Date();
+			_pollResultDoc.TopElem.is_done = !bIsFlawed;
+			_pollResultDoc.Save();
+			
+			_poll_list = ArraySelect(_pollProcedure.TopElem.polls, "poll_id.HasValue");
+			
+				_curaud = _pollProcedure.TopElem.auditorys.GetOptChildByKey(curUserID);
+				if (_curaud != undefined)
+				{
+					if (ArrayCount(_curaud.poll_groups) > 0)
+					{
+						_poll_list = Array();
+						for (_pg in _curaud.poll_groups)
+						{
+							_pg_herself = _pg.PrimaryKey.OptForeignElem;
+							if (_pg_herself != undefined)
+							{
+								_poll_list = ArrayUnion(_poll_list, ArraySelect(_pg_herself.polls, 'poll_id.HasValue'));
+							}
+						}
+						_poll_list = ArraySelectDistinct(_poll_list, "PrimaryKey");
+					}
+					else
+						_poll_list = ArraySelect(_pollProcedure.TopElem.polls, "poll_id.HasValue");
+				}
+				else if (ArrayOptFirstElem(_pollProcedure.TopElem.subdivisions) != undefined)
+				{
+					_poll_list = Array();
+					_flag_inspace = true;
+					for (_cursub in _pollProcedure.TopElem.subdivisions)
+					if (ArrayCount(_cursub.poll_groups > 0))
+					{
+						_sub_persons = tools.get_sub_person_ids_by_subdivision_id(_cursub.PrimaryKey);
+						if (ArrayOptFind(_sub_persons, "This == " + curUserID) != undefined)
+						{
+							for (_pg in _cursub.poll_groups)
+							{
+								_pg_herself = _pg.PrimaryKey.OptForeignElem;
+								if (_pg_herself != undefined)
+								{
+									_poll_list = ArrayUnion(_poll_list, ArraySelect(_pg_herself.polls, 'poll_id.HasValue'));
+								}
+							}
+							_flag_inspace = false;
+						}
+					}
+					if (_flag_inspace)
+						_poll_list = ArraySelect(_pollProcedure.TopElem.polls, "poll_id.HasValue");
+					else
+						_poll_list = ArraySelectDistinct(_poll_list, "PrimaryKey");
+				}
+				else
+					_poll_list = ArraySelect(_pollProcedure.TopElem.polls, "poll_id.HasValue");
+				
+			
+			_results_pre = XQuery("for $elem in poll_results where $elem/person_id = " + _pollResultDoc.TopElem.person_id +" and $elem/id != "+_pollResultID+" and $elem/poll_procedure_id = " +_pollResultDoc.TopElem.poll_procedure_id+ " and $elem/is_done = false() and $elem/status != 1 return $elem");
+			_results = Array();
+			for (_pl in _poll_list)
+				_results = ArrayUnion(_results, ArraySelect(_results_pre, "poll_id == "+_pl.PrimaryKey));
+			
+			//_results = ArraySelect(_results, "ArrayOptFind(_poll_list, 'poll_id == '+poll_id)!= undefined");
+			
+			if (_pollProcedure.TopElem.additional.mini_workflow_code.HasValue)
+			{
+				_result = undefined;
+				for (_test_res in  _results)
+				{
+					POLL_PROCEDURE = _pollProcedure.TopElem;
+					POLL_PROCEDURE_ID = _pollProcedure.DocID;
+					RESULT_ENTRY = _test_res;
+					POLL_ENTRY = _test_res.poll_id.OptForeignElem;
+					I_AM_RESPONSIBLE = (ArrayOptFind(POLL_PROCEDURE.subdivisions, "person_id == " + curUserID) != undefined);
+					SUBORDINATES_IDS = ArrayExtract(ArraySelect(POLL_PROCEDURE.auditorys, "responsible_person_id == " + curUserID), "person_id");
+					try
+					{
+						if (eval(_pollProcedure.TopElem.additional.mini_workflow_code) == true)
+						{
+							_result = _test_res;
+							break;
+						}
+					}
+					catch(_OoO_){alert(POLL_PROCEDURE.name + ": Code failed!\n" + _OoO_)}
+				}
+			}
+			else
+				_result = ArrayOptFirstElem(_results);
+			
+			if(_result != undefined && !bIsFlawed)
+				_href = "view_doc.html?mode=" +Request.Form.mode+ "&doc_id=" + Request.Form.doc_id +"&object_id=" +_pollResultDoc.TopElem.poll_procedure_id+"&poll_id=" + _result.poll_id + "&poll_result_id=" + _result.id;
+			else
+				_href = "view_doc.html?mode=" +Request.Form.mode+ "&doc_id=" + Request.Form.doc_id +"&object_id=" +_pollResultDoc.TopElem.poll_procedure_id+"&poll_id=" + Request.Form.poll_id + "&poll_result_id=" + _pollResultID;
+			
+		}
+	}
+	Response.Redirect( _href );
+%>

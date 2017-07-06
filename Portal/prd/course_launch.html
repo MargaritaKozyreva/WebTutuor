@@ -1,0 +1,342 @@
+<%
+//alert('START course launch');
+Server.Execute( "include/user_init.html" );
+//alert('include/user_init.html');
+
+try
+{
+	curCourseID = Int( Request.Query.course_id );
+	curCourse = OpenDoc( UrlFromDocID( curCourseID ) ).TopElem;
+}
+catch ( err )
+{
+	curErrorText = 'Course ID does not correct.';
+	Server.Execute( "view_access_panel.html" );
+	Cancel();
+}
+
+curAssessmentID = null;
+curAssessment = null;
+
+switch ( curHostSettings.default_portal_type )
+{
+	case 'sharepoint':
+		break;
+		
+	default:
+		try
+		{
+			if ( global_settings.settings.check_sid )
+			{
+				if ( ! Request.Query.HasProperty( 'sid' ) )
+					throw 'SessionID is not init.';
+					
+				curSid = Request.Query.sid;
+				if ( ! tools.check_sum_sid( curCourseID, curSid ) )
+					throw 'SessionID is not valid.';
+			}
+			
+			if ( ! tools_web.check_access( curCourse, curUserID, curUser, Session ) )
+				throw 'Course access denied.';
+		}
+		catch ( err )
+		{
+			curErrorText = err;
+			Server.Execute( "view_access_panel.html" );
+			Cancel();
+		}
+		break;
+}
+
+try
+{
+	curObjectID = Int( Request.Query.object_id );
+}
+catch ( err )
+{
+	curObjectID = ArrayOptFirstElem( XQuery( 'for $elem in active_learnings where $elem/person_id = ' + curUserID + ' and $elem/course_id = ' + curCourseID + ' return $elem' ) );
+	if ( curObjectID == undefined )
+	{
+		curErrorText = 'Active learning does not exists.';
+		Server.Execute( "view_access_panel.html" );
+		Cancel();
+	}
+	else
+	{
+		curObjectID = curObjectID.id;
+	}
+}
+try
+{
+	docLearning = OpenDoc( UrlFromDocID( curObjectID ) );
+	learningDoc = docLearning.TopElem;
+	docLearningName = learningDoc.Name;
+}
+catch ( err )
+{
+	curErrorText = 'Active learning ID (' + curObjectID + ') does not correct. Function OpenDoc falied.';
+	Server.Execute( "view_access_panel.html" );
+	Cancel();
+}
+if ( learningDoc.person_id != curUserID )
+{
+	curErrorText = 'Learning person ID does not correct.';
+	Server.Execute( "view_access_panel.html" );
+	Cancel();
+}
+
+
+if ( learningDoc.education_plan_id.HasValue )
+{
+	try
+	{
+		curEducationPlan = OpenDoc( UrlFromDocID( learningDoc.education_plan_id ) ).TopElem;
+	}
+	catch ( err )
+	{
+		curErrorText = 'Education plan ID (' + learningDoc.education_plan_id + ') does not correct. Function OpenDoc falied.';
+		Server.Execute( "view_access_panel.html" );
+		Cancel();
+	}
+	if ( curEducationPlan.getEducationPlanAccess( curObjectID, curUserID ) != true )
+	{
+		Response.Write( '<a href="view_doc.html?mode=education_plan&doc_id=' + curDocID + '&object_id=' + learningDoc.education_plan_id + '">' + tools.get_web_str('vlpb_message8') + '</a><br/>' );
+		Cancel();
+	}
+}
+
+
+if ( Request.QueryString.HasProperty( 'part_code' ) && Request.QueryString.part_code != '' )
+	docLearningPartCode = Request.QueryString.part_code;
+else
+	docLearningPartCode = ArrayFind( curCourse.parts, "url.HasValue && completed_parent_parts.ChildNum==0" ).code;
+
+if ( docLearningName == 'active_learning' )
+{
+	tempLearningDoc = OpenNewDoc( 'x-local://wtv/wtv_active_learning.xmd' ).TopElem;
+	tempLearningDoc.parts.AssignElem( curCourse.parts );
+	for ( _part in learningDoc.parts )
+		tempLearningDoc.parts.ObtainChildByKey( _part.code ).AssignElem( _part );
+		
+	learningDoc.parts.AssignElem( tempLearningDoc.parts );
+	learningDoc.last_usage_part_code = docLearningPartCode;
+}
+
+docLearningPart = learningDoc.parts.GetChildByKey( docLearningPartCode );
+curCoursePart = curCourse.parts.GetChildByKey( docLearningPartCode );
+
+
+_completed_parent_parts_str = '';
+for ( _completed_parent_part in curCoursePart.completed_parent_parts )
+{
+	_cur_part = learningDoc.parts.GetOptChildByKey( _completed_parent_part.PrimaryKey );
+	if ( _cur_part != undefined && _cur_part.state_id != 2 && _cur_part.state_id != 4 )
+		_completed_parent_parts_str += '- ' + tools_web.get_cur_lng_name( _cur_part.name ) + '<br\>';
+}
+if ( _completed_parent_parts_str != '' )
+{
+	Response.Write( tools.get_web_str('vcplb_message2') + '<br/>' + _completed_parent_parts_str );
+	Cancel();
+}
+
+
+if ( ! learningDoc.start_learning_date.HasValue )
+	learningDoc.start_learning_date = CurDate;
+
+
+try
+{
+	curLocation = ( curCourse.ignor_location || ! curUser.location_id.HasValue ? '' : lists.locations.GetChildByKey( curUser.location_id ).url );
+}
+catch ( frd )
+{
+	curLocation = '';
+}
+
+function get_start_url()
+{
+	var _url = curCoursePart.url;
+	if ( ! StrContains( _url, '://' ) )
+	{
+		if ( StrContains( curCourse.base_url, '://' ) )
+			_url = UrlAppendPath( curCourse.base_url, _url );
+		else if ( curLocation != '' )
+			_url = UrlAppendPath( UrlAppendPath( curLocation, ( StrBegins( _url, '/' ) ? '' : curCourse.base_url ) ), _url )
+		else
+			_url = ( StrBegins( _url, '/' ) ? '' : ( StrBegins( curCourse.base_url, '/' ) ? '' : '/' ) + curCourse.base_url ) + _url;
+	}
+	return _url;
+}
+
+
+switch( docLearningPart.type )
+{
+	case 'inline':
+		if ( docLearningName == 'active_learning' )
+		{
+			docLearningPart.state_id = 2;
+			docLearningPart.last_usage_date = CurDate;
+			if ( ! docLearningPart.start_usage_date.HasValue )
+				docLearningPart.start_usage_date = CurDate;
+			docLearning.Save();
+		}
+
+		sUrl = get_start_url();
+		if ( StrContains( sUrl, '://' ) )
+		{
+			Response.Redirect( sUrl );
+		}
+		else
+		{
+			switch( UrlPathSuffix( curCoursePart.url ) )
+			{
+				case '.html':
+				case '.htm':
+					/*
+						sUrlSourse = 'x-local://wt/web' + sUrl;
+						sUrl = StrRangePos( sUrl, 0, sUrl.lastIndexOf( '.' ) ) + '_xhttp_res' + UrlPathSuffix( curCoursePart.url );
+						PutUrlData( 'x-local://wt/web' + sUrl, tools_web.get_web_desc( LoadUrlData( sUrlSourse ), sUrlSourse ) );
+						Response.Redirect( sUrl );
+					*/
+					sUrlSourse = 'x-local://wt/web' + sUrl;
+					_str = '';
+					try
+					{
+						_str = LoadUrlData( sUrlSourse );
+					}
+					catch ( err )
+					{
+						alert( err );
+					}
+					Response.Write( '<base href="' + UrlParent( tools_web.get_url_protocol( Request.Url ) + curHost + sUrl ) + '"/>' + tools_web.get_web_desc( _str, sUrlSourse ) );
+					break;
+
+				default:
+					Response.Redirect( sUrl );
+					break;
+			}
+		}
+		Cancel();
+		break;
+		
+	case 'folder':
+		if ( docLearningName == 'active_learning' )
+			docLearning.Save();
+			
+		Response.Write( curCoursePart.desc );
+		//Response.Write( tools_web.get_web_desc( curCoursePart.desc, UrlFromDocID( curCourseID ), 'course.parts[' + curCoursePart.ChildIndex + '].desc' ) );
+		Cancel();
+		break;
+		
+	case 'test':
+		if ( docLearningPart.attempts_num <= docLearningPart.test_learnings.ChildNum )
+		{
+			Response.Write( tools.get_web_str('cl_end_attempts') );
+			Cancel();
+		}
+		
+		curAssessmentID = docLearningPart.assessment_id;
+		curAssessment = OpenDoc( UrlFromDocID( curAssessmentID ) ).TopElem;
+
+		if ( ! docLearningPart.qti_text.HasValue )
+		{
+			_qti_str = qti_tools.qti_return( docLearningPart.assessment_id, UrlParent( ( StrBegins( curAssessment.publish_url, 'x-local://' ) ? '' : 'x-local://wt/web' ) + curAssessment.publish_url ) );
+			if( StrEnds( _qti_str, '#failed#' ) )
+			{
+				Response.Write( _qti_str );
+				Cancel();
+			}
+
+			docLearningPart.max_score = qti_tools.max_score_return( _qti_str );
+			docLearningPart.qti_text = _qti_str;
+			docLearning.Save();
+		}
+		break;
+		
+	default:
+		
+		break;
+}
+
+if ( docLearningName == 'active_learning' )
+	docLearning.Save();
+
+
+_last_date = DateOffset( CurDate, 0-8640 );
+connectionsArray = XQuery( 'for $elem in connections where $elem/creation_date < date(\'' + _last_date + '\') return $elem' );
+for ( _connection in connectionsArray )
+	try
+	{
+		DeleteDoc( UrlFromDocID( _connection.id ), true );
+	}
+	catch ( err )
+	{
+	}
+	
+docConnection = OpenNewDoc( 'x-local://wtv/wtv_connection.xmd' );
+connectionDoc = docConnection.TopElem;
+connectionDoc.active_learning_id = curObjectID;
+connectionDoc.course_id = curCourseID;
+connectionDoc.user_id = curUser.code;
+connectionDoc.user_fullname = curUser.fullname;
+connectionDoc.part_code = docLearningPartCode;
+docConnection.BindToDb(DefaultDb);
+docConnection.Save();
+_session_id = docConnection.DocID;
+
+
+//	_tracking_url = tools_web.get_url_protocol( Request.Url ) + Request.UrlHost + "/handler.html";
+url_prefix = '';
+switch ( curHostSettings.default_portal_type )
+{
+	case 'sharepoint':
+    	_tracking_url = "/handler.html?qti_dir=1";
+		url_prefix = Request.QueryString.GetOptProperty( "url_prefix", "" );
+		_tracking_url = url_prefix + _tracking_url;
+		break;
+		
+	default:
+		_tracking_url = tools_web.get_url_protocol( Request.Url ) + Request.UrlHost + "/handler.html";
+		break;
+}
+
+_url = get_start_url();
+if ( ! curCourse.no_url_info )
+{
+	_url += ( StrContains( _url, "?" ) ? "&" : "?" ) + "aicc_sid=" + _session_id + "&aicc_url=" + UrlEncode( _tracking_url )
+		+ ( curAssessment != null ? '&' + qti_tools.get_player_url_param( curAssessmentID, curAssessment, curCourse.view_type ) : '' );
+}
+
+_url = url_prefix + _url;
+
+//alert(_url);
+//Response.Redirect( _url );
+%>
+
+<script language="javascript">
+var ScormAPI = null;
+try
+{
+	ScormAPI = window.opener.API;
+}
+catch ( e )
+{
+	try
+	{
+		ScormAPI = window.parent.API;
+	}
+	catch ( ee )
+	{
+	}
+}
+if ( ScormAPI != null )
+{
+	if ( ScormAPI.ResetAPI )
+		ScormAPI.ResetAPI();
+	
+	ScormAPI.session_id="<%=_session_id%>";
+	ScormAPI.tracking_url="<%=_tracking_url%>";
+}
+
+document.location.href = "<%=_url%>";
+</script>

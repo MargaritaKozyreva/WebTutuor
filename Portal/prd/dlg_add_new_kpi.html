@@ -1,0 +1,1067 @@
+<%Server.Execute( "include/user_init.html" )
+Server.Execute( "include/head.html" )
+/*alert('<====>');
+for (a in Request.Form)
+{
+ alert(a+"="+Request.Form.GetProperty(a));
+}
+alert('<====>');*/
+
+try
+{
+	fieldArray = custom_templates.Child( "kpi" ).fields;
+}
+catch ( e )
+{
+	fieldArray = Array();
+}
+
+_code='';
+_name=''
+_type_id='';
+_range_min=''
+_range_max='';
+_auto_formula='';
+_is_bonus_source=false;
+_comment='';
+_owners_ids='';
+_unit_of_measurement=''
+_responsible_persons_ids=curUserID+'';
+_scale_counter=0;
+arrScales=Array();
+_is_kpi=true;
+if ( Request.Form.HasProperty( 'is_posted' ) )
+{
+	_is_posted = Request.Form.GetProperty( 'is_posted' );
+	if ( Request.Form.HasProperty( 'code' ) )
+	{	
+		_code=Request.Form.GetProperty( 'code' );
+	}
+	if ( Request.Form.HasProperty( 'name' ) )
+	{	
+		_name = Request.Form.GetProperty('name');
+	}
+	if ( Request.Form.HasProperty( 'type_id' ) )
+	{	
+		_type_id = Request.Form.GetProperty('type_id');
+	}
+	if ( Request.Form.HasProperty( 'range_min' ) )
+	{	
+		_range_min = Request.Form.GetProperty('range_min');
+	}
+	if ( Request.Form.HasProperty( 'range_max' ) )
+	{	
+		_range_max = Request.Form.GetProperty('range_max');
+	}
+	if ( Request.Form.HasProperty( 'auto_formula' ) )
+	{	
+		_auto_formula = Request.Form.GetProperty('auto_formula');
+	}
+	if ( Request.Form.HasProperty( 'is_bonus_source' ) )
+	{	
+		_is_bonus_source = true;
+	}
+	if ( Request.Form.HasProperty( 'comment' ) )
+	{	
+		_comment = Request.Form.GetProperty('comment');
+	}
+	if ( Request.Form.HasProperty( 'unit_of_measurement' ) )
+	{	
+		_unit_of_measurement = Request.Form.GetProperty('unit_of_measurement');
+	}
+	
+	
+	if ( Request.Form.HasProperty( 'owners_ids' ) )
+	{	
+		_owners_ids = Request.Form.GetProperty('owners_ids');
+	}
+	
+	if ( Request.Form.HasProperty( 'responsible_persons_ids' ) )
+	{	
+		_responsible_persons_ids= Request.Form.GetProperty('responsible_persons_ids');
+	}
+	if ( Request.Form.HasProperty( 'is_kpi' ) )
+	{	
+		_is_kpi= Request.Form.GetProperty('is_kpi');
+	}
+	if ( Request.Form.HasProperty( 'scale_counter' ) )
+	{	
+		_scale_counter = Int(Request.Form.GetProperty('scale_counter'));
+		for ( i=0;i<_scale_counter;i++)
+		{
+			//_child=NewKpiDoc.TopElem.scales.AddChild();
+			_child = new Object;
+			flag=0;
+			if ( Request.Form.HasProperty( 'scale_name_'+i ) )
+			{	
+				_child.name  = Request.Form.GetProperty('scale_name_'+i);
+				flag++
+			}
+			if ( Request.Form.HasProperty( 'scale_percent_'+i ) )
+			{	
+				_child.percent  = Request.Form.GetProperty('scale_percent_'+i);
+				flag++
+			}
+			if ( Request.Form.HasProperty( 'scale_desc_'+i ) )
+			{	
+				_child.desc  = Request.Form.GetProperty('scale_desc_'+i);
+				flag++
+			}
+			if (flag>0)
+			{
+				arrScales[ArrayCount(arrScales)]=_child;
+			}
+		}
+	}
+	_scale_counter=ArrayCount(arrScales);
+	if (_is_posted=="1")
+	{
+		try
+		{
+			NewKpiDoc= OpenNewDoc( 'x-local://wtv/wtv_kpi.xmd' );
+			
+			NewKpiDoc.TopElem.code = _code;
+			NewKpiDoc.TopElem.name = _name;
+			NewKpiDoc.TopElem.type = _type_id;
+
+			NewKpiDoc.TopElem.range_min = _range_min;	
+			NewKpiDoc.TopElem.range_max = _range_max;
+			NewKpiDoc.TopElem.auto_formula = _auto_formula
+					
+			NewKpiDoc.TopElem.is_bonus_source =_is_bonus_source
+			NewKpiDoc.TopElem.comment = _comment;
+			NewKpiDoc.TopElem.is_kpi = _is_kpi;
+			NewKpiDoc.TopElem.unit_of_measurement=_unit_of_measurement;
+
+			for (_child in arrScales)
+			{
+				NewElem=NewKpiDoc.TopElem.scales.AddChild();
+				NewElem.name=_child.name;
+				NewElem.percent=_child.percent;
+				NewElem.desc=_child.desc;
+			}			
+
+			arrOwners = _owners_ids.split(';');
+			for ( iOwnerElem in arrOwners )
+			{
+				if (iOwnerElem!=''&&iOwnerElem!='0')
+				{
+						fldOwnerChild = NewKpiDoc.TopElem.owners.ObtainChildByKey( iOwnerElem );
+						
+						tools.common_filling( 'collaborator', fldOwnerChild, Int(iOwnerElem) );
+				}
+			}
+			
+			arrResponsiblePersons = _responsible_persons_ids.split(';');
+			for ( iResponsiblePersonElem in arrResponsiblePersons )
+			{
+				if (iResponsiblePersonElem!=''&&iResponsiblePersonElem!='0')
+				{
+						fldResponsibleChild = NewKpiDoc.TopElem.responsible_persons.ObtainChildByKey( iResponsiblePersonElem );
+						
+						tools.common_filling( 'collaborator', fldResponsibleChild, Int(iResponsiblePersonElem) );
+				}
+			}
+
+			NewKpiDoc.BindToDb( DefaultDb );
+			NewKpiDoc.Save();
+			
+			try
+			{
+				tools_web.web_custom_elems_filling( 'kpi', NewKpiDoc.DocID, NewKpiDoc.TopElem, Request.Form );
+				NewKpiDoc.Save();
+			}
+			catch(ex)
+			{
+				DeleteDoc(UrlFromDocID(NewKpiDoc.DocID), true);	
+				ex=tools_web.get_web_str('dank_err_save') + ': '+UnifySpaces(ex);
+				alert(ex)
+%>
+				<script>
+					alert('<%=ex%>');
+				</script>
+<%				
+			}		
+%>
+			<script>
+				dialogArguments.handle=true;
+				window.close();
+			</script>
+<%
+		}
+		catch(ex)
+		{
+			ex=tools_web.get_web_str('dank_err_save') + ': '+UnifySpaces(ex);
+			alert(ex)
+%>
+			<script>
+				alert('<%=ex%>');
+			</script>
+<%			
+		}
+	}
+}
+_scales_str=''
+i=0;
+for (_child in arrScales)
+{
+	_scales_str=_scales_str+'<tr id="scale_line_'+i+'">
+		<td align="center" valign="middle"><input type="TEXT" name="scale_name_'+i+'" id="scale_name_'+i+'" value="'+_child.name+'" class="inputEdit" style="width:100%"></td>
+		<td align="center" valign="middle"><input type="TEXT" name="scale_percent_'+i+'" id="scale_percent_'+i+'" value="'+_child.percent+'" class="inputEdit" onchange="checkEnter(&quot;scale_percent_'+i+'&quot;);" style="width:100%"></td>
+		<td align="center" valign="middle"><TEXTAREA name="scale_desc_'+i+'" id="scale_desc_'+i+' rows="5" COLS="10" class="inputEdit" style="width:100%">'+_child.desc+'</TEXTAREA></td>
+		<td align="center" valign="middle"><input type="button" value="X" name="but_scale_'+i+'" id="but_scale_'+i+'" onClick="deleteTarget()" class="inputButton" onMouseOver="this.className=&quot;inputButtonOver&quot;;" onMouseOut="this.className=&quot;inputButton&quot;;"/></td>
+		</tr>'
+	i++;
+}			
+
+
+_text=UnifySpaces('
+	<table border="0" cellspacing="1" cellpadding="4" width="100%">
+		<tr>
+			<TH>
+				'+ms_tools.get_const("tx2cl1vc47")+':
+			</TH>
+			<TH>
+				'+ms_tools.get_const("b469rchcgv")+':
+			</TH>
+			<TH>
+				'+ms_tools.get_const("5ww3qs10d5")+':
+			</TH>
+			<TH>
+				&nbsp;
+			</TH>
+		</tr>
+		<TBODY id="formscalebodytable">
+		'+_scales_str+'
+		</TBODY>
+	</table>')
+
+%>
+
+<HTML>
+<HEAD>
+<base target=_self>
+<title><%=tools_web.get_web_str('dank_title')%></title>
+<SCRIPT LANGUAGE="JAVASCRIPT">
+
+//********************************************************************************************
+function xShowModalDialog( sURL, vArguments, sFeatures ) 
+{ 
+	if ( sURL==null||sURL=='' ) 
+	{ 
+		alert ("Invalid URL input."); 
+		return false; 
+	} 
+	if ( vArguments == null || vArguments == '' ) 
+	{ 
+		vArguments=''; 
+	} 
+	if ( sFeatures == null || sFeatures == '' ) 
+	{ 
+		sFeatures=dFeatures; 
+	} 
+	if ( window.navigator.appVersion.indexOf( "MSIE" ) != -1 ) 
+	{ 
+		window.showModalDialog( sURL, vArguments, sFeatures ); 
+		return false; 
+	} 
+	sFeatures = sFeatures.replace( / /gi, '' ); 
+	aFeatures = sFeatures.split( ";" ); 
+	sWinFeat = "directories=0,menubar=0,titlebar=0,toolbar=0,"; 
+	for ( x in aFeatures ) 
+	{ 
+		aTmp = aFeatures[x].split( ":" ); 
+		sKey = aTmp[0].toLowerCase(); 
+		sVal = aTmp[1]; 
+		switch ( sKey ) 
+		{ 
+			case "dialogheight": 
+				sWinFeat += "height="+sVal+","; 
+				pHeight = sVal; 
+				break; 
+			case "dialogwidth": 
+				sWinFeat += "width="+sVal+","; 
+				pWidth = sVal; 
+				break; 
+			case "dialogtop": 
+				sWinFeat += "screenY="+sVal+","; 
+				break; 
+			case "dialogleft": 
+				sWinFeat += "screenX="+sVal+","; 
+				break; 
+			case "resizable": 
+				sWinFeat += "resizable="+sVal+","; 
+				break; 
+			case "status": 
+				sWinFeat += "status="+sVal+","; 
+				break; 
+			case "center": 
+				if ( sVal.toLowerCase() == "yes" ) 
+				{ 
+					sWinFeat += "screenY="+((screen.availHeight-pHeight)/2)+","; 
+					sWinFeat += "screenX="+((screen.availWidth-pWidth)/2)+","; 
+				} 
+				break; 
+		} 
+	} 
+	modalWin=window.open( String( sURL ),"", sWinFeat ); 
+	if ( vArguments != null && vArguments != '' ) 
+	{ 
+		modalWin.dialogArguments = vArguments;
+	} 
+} 
+
+
+//*************************************************************************************************
+</SCRIPT>
+<SCRIPT LANGUAGE="JAVASCRIPT">
+function doSelect(sel,selected_object_ids,_org_id,multi,input_type,sel_boss)
+{	
+//alert(input_type);
+//alert(selected_object_ids);
+	 //if (sel.length!=1)
+	 //{
+	  //name=sel[0].name;
+	 //}
+//alert(name);
+
+		var pars=new Object();
+		var strAttr="status:no;dialogWidth:780px;dialogHeight:550px;help:no;resizable:1";
+		pars.selected_object_ids = selected_object_ids;
+//alert(pars.selected_object_ids);
+		pars.can_be_empty = true;
+		pars.show_all = true;
+//		pars.display_object_ids = null;
+		add_str='';
+		if (sel_boss!='')
+		{
+			add_str='&number='+sel_boss;	
+		}
+		if (_org_id!='')
+		{
+			xShowModalDialog( 'dlg_select.html?'+add_str+'&catalog_name=collaborator&typein=1&multi_select='+multi+'&xquery_qual=' + escape('$elem/org_id = '+_org_id+'') + '&rand='+ Math.random(), pars, strAttr );
+		}
+		else
+		{
+			xShowModalDialog( 'dlg_select.html?doc_id='+add_str+'&catalog_name=collaborator&typein=1&multi_select='+multi+'&rand='+ Math.random(), pars, strAttr );
+		}	
+		if ( ! pars.handle ) 
+			return null;
+		//document.getElementById('responsible').value = pars.element_name;
+		//document.getElementById('selected_object_ids').value = pars.selected_object_ids;
+//alert(pars.element_name);
+		//alert(pars.selected_object_ids)
+		//tmp=document.getElementById(sel.name);
+		//alert(pars.selected_object_ids)
+		sel.value=pars.selected_object_ids;
+
+//alert(sel.value);
+		selected_object_ids = pars.selected_object_ids;
+		
+		if (parseInt(input_type)==1)
+		{
+			tmp=document.getElementById('owners');
+			tmp.innerHTML=tools_web.get_web_str('dank_owners') + ' ('+pars.elemArray.length +'):'
+		}
+		else
+		{
+			tmp=document.getElementById('responsible_persons');
+			tmp.innerHTML=tools_web.get_web_str('dank_responsibles') + ' ('+pars.elemArray.length +'):'
+		}
+		
+/*		if (parseInt(input_type)==0)
+		{
+			while(tmp.options.length > 0)
+			{
+				tmp.remove(0);
+			}
+			
+			//ar_pars=pars.selected_object_ids.split(";");		
+			for(n=0; n<pars.elemNamesArray.length; n++)
+			{			
+				var ioption=document.createElement('OPTION');
+				ioption.setAttribute('value',pars.elemArray[n]);
+				ioption.text=pars.elemNamesArray[n];
+				tmp.add(ioption);
+			};
+			tmp.size=pars.elemNamesArray.length;
+		}
+		else
+		{
+			tmp.value=pars.element_name;
+		}*/
+		
+}
+
+
+//-->
+</script>
+
+<script>
+//----------------------------------------------------------------------------------------------------------------------------------------------------//
+function doSubmit( _action, _id )
+{
+	hasBadFormulaElem=false;
+	BadFormulaElem=0;
+	try
+	{
+		BadFormulaElem=parseInt(document.getElementById('bad_formula').value);
+		hasBadFormulaElem=true;
+	}
+	catch(ex)
+	{
+	}
+	if (hasBadFormulaElem)
+	{
+		if (BadFormulaElem==1)
+		{
+			alert('<%=ms_tools.get_const("nobtgmesnn")%>');
+			return false;
+		}
+	}
+	document.getElementById('action_id').value = _action;
+	document.getElementById('is_posted').value = 1;
+	document.forms['kpi_form'].submit();
+	return false;
+}
+//----------------------------------------------------------------------------------------------------------------------------------------------------//
+function deleteTarget()
+{
+
+	var major_count=parseInt(document.all["scale_counter"].value);
+	//major_count--;
+	
+	var id=event.srcElement.getAttribute('name');
+	var tobj=document.all.formscalebodytable;
+	
+	if (id) id=parseInt(id.substring(10,id.length));
+
+
+	if (document.all["scale_line_"+ id])
+	{
+		tobj.deleteRow((document.all["scale_line_"+ id].rowIndex-1));
+	}
+	
+	document.all["scale_counter"].value=major_count;
+}
+//----------------------------------------------------------------------------------------------------------------------------------------------------//
+function checkEnter(elem)
+{	
+	try
+	{
+		var validRegExp = /^[0-9]*?$/;
+		if (!(validRegExp.test(document.getElementById(elem).value)))
+		{
+			alert(<%=CodeLiteral( tools_web.get_web_str('dank_mess_num') )%>);
+			document.getElementById(elem).value='';
+			document.getElementById(elem).focus();			
+			return false;
+		}
+		return true
+	}
+	catch(err)
+	{
+		alert(err)
+		return true
+	}
+}
+//----------------------------------------------------------------------------------------------------------------------------------------------------//
+function checkFormula(elem)
+{	
+	try
+	{
+		NewValue=document.getElementById(elem).value;
+		val = String(NewValue).replace(';', '');
+		val = val.replace('==', '$$$$');
+		val = val.replace( '=', '==');
+		val = val.replace( '$$$$' ,'==');
+		if (val== '')
+		{
+			val='FACT / PLAN'
+		}
+		
+		_ho = 'FACT=1; PLAN=1; WEIGHT=1; ' + val + ';';
+		flag_bad_formula=0;
+		textColor="#000000";
+		try
+		{
+			eval(_ho);
+		}
+		catch(_ne_ho_)
+		{
+			flag_bad_formula = 1;
+			textColor="#FF0000"
+		}
+		document.getElementById('bad_formula').value=flag_bad_formula;
+		document.getElementById('auto_formula').value=val;
+		document.getElementById('formula_str').innerHTML='<font color="'+textColor+'"><b><%=tools_web.get_web_str('dank_formula')%>='+document.getElementById('auto_formula').value+'</b></font>';
+
+		return true;
+	}
+	catch(err)
+	{
+		alert('fe'+err)
+		return true
+	}
+}
+//----------------------------------------------------------------------------------------------------------------------------------------------------//
+function AddScaleRow()
+{	
+	var major_count=parseInt(document.all["scale_counter"].value);
+
+	var tobj=document.all.formscalebodytable;
+	
+	var trow=document.createElement("TR");
+	trow.setAttribute("id","scale_line_"+major_count);
+	var tinsrow=tobj.insertAdjacentElement('beforeEnd',trow);
+	
+	
+	var tcol2=document.createElement("TD");
+	tcol2.innerHTML='<input type="TEXT" name="scale_name_'+major_count+'" id="scale_name_'+major_count+'" class="inputEdit" style="width:100%">';
+	tcol2.setAttribute("align","center");
+	tcol2.setAttribute("vAlign","middle");
+	var tinscol2=trow.insertAdjacentElement('beforeEnd',tcol2);
+	
+	var tcol3=document.createElement("TD");
+	tcol3.innerHTML='<input type="TEXT" name="scale_percent_'+major_count+'" id="scale_percent_'+major_count+'" class="inputEdit" onchange="checkEnter(\'scale_percent_'+major_count+'\')" style="width:100%">';
+	tcol3.setAttribute("align","center");
+	tcol3.setAttribute("vAlign","middle");
+	var tinscol3=trow.insertAdjacentElement('beforeEnd',tcol3);
+	
+	var tcol3=document.createElement("TD");
+	tcol3.innerHTML='<TEXTAREA name="scale_desc_'+major_count+'" id="scale_desc_'+major_count+' rows="5" COLS="10" class="inputEdit" style="width:100%"></TEXTAREA>';
+	tcol3.setAttribute("align","center");
+	tcol3.setAttribute("vAlign","middle");
+	var tinscol3=trow.insertAdjacentElement('beforeEnd',tcol3);
+	
+	
+	var tcol4=document.createElement("TD");
+	tcol4.setAttribute("align","center");
+	tcol4.setAttribute("vAlign","middle");
+	tcol4.colSpan=1;
+	var tinscol4=trow.insertAdjacentElement('beforeEnd',tcol4);
+	
+	var tinput4=document.createElement("INPUT");
+	tinput4.setAttribute("type","BUTTON");
+	tinput4.className="inputButton";
+	tinput4.setAttribute("id","but_scale_"+major_count);
+	tinput4.setAttribute("name","but_scale_"+major_count);
+	tinput4.setAttribute("value","X");
+	tinput4.attachEvent("onclick",deleteTarget);
+	tinput4.attachEvent("onmouseover",function(){event.srcElement.className='inputButtonOver';});
+	tinput4.attachEvent("onmouseout",function(){event.srcElement.className='inputButton';});
+	
+	tinscol4.insertAdjacentElement('beforeEnd',tinput4);
+	
+	major_count++	
+	document.all["scale_counter"].value=major_count;
+}
+//----------------------------------------------------------------------------------------------------------------------------------------------------//
+function createNewFillForm()
+{
+	var major_count=parseInt(document.all["tcounter"].value);
+	
+	//document.all["tcounter"].value=major_count;
+
+	var type=document.getElementById('type_id').value;
+	
+	
+	var tobj=document.all.formfillbodytable;
+	
+	for (i=0; i<=major_count; i++)
+	{
+		if (document.all["line"+ i])
+		{
+			tobj.deleteRow(document.all["line"+i].rowIndex);
+		}
+	}
+	
+	if  (type=='auto'||type=='input')
+	{
+		var trow1=document.createElement("TR");
+		trow1.setAttribute("id","line"+major_count);
+		var tinsrow=tobj.insertAdjacentElement('beforeEnd',trow1);
+		var tcol1=document.createElement("TD");
+		tcol1.innerHTML='<%=tools_web.get_web_str('dank_inter')%>:'
+		tcol1.setAttribute("align","left");
+		tcol1.setAttribute("vAlign","middle");
+		tcol1.colSpan=3;
+		var tinscol1=trow1.insertAdjacentElement('beforeEnd',tcol1);
+		
+		var tcol2=document.createElement("TD");
+		tcol2.setAttribute("align","left");
+		tcol2.setAttribute("vAlign","middle");
+		tcol2.innerHTML='&nbsp;'
+		var tinscol2=trow1.insertAdjacentElement('beforeEnd',tcol2);
+		
+		major_count++;
+		
+		
+		var trow=document.createElement("TR");
+		trow.setAttribute("id","line"+major_count);
+		var tinsrow=tobj.insertAdjacentElement('beforeEnd',trow);
+		
+		var tcol2=document.createElement("TD");
+		tcol2.setAttribute("align","left");
+		tcol2.setAttribute("vAlign","middle");
+		//tcol2.setAttribute("width","100%");
+		tcol2.colSpan=3;
+		var tinscol2=trow.insertAdjacentElement('beforeEnd',tcol2);
+		
+		tcol2.innerHTML='<input type="TEXT" name="range_min" id="range_min" value="<%=_range_min%>" class="inputEdit" onchange="checkEnter(\'range_min\')" style="width:80px">&nbsp;-&nbsp<input type="TEXT" name="range_max" id="range_max" value="<%=_range_max%>" class="inputEdit" onchange="checkEnter(\'range_max\')" style="width:80px">'
+		
+		var tcol5=document.createElement("TD");
+		tcol5.setAttribute("align","left");
+		tcol5.setAttribute("vAlign","middle");
+		tcol5.innerHTML='&nbsp;'
+		var tinscol5=trow.insertAdjacentElement('beforeEnd',tcol5);
+		major_count++;
+		
+		var trow=document.createElement("TR");
+		trow.setAttribute("id","line"+major_count);
+		var tinsrow=tobj.insertAdjacentElement('beforeEnd',trow);
+		
+		var tcol1=document.createElement("TD");
+		tcol1.innerHTML='<%=tools_web.get_web_str('dank_calc_formula')%>:'
+		tcol1.setAttribute("align","left");
+		tcol1.setAttribute("vAlign","middle");
+		tcol1.colSpan=3;
+		var tinscol1=trow.insertAdjacentElement('beforeEnd',tcol1);
+		
+		var tcol2=document.createElement("TD");
+		tcol2.setAttribute("align","left");
+		tcol2.setAttribute("vAlign","middle");
+		tcol2.innerHTML='&nbsp;'
+		var tinscol2=trow.insertAdjacentElement('beforeEnd',tcol2);
+		
+		major_count++;
+		if  (type=='auto')
+		{
+			var trow=document.createElement("TR");
+			trow.setAttribute("id","line"+major_count);
+			var tinsrow=tobj.insertAdjacentElement('beforeEnd',trow);
+			
+			var tcol1=document.createElement("TD");
+			tcol1.setAttribute("align","center");
+			tcol1.setAttribute("vAlign","middle");
+			tcol1.colSpan=4;
+			var tinscol1=trow.insertAdjacentElement('beforeEnd',tcol1);
+			
+			var tinput2=document.createElement("INPUT");
+			tinput2.setAttribute("type","Text");
+			tinput2.className="inputEdit";
+			tinput2.style.width="100%";
+			tinput2.setAttribute("id","auto_formula_tmp");
+			tinput2.setAttribute("name","auto_formula_tmp");
+			tinput2.setAttribute("value","<%=_auto_formula%>");
+			tinput2.attachEvent("onchange",function(){checkFormula('auto_formula_tmp');});
+			tinscol1.insertAdjacentElement('beforeEnd',tinput2);
+			
+			var tinput3=document.createElement("INPUT");
+			tinput3.setAttribute("type","Hidden");
+			tinput3.className="inputEdit";
+			tinput3.setAttribute("id","auto_formula");
+			tinput3.setAttribute("name","auto_formula");
+			tinput3.setAttribute("value","<%=_auto_formula%>");
+			tinscol1.insertAdjacentElement('beforeEnd',tinput3);
+			
+			var tinput4=document.createElement("INPUT");
+			tinput4.setAttribute("type","Hidden");
+			tinput4.className="inputEdit";
+			tinput4.setAttribute("id","bad_formula");
+			tinput4.setAttribute("name","bad_formula");
+			tinput4.setAttribute("value","0");
+			tinscol1.insertAdjacentElement('beforeEnd',tinput4);
+			
+			major_count++;
+			
+			var trow=document.createElement("TR");
+			trow.setAttribute("id","line"+major_count);
+			var tinsrow=tobj.insertAdjacentElement('beforeEnd',trow);
+			
+			var tcol1=document.createElement("TD");
+			tcol1.setAttribute("align","left");
+			tcol1.setAttribute("vAlign","middle");
+			tcol1.setAttribute("id","formula_str");
+			tcol1.setAttribute("name","formula_str");
+			tcol1.colSpan=3;
+			tcol1.innerHTML='<font color="#000000"><b><%=tools_web.get_web_str('dank_formula')%>='+document.getElementById('auto_formula').value+'</b></font>';
+			var tinscol1=trow.insertAdjacentElement('beforeEnd',tcol1);
+			
+			var tcol2=document.createElement("TD");
+			tcol2.setAttribute("align","left");
+			tcol2.setAttribute("vAlign","middle");
+			tcol2.innerHTML='&nbsp;'
+			var tinscol2=trow.insertAdjacentElement('beforeEnd',tcol2);
+			
+			major_count++;
+		}
+				
+	}
+	else if (type=='scale')
+	{
+	
+		var trow=document.createElement("TR");
+		trow.setAttribute("id","line"+major_count);
+		var tinsrow=tobj.insertAdjacentElement('beforeEnd',trow);
+		var tcol1=document.createElement("TD");
+		tcol1.innerHTML="<%=ms_tools.get_const('lfxluemjkm')%>:"
+		tcol1.setAttribute("align","left");
+		tcol1.setAttribute("vAlign","middle");
+		tcol1.colSpan=3;
+		var tinscol1=trow.insertAdjacentElement('beforeEnd',tcol1);
+		
+		var tcol2=document.createElement("TD");
+		tcol2.setAttribute("align","center");
+		tcol2.setAttribute("vAlign","middle");
+		tcol2.setAttribute("width","15%");
+		tcol2.innerHTML='<input type="button" value="<%=tools_web.get_web_str("veb_add")%>" onClick="AddScaleRow()" class="inputButton" onMouseOver="this.className=\'inputButtonOver\';" onMouseOut="this.className=\'inputButton\';"/>'
+		var tinscol2=trow.insertAdjacentElement('beforeEnd',tcol2);
+		major_count++;
+		
+		var trow=document.createElement("TR");
+		trow.setAttribute("id","line"+major_count);
+		var tinsrow=tobj.insertAdjacentElement('beforeEnd',trow);
+		var tcol1=document.createElement("TD");
+		tcol1.innerHTML="<%=ms_tools.get_const('lfxluemjkm')%>:"
+		tcol1.setAttribute("align","left");
+		tcol1.setAttribute("vAlign","middle");
+		tcol1.colSpan=4;
+		tcol1.innerHTML='<%=_text%>';
+		var tinscol1=trow.insertAdjacentElement('beforeEnd',tcol1);
+		
+		major_count++;
+		
+	}
+	
+	var trow=document.createElement("TR");
+	trow.setAttribute("id","line"+major_count);
+	var tinsrow=tobj.insertAdjacentElement('beforeEnd',trow);
+	
+	
+	var tcol1=document.createElement("TD");
+	tcol1.setAttribute("align","left");
+	tcol1.setAttribute("vAlign","middle");
+	tcol1.colSpan=3;
+	tcol1.innerHTML="<input type='checkbox' name='is_bonus_source' id='is_bonus_source' <%=_is_bonus_source?'checked':''%>><%=ms_tools.get_const('8h1jgf8wm7')%>";
+	var tinscol1=trow.insertAdjacentElement('beforeEnd',tcol1);
+	
+	var tcol2=document.createElement("TD");
+	tcol2.setAttribute("align","left");
+	tcol2.setAttribute("vAlign","middle");
+	tcol2.innerHTML='&nbsp;'
+	var tinscol2=trow.insertAdjacentElement('beforeEnd',tcol2);
+	
+	major_count++;
+	
+	
+	var trow=document.createElement("TR");
+	trow.setAttribute("id","line"+major_count);
+	var tinsrow=tobj.insertAdjacentElement('beforeEnd',trow);
+	
+	var tcol1=document.createElement("TD");
+	tcol1.innerHTML='<%=tools_web.get_web_str('dank_unit')%>:'
+	tcol1.setAttribute("align","left");
+	tcol1.setAttribute("vAlign","middle");
+	tcol1.colSpan=4;
+	var tinscol1=trow.insertAdjacentElement('beforeEnd',tcol1);
+	
+	var trow=document.createElement("TR");
+	trow.setAttribute("id","line"+major_count);
+	var tinsrow=tobj.insertAdjacentElement('beforeEnd',trow);
+	
+	major_count++;
+	
+	var tcol1=document.createElement("TD");
+	tcol1.setAttribute("align","left");
+	tcol1.setAttribute("vAlign","middle");
+	tcol1.colSpan=4;
+	tcol1.innerHTML="<input type='text' name='unit_of_measurement' id='unit_of_measurement' value='<%=_unit_of_measurement%>' class='inputEdit' style='width:100%'>";
+	var tinscol1=trow.insertAdjacentElement('beforeEnd',tcol1);
+	
+	major_count++;
+		
+	var trow=document.createElement("TR");
+	trow.setAttribute("id","line"+major_count);
+	var tinsrow=tobj.insertAdjacentElement('beforeEnd',trow);
+	
+	var tcol2=document.createElement("TD");
+	tcol2.innerHTML='<%=tools_web.get_web_str('dank_owners')%> (<%=(_owners_ids!=''?ArrayCount(_owners_ids.split(";")):0)%>): '
+	tcol2.setAttribute("align","left");
+	tcol2.setAttribute("id","owners");
+	tcol2.setAttribute("name","owners");
+	tcol2.setAttribute("vAlign","middle");
+	tcol2.colSpan=2;
+	var tinscol2=trow.insertAdjacentElement('beforeEnd',tcol2);
+	
+	var tcol1=document.createElement("TD");
+	tcol1.innerHTML='<input align="right" type="button" class="inputButton" value="<%=tools.get_web_str('c_choose')%>" onClick="doSelect(document.all[\'owners_ids\'],document.all[\'owners_ids\'].value,\'\',\'1\',\'1\',\'\')" class="inputButton" onMouseOver="this.className=\'inputButtonOver\';" onMouseOut="this.className=\'inputButton\';"/>'
+	tcol1.setAttribute("align","left");
+	tcol1.setAttribute("vAlign","middle");
+	tcol1.colSpan=1;
+	var tinscol1=trow.insertAdjacentElement('beforeEnd',tcol1);
+	
+	var tcol2=document.createElement("TD");
+	tcol2.setAttribute("align","left");
+	tcol2.setAttribute("vAlign","middle");
+	tcol2.innerHTML='&nbsp;'
+	var tinscol2=trow.insertAdjacentElement('beforeEnd',tcol2);
+	
+	major_count++;
+	
+	var trow=document.createElement("TR");
+	trow.setAttribute("id","line"+major_count);
+	var tinsrow=tobj.insertAdjacentElement('beforeEnd',trow);
+	
+	var tcol2=document.createElement("TD");
+	tcol2.innerHTML='<%=tools_web.get_web_str('dank_responsibles')%> (<%=(_responsible_persons_ids!=''?ArrayCount(_responsible_persons_ids.split(";")):0)%>): '
+	tcol2.setAttribute("align","left");
+	tcol2.setAttribute("id","responsible_persons");
+	tcol2.setAttribute("name","responsible_persons");
+	tcol2.setAttribute("vAlign","middle");
+	tcol2.colSpan=2;
+	var tinscol2=trow.insertAdjacentElement('beforeEnd',tcol2);
+	
+	var tcol1=document.createElement("TD");
+	tcol1.innerHTML='<input align="right" type="button" class="inputButton" value="<%=tools.get_web_str('c_choose')%>" onClick="doSelect(document.all[\'responsible_persons_ids\'],document.all[\'responsible_persons_ids\'].value,\'\',\'1\',\'0\',\'\')" class="inputButton" onMouseOver="this.className=\'inputButtonOver\';" onMouseOut="this.className=\'inputButton\';"/>'
+	tcol1.setAttribute("align","left");
+	tcol1.setAttribute("vAlign","middle");
+	tcol1.colSpan=1;
+	var tinscol1=trow.insertAdjacentElement('beforeEnd',tcol1);
+	
+	var tcol2=document.createElement("TD");
+	tcol2.setAttribute("align","left");
+	tcol2.setAttribute("vAlign","middle");
+	tcol2.innerHTML='&nbsp;'
+	var tinscol2=trow.insertAdjacentElement('beforeEnd',tcol2);
+	
+	major_count++;
+	
+	var trow=document.createElement("TR");
+	trow.setAttribute("id","line"+major_count);
+	var tinsrow=tobj.insertAdjacentElement('beforeEnd',trow);
+	
+	var tcol1=document.createElement("TD");
+	tcol1.innerHTML="<%=ms_tools.get_const('4s0cd5ospe')%>:"
+	tcol1.setAttribute("align","left");
+	tcol1.setAttribute("vAlign","middle");
+	tcol1.colSpan=3;
+	var tinscol1=trow.insertAdjacentElement('beforeEnd',tcol1);
+	
+	var tcol2=document.createElement("TD");
+	tcol2.setAttribute("align","left");
+	tcol2.setAttribute("vAlign","middle");
+	tcol2.innerHTML='&nbsp;'
+	var tinscol2=trow.insertAdjacentElement('beforeEnd',tcol2);
+	
+	major_count++;
+	
+	
+	var trow=document.createElement("TR");
+	trow.setAttribute("id","line"+major_count);
+	var tinsrow=tobj.insertAdjacentElement('beforeEnd',trow);
+	
+	
+	var tcol1=document.createElement("TD");
+	tcol1.setAttribute("align","center");
+	tcol1.setAttribute("vAlign","middle");
+	tcol1.colSpan=4;
+	tcol1.innerHTML="<TEXTAREA  name='comment' id='comment' CLASS='inputEdit'  rows='5' COLS='90' ><%=_comment%></TEXTAREA>";
+	var tinscol1=trow.insertAdjacentElement('beforeEnd',tcol1);
+	
+	major_count++;
+/*	if  (type=='auto')
+	{
+		tcol1.innerHTML='auto'
+	}
+	else
+	{
+		tcol1.innerHTML=type
+	}*/
+	
+	document.all["tcounter"].value=major_count;
+	document.all["is_kpi"].value=dialogArguments.is_kpi;
+}
+//----------------------------------------------------------------------------------------------------------------------------------------------------//
+</script>
+</head>
+
+<BODY bgcolor="#CCCCCC">
+<form action="" name="kpi_form" method="POST">
+   	<input type=hidden name="action" id="action_id" value="save"/>
+	<input type=hidden name="is_posted" id="is_posted" value="0"/>
+	<input type=hidden name="tcounter" id="tcounter" value="0"/>
+	<input type=hidden name="scale_counter" id="scale_counter" value="<%=_scale_counter%>"/>
+	<input type=hidden name="is_kpi" id="is_kpi" value=""/>
+	<input type=hidden name="owners_ids" id="owners_ids" value="<%=_owners_ids%>"/>
+	<input type=hidden name="responsible_persons_ids" id="responsible_persons_ids" value="<%=_responsible_persons_ids%>"/>
+	<table width="100%" cellspacing="0" cellpadding="4">
+		<tr>
+			<td width="100"><%=tools.get_web_str('c_code')%>:</td>
+			<td><%=tools.get_web_str('c_name')%>:</td>
+		</tr>
+		<tr>
+			<td width="100"><input type="TEXT" name="code" id="code_id" value="<%=_code%>" class="inputEdit" style="width:100"></td>
+			<td><input type="TEXT" name="name" id="name_id" value="<%=_name%>" class="inputEdit" style="width:100% "></td>	
+		</tr>
+		<tr>
+			<td colspan="2"><%=tools.get_web_str('c_type')%>:</td>
+		</tr>
+		<tr>
+			<td width="100">
+			<select name="type_id" id="type_id" onChange="createNewFillForm();">
+<%
+		i=0;
+		for ( _type in common.kpi_types )
+		{
+			_select="";
+			if (_type_id!='')
+			{
+				if (_type_id==_type.PrimaryKey)
+				{
+					_select="selected";
+				}
+			}
+			else
+			{
+				if (i==0)
+				{
+					_select="selected";
+				}
+			}
+%>
+					<option value="<%=_type.PrimaryKey%>" <%=_select%>><%=_type.name%></option>
+<%
+			i=1;
+		}
+%>			
+				</select>
+			</td>	
+		</tr>
+	</table>
+	<table border="0" cellspacing="1" cellpadding="4" width="100%">
+		<TBODY id=formfillbodytable>
+		</TBODY>
+	</table>
+<script language="JavaScript">
+createNewFillForm();
+</script>
+<!-----------------------  Custom fields----------------------->
+	<table  align="center" width="100%" cellspacing="0" cellpadding="4">
+
+				<TR>
+                  <TD COLSPAN="2">&nbsp;</TD>
+                </TR>
+<%	
+
+	for ( _field in ArraySelect( fieldArray, 'disp_web' ) )
+	{
+		try
+		{
+			_value = Request.Form.GetProperty(Trim(_field.name).toLowerCase() );
+		}
+		catch ( dd )
+		{
+			_value = '';
+		}
+%>		
+			<TR>
+<%
+		switch ( _field.type )
+		{
+			case 'heading':
+%>
+				<TD ALIGN="center" COLSPAN="2"><%=tools_web.get_cur_lng_name( _field.title )%></TD>
+<%
+				break;
+			
+			case 'bool':
+%>
+				<TD CLASS="registerLeftTD">&nbsp;</TD>
+<%			
+				break;
+				
+			default:
+%>			
+				<TD CLASS="registerLeftTD"><%=tools_web.get_cur_lng_name( _field.title )%><%=( _field.is_required ? '*' : '' )%>:</TD>
+<%				
+		}	
+	
+		switch ( _field.type )
+		{
+			case 'heading':
+				break;
+			
+			case 'bool':
+%>
+                <TD CLASS="registerRightTD"><INPUT TYPE="checkbox" NAME="<%=_field.name%>" <%=( _value == 'true' ? 'checked="checked"' : '' )%>/><%=_field.title%></TD>
+              <%		
+				break;
+				
+			case 'combo':
+%>
+                <TD CLASS="registerRightTD"><SELECT NAME="<%=_field.name%>" ID="<%=_field.name%>">
+                    <OPTION VALUE=""></OPTION>
+                    <%
+				for ( _entry in _field.entries )
+				{
+%>
+                    <OPTION VALUE="<%=HtmlEncode( _entry.value )%>"><%=_entry.value%></OPTION>
+                    <%
+				}
+%>
+                  </SELECT>
+                  <SCRIPT LANGUAGE="JavaScript">
+<!--
+selcur=document.getElementById('<%=_field.name%>');
+for (i=0;i<selcur.options.length;i++) {
+    if (selcur.options[i].value=="<%=_value%>") {
+        selcur.selectedIndex=i;
+    }
+	
+if (selcur.selectedIndex==-1) {selcur.selectedIndex=0;}
+}
+//-->
+</SCRIPT>
+                </TD>
+              <%		
+				break;
+				
+			case 'text':
+%>
+                <TD CLASS="registerRightTD"><TEXTAREA  name="<%=_field.name%>" CLASS="inputEdit"  rows="5" COLS="40" ><%=_value%></TEXTAREA></TD>
+<%
+				break;
+				
+				case 'string':
+%>
+                <TD CLASS="registerRightTD"><input type="text" name="<%=_field.name%>" style="width:150px;" class="inputEdit" value="<%=HtmlEncode( _value )%>" size="60" CLASS="inputEdit" /></TD>
+<%
+				break;
+				
+			default:		
+%>
+                <TD CLASS="registerRightTD"><INPUT TYPE="text" NAME="<%=_field.name%>" VALUE="<%=HtmlEncode( _value )%>" SIZE="30" CLASS="inputEdit"/></TD>
+              <%
+		}
+%>
+			</TR>
+<%		
+	}
+	
+%>		
+<!-----------------------  End of custom fields ----------------------->
+</table>
+	<table  align="center" width="100%" cellspacing="0" cellpadding="4">
+		<tr>
+			<td align="right">
+	<input type="button" value="<%=tools.get_web_str('c_save')%>" onClick="doSubmit('save');" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+			</td>
+			<td align="left">
+				<input type="button" value="<%=tools.get_web_str('c_cancel')%>" onClick="dialogArguments.handle=false; window.parent.close();" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+			</td>
+		</tr>
+	</table>
+</form>
+</body>
+</html>

@@ -1,0 +1,17 @@
+<%
+sCode = Request.Query.HasProperty( 'code' ) ? Request.Query.code : '';
+sCharset = Request.Query.HasProperty( 'charset' ) ? Request.Query.charset : 'windows-1251';
+
+teLearning = OpenDoc( UrlFromDocID( Int( Request.Query.atl ) ) ).TopElem;
+sQti = sCode == '' ? teLearning.qti_text : teLearning.parts.GetChildByKey( sCode ).qti_text;
+
+if ( sCharset != 'windows-1251' )
+{
+	Response.ContentType = "text/xml; charset=" + sCharset;
+	Response.Write( EncodeCharset( sQti, sCharset ) );
+}
+else
+{
+	Response.Write( sQti );
+}
+%>

@@ -1,0 +1,192 @@
+<%
+Server.Execute( "include/user_init.html" ); 
+
+_encoding = ( Request.QueryString.HasProperty("encoding") ? Request.QueryString.encoding : "windows-1251" );
+	
+_MEGA_STR = '<?xml version="1.0" encoding="'+_encoding+'"?>';
+
+
+
+if ( Request.QueryString.HasProperty("id") && Request.QueryString.id != "" )
+{
+	_MEGA_STR = _MEGA_STR + OpenDoc( UrlFromDocID( Int( Request.QueryString.id ) ) ).TopElem.Xml;
+	Response.Write( EncodeCharset( ( _MEGA_STR ), _encoding ) );
+}
+else
+{
+
+
+	//-----   object_select.xml?qid=(query)&object_name=collaborator&view_type=(view_type)&xquery_qual=$elem\field&fields=org_id,login,pos=position_id.ForeignElem.name&order_by=$elem\field&top=33  -----
+		
+		Request.QueryString.HasProperty("qid") ? _qid = Request.QueryString.qid : _qid = null;
+		
+		_object_name = Request.QueryString.object_name;
+		
+		_xquery_qual = ( Request.QueryString.HasProperty("xquery_qual") && Request.QueryString.xquery_qual != "" ? " and " + Request.QueryString.xquery_qual : "");
+		
+		_top = ( Request.QueryString.HasProperty("top") ? Int(Request.QueryString.top) : (0-1));
+		
+		_order_by = (Request.QueryString.HasProperty("order_by") && Request.QueryString.order_by != "" ? " order by " + Request.QueryString.order_by : "")
+		
+		_fields = Array();
+		_field_names = Array();
+		
+		if (Request.QueryString.HasProperty("view_type") && Request.QueryString.view_type != "")
+		{
+			viewBase = view_types.GetChildByKey( Request.QueryString.view_type );
+							
+			_i = 0;
+			for ( _column in viewBase.columns )
+			{
+				_fields[_i] = StrReplace(_column.name, "ListElem.", "_elem.");
+				_field_names[_i] = String(_column.order_code).slice(0, String(_column.order_code).indexOf("."));
+				_i++;
+			}
+				
+		}
+		else
+		{
+			viewBase = null;
+		}
+		
+		_show_all = (Request.QueryString.HasProperty("show_all") && Request.QueryString.show_all == "1");
+				
+		if (Request.QueryString.HasProperty("fields") && Request.QueryString.fields != "")
+		{
+			_new_flds = Request.QueryString.fields.split(",");
+			_new_vals = ArrayUnion(_new_flds, Array());
+			
+			for (_i = 0 ; _i < ArrayCount(_new_flds); _i++)
+			{
+				_cur_val = String(_new_flds[_i]);
+				if ( StrContains(_cur_val, "=" ))
+				{
+					_idx = _cur_val.indexOf("=");
+					_new_flds[_i] = _cur_val.slice(0,_idx);
+					_new_vals[_i] = _cur_val.slice(_idx + 1);
+					if (viewBase != null)		
+					{
+						_new_vals[_i] = "_elem." + _new_vals[_i];
+					}
+				}
+				else
+				{
+					_new_flds[_i] = _cur_val;
+					if (viewBase != null)		
+					{
+						_new_vals[_i] = "_elem." + _new_vals[_i];
+					}
+				}
+				
+			}
+					
+			_field_names =  ArrayUnion( _field_names, _new_flds);
+			_fields = ArrayUnion( _fields , _new_vals );
+		}
+		_eot = common.exchange_object_types.GetChildByKey(_object_name);
+	
+			
+		if ( (_object_name == "subdivision" || _object_name == "collaborator")&& (curUser.access.access_role != "admin" && curUser.access.access_role != "hr" && _show_all == false))
+		{
+			_elems_full = tools.get_sub_hierarchy(curUser.position_id.ForeignElem.parent_object_id ,'subdivision');
+			if ((_object_name == "position" || _object_name == "collaborator"))
+			{
+				_elems_submit = Array();
+					
+				for (_ef in _elems_full)
+				{				
+					_query = "for $elem in positions ";
+					_query = _query + "where $elem/parent_object_id = " + _ef.id + " return $elem";
+					_pos_elems = XQuery(_query);
+					
+					if (_object_name == "collaborator")
+					{
+						_es_c = ArrayCount(_elems_submit);
+						for (_pe in _pos_elems)
+						{
+							_temp_coll = _pe.basic_collaborator_id.OptForeignElem;
+							if(_temp_coll!= undefined)
+							{
+								_elems_submit[_es_c] = _temp_coll;
+								_es_c++;
+							}
+						}
+					}
+					else
+					{
+						_elems_submit = ArrayUnion(_elems_submit, _pos_elems);
+					}
+					
+				}
+				
+				_elems_full = _elems_submit;
+			}
+						
+			if (_qid != null)
+			{
+				_i = 0;
+				_elems = Array();
+				for (_e in _elems_full)
+				{
+					if (StrContains( String(_e.EvalPath(_eot.disp_name)).toLowerCase() , String(_qid).toLowerCase() ))
+					{
+						_elems[_i] = _e;
+						_i++;
+					}
+				}
+			}
+			else
+			{
+				_elems = _elems_full;
+			}
+			
+		}
+		else
+		{
+			if (_qid != null)
+			{
+			_query = "for $elem in " + _object_name + "s where contains($elem/"+ _eot.disp_name +", '"+_qid+"')" + _xquery_qual + _order_by + " return $elem";
+			
+			}
+			else
+			{
+				_query = "for $elem in " + _object_name + "s where 1=1 " + _xquery_qual + _order_by +" return $elem";
+			}
+			//alert("\n" + _query +"\n")
+			_elems = XQuery(_query);
+		}
+		
+	_MEGA_STR = _MEGA_STR + '<objects>';
+	
+	_elem_counter=0;
+	
+	for (_elem in _elems)
+	{	
+		if (_top > 0 && _elem_counter > _top)
+			break;
+		_MEGA_STR = _MEGA_STR + '<' + _object_name + ' id="' +_elem.id + '" ' + _eot.disp_name + '="' + HtmlEncode(_elem.EvalPath(_eot.disp_name)) + '"';
+		_counter = 0;
+		for(_fld in _fields)
+		{
+			_fld_name = _field_names[_counter];
+			if(_fld_name != '' && _fld_name != 'id' && _fld_name !=_eot.disp_name)
+			try
+			{
+				_MEGA_STR = _MEGA_STR + ' ' + _field_names[_counter] + '="' + HtmlEncode((viewBase != null ? eval(_fld) : _elem.EvalPath(_fld))) + '"';
+			}
+			catch(_net_takogo_)
+			{
+				//alert(_fld + "\n\n" +_net_takogo_)
+			}
+			_counter++;
+		}
+		_MEGA_STR = _MEGA_STR + '/>'
+		_elem_counter++;
+	}
+	
+	_MEGA_STR = _MEGA_STR + '</objects>';
+	
+	Response.Write(EncodeCharset((_MEGA_STR), _encoding));
+}
+Cancel();
+%>

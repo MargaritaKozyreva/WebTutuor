@@ -1,0 +1,195 @@
+<%
+Server.Execute( "include/user_init.html" )
+
+/*alert('<====>');
+for (a in Request.Query)
+{
+	alert(a+"="+Request.Query.GetProperty(a));
+	try
+	{
+ 		alert(a+"="+DecodeCharset(Request.Query.GetProperty(a),'utf-8'));
+	}
+	catch(ex)
+	{
+		alert(a+"="+Request.Query.GetProperty(a));
+	}
+
+}
+alert('<====>');*/
+has_files=false
+try
+{
+	if (Request.Query.HasProperty("template_req_type_id"))
+	{
+		try
+		{
+			template_req_type_id=Int(Request.Query.GetProperty("template_req_type_id"))
+		}
+		catch(ex)
+		{
+			
+			Response.Write("err: "+tools_web.get_web_str('der_err_type'));
+			Cancel();
+		}
+	
+	
+		if (Request.Query.HasProperty("req_id"))
+		{
+			try
+			{
+				req_id=Int(Request.Query.GetProperty("req_id"))
+			}
+			catch(ex)
+			{
+				Response.Write("err: "+ex);
+				Cancel();
+			}
+			curObjectDoc=OpenDoc(UrlFromDocID(req_id))
+			curObject=curObjectDoc.TopElem;
+			curObject.request_type_id=template_req_type_id
+			curObjectID=req_id;
+	
+			
+			_counter_flag = true;
+			try
+			{
+				//tools_web.web_custom_elems_filling( 'request', null, curObject, Request.Query );
+				_cur_template = tools.get_custom_template( 'request', null, curObject );
+				
+				if ( _cur_template != null )
+				{
+					
+					try
+					{
+						if ( _value_flag != true )
+							_value_flag = false;
+					}
+					catch ( r )
+					{
+						_value_flag = false;
+					}
+					
+					if(Request.Query.HasProperty( 'files_fo_delete' ))
+					{
+						arrFilesToDelete = String(DecodeCharset(Request.Query.GetProperty( 'files_fo_delete' ), 'utf-8' )).split(';');;
+						for(sFileToDeleteId in arrFilesToDelete)
+						{
+							if(curObject.custom_elems.ChildByKeyExists(sFileToDeleteId))
+							{
+								try
+								{
+									docFile = OpenDoc( UrlFromDocID( Int(curObject.custom_elems.GetChildByKey(sFileToDeleteId).value) ) )
+									docFile.TopElem.del_counter(curObject);
+									docFile.Save();
+								}
+								catch(x)
+								{
+									alert(x);
+								}
+								curObject.custom_elems.DeleteChildByKey(sFileToDeleteId);
+							}
+						}
+					}
+					for ( _field in _cur_template.fields )
+						try
+						{
+							if ( ! _field.disp_web || _field.type == 'title' )
+								continue;
+					
+							if ( _field.type == 'bool' )
+							{
+								_value = ( Request.Query.HasProperty( _field.name ) ? 'true' : 'false' );
+							}
+							else if ( _field.type == 'file' )	
+							{
+								has_files=true
+								_ref = DecodeCharset(EncodeCharset(Request.Query.GetProperty( _field.name ), 'utf-8' ), 'utf-8' );
+								_ref_name=Request.Query.HasProperty( _field.name+'_file_name' )? DecodeCharset(UrlDecode(Request.Query.GetProperty(  _field.name+'_file_name' )), 'utf-8' ):'';
+								if ( Trim( _ref ) == '' ||  _ref_name=='' )
+									continue;
+									
+								doc = OpenNewDoc( 'x-local://wtv/wtv_resource.xmd' );
+								doc.BindToDb( DefaultDb );
+								doc.TopElem.put_str( _ref, _ref_name, curObject );
+								_value = doc.DocID;
+							}
+							else			
+							{
+								switch( global_settings.settings.default_portal_type )
+								{
+									case 'sharepoint':
+										_value = DecodeCharset( Request.Query.GetProperty( _field.name ), 'utf-8' );
+										break;
+										
+									default:
+										_value = DecodeCharset( Request.Query.GetProperty( _field.name ), 'utf-8' );;
+										break;
+								}
+								
+								if ( _value_flag && _field.is_required && _value == '' )
+									continue;
+							}
+							
+							curObject.custom_elems.ObtainChildByKey( _field.name ).value = _value;
+						}
+						catch ( ee )
+						{
+							alert( ee )	;			
+							_counter_flag = false;
+						}
+						
+				}
+				
+			}
+			catch ( e )
+			{
+				alert( e );
+			}
+			try
+			{
+				curObjectDoc.Save();
+			}
+			catch(ex)
+			{
+				Response.Write("err: "+ex);
+			}	
+		}
+
+	}
+
+	
+	if (has_files)
+	{
+		files_adr_str=''
+		fileFieldArray=ArraySelect( _cur_template.fields, 'type=="file"')
+		i=0;
+		for (iFileFieldElem in fileFieldArray)
+		{
+			try
+			{
+				_value = curObject.custom_elems.GetChildByKey( iFileFieldElem.name ).value;
+			}
+			catch ( dd )
+			{
+				_value = '';
+			}
+			if	(files_adr_str!='')
+			{
+				files_adr_str=files_adr_str+"#@#";
+			}
+			alert('_value'+_value)
+			alert((Trim(_value)!='')?OpenDoc( UrlFromDocID( Int(_value))).TopElem.name:'')
+			files_adr_str=files_adr_str+iFileFieldElem.name+"|@#@|"+((Trim(_value)!='')?UrlEncode('<a href="download_file.html?file_id='+_value+'&sid='+tools.get_sum_sid( _value )+'">'+EncodeCharset(OpenDoc( UrlFromDocID( Int(_value))).TopElem.name, 'utf-8' )+'</a>'):'');
+		}
+		Response.Write(files_adr_str)
+	}
+	else
+	{
+		Response.Write("Ok!")
+	}
+}
+catch(ex)
+{
+	Response.Write("err: "+ex);
+}
+%>

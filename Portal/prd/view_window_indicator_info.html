@@ -1,0 +1,200 @@
+<%Server.Execute( "include/user_init.html");%>
+<HTML>
+<HEAD>
+	<TITLE>Info</TITLE>
+</HEAD>
+<BODY>
+<DIV ID="main_block" CLASS="mainBlockDiv">
+<%
+try
+{
+	_type = Request.QueryString.type;
+	cur_indicator = OpenDoc( UrlFromDocID( Int(Request.QueryString.doc_id) ) ).TopElem;
+}
+catch(_dermo_)
+{
+Response.Write('<font size="+1"><b>'+tools_web.get_web_str("vcp_error_msg_open_window")+'</b></font>')
+Cancel();
+}
+%>
+	<hr/>
+<%
+	if (ArrayCount(ArraySelect(cur_indicator.scales, "percent.HasValue")) > 0 )
+		show_percent = true;
+	else
+		show_percent = false;
+
+	switch (_type)
+	{
+		case "competence":
+%>
+		<center><font size="+1"><%=tools_web.get_web_str("ass_competence")%>: &nbsp;<b><%=tools_web.get_cur_lng_name(cur_indicator.name, curLng.short_id)%></b></font></center>
+		<hr/>
+		<b><%=tools_web.get_web_str("ass_scale")%></b>
+		<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="gray"><tr><td>
+		<table width="100%" cellpadding="1" cellspacing="1">
+		<tr bgcolor="silver">
+			<td width="30px" align="center">#</td>
+			<td width="100px" align="center"><%=tools_web.get_web_str("c_value")%></td>
+<% 
+	if (show_percent)
+	{
+%>
+			<td width="40px" align="center"><%=tools_web.get_web_str("vcp_percent_correspond")%></td>
+<% 
+	}
+%>
+			<td><%=tools_web.get_web_str("c_desc")%></td>
+		</tr>
+		<%
+		for (_scale in cur_indicator.scales)
+		{		
+		%>
+				
+		<tr bgcolor="white">
+			<td width="30px" align="center"><%=(_scale.ChildIndex + 1)%></td>
+			<td width="200px"><%=tools_web.get_cur_lng_name(_scale.name, curLng.short_id)%></td>
+<% 
+	if (show_percent)
+	{
+%>
+			<td width="40px"><%=_scale.percent%></td>
+<% 
+	}
+%>
+			<td><%=tools_web.get_cur_lng_name(_scale.desc, curLng.short_id)%></td>
+		</tr>
+		<%
+		}
+		%>
+		</table>
+		</td></tr></table>
+		<br/>
+		<hr/>
+		<br/>
+		<b><%=tools_web.get_web_str("vcp_child_indicators")%></b>
+		<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="gray"><tr><td>
+		<table width="100%" cellpadding="1" cellspacing="1">
+<%
+		_temp_indicators = XQuery("for $indicator in indicators where $indicator/competence_id = " + Request.QueryString.doc_id +" return $indicator");
+		
+		for (_indicator in _temp_indicators)
+		{
+%>
+		<tr bgcolor="white">			
+			<td>
+			<%=tools_web.get_cur_lng_name(_indicator.name, curLng.short_id)%>
+			</td>			
+		</tr>
+<%
+		}
+%>
+		</table>
+		</td></tr></table>
+<%		
+		break;
+		case "indicator":
+%>
+		<center><font size="+1"><%=tools_web.get_web_str("ass_indicator")%>: &nbsp;<b><%=tools_web.get_cur_lng_name(cur_indicator.name, curLng.short_id)%></b></font></center>
+		<hr/>
+		<b><%=tools_web.get_web_str("ass_scale")%></b>
+		<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="gray"><tr><td>
+		<table width="100%" cellpadding="1" cellspacing="1">
+		<tr bgcolor="silver">	
+			<td width="30px" align="center">
+				#
+			</td>
+			<td width="100px" align="center"><%=tools_web.get_web_str("c_value")%></td>
+			<td width="40px" align="center"><%=tools_web.get_web_str("vcp_percent_correspond")%></td>
+			<td><%=tools_web.get_web_str("c_desc")%></td>
+		</tr>
+		<%
+		for (_scale in cur_indicator.scales)
+		{		
+		%>
+				
+		<tr bgcolor="white">
+			<td width="30px" align="center">
+			<%=(_scale.ChildIndex + 1)%>
+			</td>
+			<td width="200px">
+			<%=tools_web.get_cur_lng_name(_scale.name, curLng.short_id)%>
+			</td>
+			<td width="40px">
+			<%=_scale.percent%>
+			</td>
+			<td>
+			<%=tools_web.get_cur_lng_name(_scale.desc, curLng.short_id)%>
+			</td>
+		</tr>
+		<%
+		}
+		%>
+		
+		</table>
+		</td></tr></table>
+<%
+		break;
+		case "supplementary_question":
+%>
+		<center><font size="+1"><%="Дополнительный вопрос"%>: &nbsp;<b><%=cur_indicator.name%></b></font></center>
+		<hr/>
+		<br/>
+		<b>Тип:</b>&nbsp;<%=(cur_indicator.type == "1" ? "Открытый вопрос":"Оценка по шкале")%>
+<%
+		if (cur_indicator.type == "2")
+		{
+%>
+		<p>
+		<b><%=tools_web.get_web_str("ass_scale")%></b>
+		<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="gray"><tr><td>
+		<table width="100%" cellpadding="1" cellspacing="1">
+		<tr bgcolor="silver">	
+			<td width="30px" align="center">
+				#
+			</td>
+			<td width="100px" align="center"><%=tools_web.get_web_str("c_value")%></td>
+			<td width="40px" align="center"><%=tools_web.get_web_str("vcp_percent_correspond")%></td>
+			<td><%=tools_web.get_web_str("c_desc")%></td>
+		</tr>
+		<%
+		for (_scale in cur_indicator.scales)
+		{		
+		%>
+		<tr bgcolor="white">
+			<td width="30px" align="center">
+			<%=(_scale.ChildIndex + 1)%>
+			</td>
+			<td width="200px">
+			<%=tools_web.get_cur_lng_name(_scale.name, curLng.short_id)%>
+			</td>
+			<td width="40px">
+			<%=_scale.percent%>
+			</td>
+			<td>
+			<%=tools_web.get_cur_lng_name(_scale.desc, curLng.short_id)%>
+			</td>
+		</tr>
+		<%
+		}
+		%>
+		</table>
+		</td></tr></table>
+		</p>
+<%
+		}
+		break;
+	}
+	
+	if (cur_indicator.comment.HasValue)
+		Response.Write("<p>"+tools_web.get_cur_lng_name(cur_indicator.comment, curLng.short_id)+"</p>")
+%>
+		
+		<p>
+		<center><input type="button" value="<%=tools_web.get_web_str("c_close")%>" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" class="inputButton" onClick="window.close();"></center>
+		</p>
+			
+</DIV>
+
+</BODY>
+</HTML>

@@ -1,0 +1,220 @@
+<%
+if (!curObject.is_done && curObject.expert_person_id.Value == curUserID)
+	IS_MODIFY = true;
+else
+	IS_MODIFY = false;
+	
+_col_id = curObject.person_id;
+_colDoc = OpenDoc( UrlFromDocID( _col_id ) );
+_col = _colDoc.TopElem;
+_staff = '';
+try
+{
+	_sub = OpenDoc(UrlFromDocID(_col.position_parent_id )).TopElem;
+	while( _sub!=undefined )
+	{
+    	_staff=_sub.name+(_staff!=''?' -> ':'')+_staff;
+		if ( _sub.parent_object_id!=null)
+    		_sub = ArrayOptFirstElem( XQuery( 'for $elem in subdivisions where $elem/id='+_sub.parent_object_id+' return $elem'));
+		else
+    		break;
+	}
+}
+catch(ee)
+{
+}
+	
+%>
+
+<FORM ACTION="event_pa_change.html" NAME="event_form" METHOD="POST">
+	<input type=hidden name="doc_id" value="<%=curDocID%>"/>
+	<input type=hidden name="action" value="save"/>
+	<input type=hidden name="object_id" value="<%=curObjectID%>"/>
+    <input type="hidden" name="action" value="save"/>
+    <input type="hidden" name="status" value="plan"/>
+
+<table width="100%" cellspacing="0" cellpadding="4" class="tableBorder">
+    <tr>
+    	<td width="200" align="right"><b><%=tools.get_web_str('c_event')%>:</b></td>
+        <td style="font-weight: normal"><a href="view_doc.html?mode=event_assessment_plans&object_id=<%=curObject.event_id%>&doc_id=<%=curDocID%>"><%=curObject.event_id.ForeignElem.name%></a></td>
+   	</tr>
+	<tr>		
+		<td width="200" align="right"><b><%=tools.get_web_str('c_code')%>:</b></td>
+    	<td style="font-weight: normal"><a href="view_doc.html?mode=event_assessment_plans&object_id=<%=curObject.event_id%>&doc_id=<%=curDocID%>"><%=curObject.event_id.ForeignElem.code%></a></td>
+    </tr>
+	<tr>
+		<td colspan="2">&nbsp;</td>
+	</tr>
+	<tr>		
+		<td width="200" align="right"><b><%=tools.get_web_str('ass_estimated_person')%>:</b></td>
+    	<td style="font-weight: normal"><%=curObject.person_id.sd.fullname%></td>
+    </tr>
+	<tr>		
+		<td width="200" align="right"><b><%=tools.get_web_str('c_position')%>:</b></td>
+    	<td style="font-weight: normal"><%=_staff%></td>
+    </tr>
+	<tr>		
+		<td width="200" align="right"><b><%=tools.get_web_str('c_org')%>:</b></td>
+    	<td style="font-weight: normal"><%=curObject.person_id.sd.org_name%></td>
+    </tr>
+	<tr>
+		<td colspan="2">&nbsp;</td>
+	</tr>
+	<tr>		
+		<td width="200" align="right"><b><%=tools.get_web_str('ass_estimating_person')%>:</b></td>
+    	<td style="font-weight: normal"><%=curObject.expert_person_id.sd.fullname%></td>
+    </tr>
+</table>
+<%
+		_temp_assessment_plan = ArrayFirstElem(XQuery( "for $event_assessment_plan in event_assessment_plans where $event_assessment_plan/id = " + curObjectID + " return $event_assessment_plan" ));
+		counter = 0;
+		curPAID = _temp_assessment_plan.id;
+        curPADoc = OpenDoc( UrlFromDocID( curPAID ) );
+		curPA = curPADoc.TopElem;
+        
+	if ( StrContains(curObject.assessment_type_id, "comp"))
+	{
+%>
+<table width="100%"  border="0" cellspacing="0" cellpadding="0" class="tableBorder" >
+	<tr>
+			<td bgcolor="silver" width="70%">
+				<%=tools.get_web_str("ass_competences")%>
+			</td>					
+			<td bgcolor="silver" align="center">
+				<%=tools.get_web_str("ass_mark")%>
+			</td>
+<%
+
+		for ( _comp in curPA.competences )
+		{
+			try
+			{
+				competenceDoc = OpenDoc(UrlFromDocID(_comp.competence_id)).TopElem;
+			}
+			catch(_SHIIIIT_)
+			{
+				continue;
+			}
+			_class = counter++ % 2 ? 'tableRowEven' : 'tableRowOdd';
+%>
+			
+			<TR VALIGN="MIDDLE">					
+				<TD class="<%=_class%>"><b><%=_comp.PrimaryKey.ForeignElem.name%></b></TD>
+				<TD class="<%=_class%>">
+<%
+	if (IS_MODIFY)
+	{
+%>				
+					<select name="comp<%=_comp.PrimaryKey%>" style="width: 100px">
+											<option  value="_scale.PrimaryKey"></option>
+<%
+											for ( _scale in competenceDoc.scales )
+											{
+												if ( _scale.PrimaryKey == _comp.mark )
+                                                {
+%>
+													<option selected value="<%=_scale.PrimaryKey%>"><%=_scale.name%></option>
+<%
+   												}
+                                                else
+                                                {
+%>
+													<option value="<%=_scale.PrimaryKey%>"><%=_scale.name%></option>
+<%
+												}
+											}
+%>
+					</select>
+<%
+	}
+	else
+	{
+		_scale = ArrayOptFind( competenceDoc.scales, "PrimaryKey == '" + _comp.mark + "'");
+		if (_scale != undefined)
+			Response.Write(_scale.name);
+		else
+			Response.Write("&nbsp;");
+	}
+		
+%>
+				</TD>
+			</TR>
+<%
+						
+			for ( _indicator in _comp.indicators )
+			{
+				try
+				{
+					indicatorDoc = OpenDoc(UrlFromDocID(_indicator.indicator_id)).TopElem;
+				}
+				catch(_SHIIIIT_)
+				{
+					continue;		
+				}
+%>
+			<TR VALIGN="MIDDLE">
+				<TD class="<%=_class%>">—   <%=_indicator.PrimaryKey.ForeignElem.name%></TD>
+				<TD class="<%=_class%>">
+<%
+	if (IS_MODIFY)
+	{
+%>	
+				<select name="ind<%=_indicator.PrimaryKey%>" style="width: 100px">
+											<option value="_scale.PrimaryKey"></option>
+<%
+											for ( _scale in indicatorDoc.scales )
+											{
+%>
+												<option <% if ( _scale.PrimaryKey == _indicator.mark ){%>selected<%}%> value="<%=_scale.PrimaryKey%>"><%=_scale.name%></option>
+<%
+											}
+%>
+											
+				</select>
+<%
+	}
+	else
+	{
+		_scale = ArrayOptFind( indicatorDoc.scales, "PrimaryKey == '" + _indicator.mark + "'");
+		if (_scale != undefined)
+			Response.Write(_scale.name);
+		else
+			Response.Write("&nbsp;");
+	}
+%>	
+										</TD>
+			</TR>
+			</TR>
+<%			
+			}
+		}
+	}	
+%>	
+
+    <input type="hidden" name="pa_id" value="<%=curPAID%>"/> 
+
+</table>
+
+<%
+	isModify = IS_MODIFY;
+	
+	Server.Execute( "view_custom_templates.html" );
+	if (IS_MODIFY)
+	{
+%>
+<hr/>
+<p><center><input type=submit  value="    <%=tools.get_web_str("c_save")%>    " class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/></center></p>
+
+
+<%
+	
+if ( Request.Query.HasProperty( "action" ) && Request.Query.GetProperty( "action" ) == "save" )
+{
+%>
+<p><center><input type="submit"  value="<%=tools_web.get_web_str("ass_finish_estimation")%>"  class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/></center></p>
+<input type="hidden" name="action2" value="finish"/>
+<%
+}
+	}
+%>
+</FORM>

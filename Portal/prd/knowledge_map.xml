@@ -1,0 +1,273 @@
+<%
+	Server.Execute( "include/user_init.html" );
+	
+	_encoding = "utf-8";
+	
+	MEGASTR = '<?xml version="1.0" encoding="utf-8"?>';
+iSTART =  GetCurTicks();
+	if (Request.Query.HasProperty("mode"))
+		sMode = Request.Query.GetProperty("mode");
+	else
+		sMode = "default";
+		
+	switch (sMode)
+	{
+		case "kapit":
+			MEGASTR += '<tree>';
+			var teObject;
+			try
+			{
+				if (Request.QueryString.GetProperty("object_id") == "knowledge_map")
+				{
+					teObject = OpenDocFromStr("<knowledge_map/>").TopElem
+					iObjectID = 0;
+				}
+				else
+				{
+					iObjectID = Int(Request.QueryString.GetProperty("object_id"));
+					teObject = OpenDoc(UrlFromDocID(iObjectID)).TopElem;
+				}
+			}
+			catch(_Y_)
+			{
+				alert(_Y_);
+				teObject = null;
+				iObjectID = 0-1;
+			}
+			function get_children_parts(iParentIDPARAM, iKnowledgeClassifierIDPARAM)
+			{
+				if (iParentIDPARAM == null)
+					xarrKP = XQuery("for $elem in knowledge_parts where $elem/knowledge_classifier_id = " + iKnowledgeClassifierIDPARAM + " and $elem/parent_object_id = " +XQueryLiteral(iParentIDPARAM)+ " return $elem");
+				else
+					xarrKP = XQuery("for $elem in knowledge_parts where $elem/parent_object_id = " +XQueryLiteral(iParentIDPARAM)+ " return $elem");
+				for (catTopKP in xarrKP)
+				{
+					xarrSubKps = XQuery("for $elem in knowledge_parts where $elem/parent_object_id = " + catTopKP.id + " return $elem");
+					for (catSubKPElem in xarrSubKps)
+					{
+						MEGASTR += '<node id="'+catSubKPElem.PrimaryKey+'" parent_id="' +catTopKP.id+ '" name="' + XmlAttrEncode(catSubKPElem.name) + '" type="knowledge_part"/>';
+					}
+					aKnowledgeObjects = Array();
+					for (commonKnowledgePartsObject in common.knowledge_parts_objects)
+					{
+						aKnowledgeObjects =  XQuery ("for $obj in " + commonKnowledgePartsObject.PrimaryKey + "s where contains($obj/knowledge_parts, '" +catTopKP.id+ "' ) return $obj");
+						sNameFld = common.exchange_object_types.GetChildByKey(commonKnowledgePartsObject.PrimaryKey).disp_name;
+						for (catObjElem in aKnowledgeObjects)
+							MEGASTR += '<node id="'+catObjElem.PrimaryKey+'" parent_id="' +catTopKP.id+ '" name="' + XmlAttrEncode(catObjElem.EvalPath(sNameFld)) + '" type="' + commonKnowledgePartsObject.PrimaryKey + '"/>';
+						
+					}
+				}
+			}
+			
+			if (teObject == null)
+			{
+				MEGASTR += '<node id="knowledge_map" parent_id="null" name="' + XmlAttrEncode(tools_web.get_web_str("vkm_knowledge_map")) + '" type="knowledge_map" title="1"/>';
+				for (catKnowledgeClassifierElem in knowledge_classifiers)
+				{
+					MEGASTR += '<node id="'+catKnowledgeClassifierElem.PrimaryKey+'" parent_id="knowledge_map" name="' + XmlAttrEncode(catKnowledgeClassifierElem.name) + '" type="knowledge_classifier"/>';
+				}
+			}
+			else
+			{
+				switch (teObject.Name)
+				{
+					case "knowledge_map":
+						for (catKnowledgeClassifierElem in knowledge_classifiers)
+						{
+							xarrKP = XQuery("for $elem in knowledge_parts where $elem/knowledge_classifier_id = " + catKnowledgeClassifierElem.PrimaryKey + " and $elem/parent_object_id = null() return $elem");
+							for (catTopKP in xarrKP)
+							{
+								MEGASTR += '<node id="'+catTopKP.PrimaryKey+'" parent_id="' +catTopKP.knowledge_classifier_id+ '" name="' + XmlAttrEncode(catTopKP.name) + '" type="knowledge_part"/>';
+							}
+						}
+						break;
+					case "knowledge_classifier":
+						get_children_parts(null, iObjectID);
+						break;
+					case "knowledge_part":
+						get_children_parts(iObjectID, null);
+						break;
+					default:
+						break;
+				}
+			}
+			
+		/*
+			aParents = Array();
+			MEGASTR += '<tree><node id="knowledge_map" parent_id="null" name="' + XmlAttrEncode(tools_web.get_web_str("vkm_knowledge_map")) + '" type="knowledge_map" title="1"/>';
+			for (catKnowledgeClassifierElem in knowledge_classifiers)
+			{
+				MEGASTR += '<node id="'+catKnowledgeClassifierElem.PrimaryKey+'" parent_id="knowledge_map" name="' + XmlAttrEncode(catKnowledgeClassifierElem.name) + '" type="knowledge_classifier"/>';
+				
+				xarrKP = XQuery("for $elem in knowledge_parts where $elem/knowledge_classifier_id = " + catKnowledgeClassifierElem.PrimaryKey + " and $elem/parent_object_id = null() return $elem");
+				
+				for (catTopKP in xarrKP)
+				{
+					MEGASTR += '<node id="'+catTopKP.PrimaryKey+'" parent_id="' +catTopKP.knowledge_classifier_id+ '" name="' + XmlAttrEncode(catTopKP.name) + '" type="knowledge_part"/>';
+					aParents[ArrayCount(aParents)] = catTopKP.PrimaryKey;
+					for (catChildElem in XQuery("CatalogHierSubset('knowledge_parts'," + catTopKP.PrimaryKey + ")"))
+					{
+						MEGASTR += '<node id="'+catChildElem.PrimaryKey+'" parent_id="' +catChildElem.parent_object_id+ '" name="' + XmlAttrEncode(catChildElem.name) + '" type="knowledge_part"/>';
+						aParents[ArrayCount(aParents)] = catChildElem.PrimaryKey;
+					}
+				}
+			}
+			
+			aKnowledgeObjects = Array();
+			for (commonKnowledgePartsObject in common.knowledge_parts_objects)
+			{
+				aKnowledgeObjects =  XQuery ('for $obj in ' + commonKnowledgePartsObject.PrimaryKey + 's where $obj/knowledge_parts != "" return $obj');
+				sNameFld = common.exchange_object_types.GetChildByKey(commonKnowledgePartsObject.PrimaryKey).disp_name;
+				for (catObjElem in aKnowledgeObjects)
+				if (ArrayOptFind(aParents, "This == " + catObjElem.id) != undefined)
+				{
+					aKnowledgeParts = String(catObjElem.knowledge_parts).split(";");
+					for (sKnowledgeID in aKnowledgeParts)
+						MEGASTR += '<node id="'+catObjElem.PrimaryKey+'" parent_id="' +sKnowledgeID+ '" name="' + XmlAttrEncode(catObjElem.EvalPath(sNameFld)) + '" type="' + commonKnowledgePartsObject.PrimaryKey + '"/>';
+				}
+			}
+		*/
+			MEGASTR += "</tree>";
+			break;
+		default:
+	/*
+	
+	MEGASTR = MEGASTR + '<mindmap>';
+	MEGASTR = MEGASTR + '	<words>';
+	MEGASTR = MEGASTR + '		<word id="king" value="" type="main">';
+				
+	MEGASTR = MEGASTR + '				<word id="mages" value="Mages" type="main">';
+	MEGASTR = MEGASTR + '					<word value="Wizard" description="This is wizard!" />';
+	MEGASTR = MEGASTR + '					<word value="Druid" description="This is druid!" />';
+	MEGASTR = MEGASTR + '					<word value="Transmuter" description="This is transmuter!" />';
+	MEGASTR = MEGASTR + '				</word>';
+	MEGASTR = MEGASTR + '				<word value="General" description="War lord!" type="main">';
+	MEGASTR = MEGASTR + '					<word value="Zoldat" id="soldier"/>';
+	MEGASTR = MEGASTR + '				</word>';
+					
+	MEGASTR = MEGASTR + '				<word value="Peasant" type="main">';
+	MEGASTR = MEGASTR + '					<word value="Worker"/>';
+	MEGASTR = MEGASTR + '					<word value="Smith"/>';
+	MEGASTR = MEGASTR + '					<word value="Farmer"/>';
+	MEGASTR = MEGASTR + '					<word value="Alchemist" type="main"/>';
+	MEGASTR = MEGASTR + '				</word>';
+	MEGASTR = MEGASTR + '		</word>';
+	MEGASTR = MEGASTR + '	</words>';
+	MEGASTR = MEGASTR + '	<links>';
+			
+	MEGASTR = MEGASTR + '		<link a="transmuter" b="alchemist" />';
+	MEGASTR = MEGASTR + '		<link a="alchemist" b="transmuter" />';
+	MEGASTR = MEGASTR + '		<link a="worker" b="farmer"/>';
+	MEGASTR = MEGASTR + '		<link a="worker" b="smith"/>';
+	
+	MEGASTR = MEGASTR + '	</links>';
+	MEGASTR = MEGASTR + '</mindmap>';
+	*/
+	
+		LINKSTR="<links>";
+		
+		function build_part(_part, _parent_part)
+		{			
+			if (_part == undefined)
+			{
+				curPartsArray = ArraySelect(partsArray , "parent_object_id.HasValue == false");
+			}
+			else
+			{			
+				MEGASTR = MEGASTR + '<word id="' + _part.id + '" value="' + XmlAttrEncode(_part.name) + '">';
+				if (_part.experts.HasValue)
+				{
+					_experts_pack = String(_part.experts).split(";");
+						for (_ep_id in _experts_pack)
+							LINKSTR = LINKSTR + '<link a="' + _ep_id + '" b="' + _part.id + '" /><link a="' + _part.id + '" b="' + _ep_id + '"/>';
+				}			
+				curPartsArray = ArraySelect(partsArray , "parent_object_id == _part.id");
+			}
+		
+			for (_new_part in curPartsArray)
+			{
+				build_part(_new_part, _part);
+			}
+			
+			
+			if (_part != undefined)
+			{
+				MEGASTR = MEGASTR + '</word>';
+			}
+		
+		}
+			
+			
+		MEGASTR = MEGASTR + '<mindmap>';
+		MEGASTR = MEGASTR + '	<words>';
+		MEGASTR = MEGASTR + '		<word id="king" value="' + XmlAttrEncode(tools.get_web_str('vkm_knowledge_map')) + '" type="main">';
+		MEGASTR = MEGASTR + '			<word id="knowledge_classifiers" value="' + XmlAttrEncode(tools.get_web_str('vkpb_classifier')) + '" type="main">';
+		
+			for (_classifier in knowledge_classifiers)
+			{
+				curPartsArray = Array();
+						
+				MEGASTR = MEGASTR + '<word id="' + _classifier.id + '" value="' + XmlAttrEncode(_classifier.name) + '" type="main">';
+					partsArray = XQuery("for $knowledge_part in knowledge_parts where $knowledge_part/knowledge_classifier_id = " + _classifier.id + " order by $knowledge_part/name return $knowledge_part");
+									
+					build_part(undefined, undefined);
+					
+				MEGASTR = MEGASTR + '</word>';
+			}
+		MEGASTR = MEGASTR + '			</word>';
+		MEGASTR = MEGASTR + '			<word id="experts" value="' + XmlAttrEncode(tools.get_web_str('vkpb_experts')) + '" type="main">';
+			for (_expert in experts)
+			{
+				MEGASTR = MEGASTR + '<word id="' + _expert.id + '" value="' + XmlAttrEncode(_expert.person_fullname) + '"/>';
+			}
+		MEGASTR = MEGASTR + '			</word>';
+		MEGASTR = MEGASTR + '			<word id="documents" value="' + XmlAttrEncode(tools.get_web_str('vsb_docs')) + '" type="main">';
+				for (_knowledge_parts_object in common.knowledge_parts_objects)
+				{
+					_exchange_type = common.exchange_object_types.GetOptChildByKey(_knowledge_parts_object.PrimaryKey);
+					if (_exchange_type != undefined)
+					{
+						_ooo_object_type = _exchange_type.name;
+						_ooo_object_type_name = _exchange_type.title;
+					}
+					else
+					{
+						_ooo_name = '???';
+						_ooo_object_type = '';	
+					}
+				
+				
+					MEGASTR = MEGASTR + '<word id="' + _knowledge_parts_object.PrimaryKey + '" value="' + XmlAttrEncode(_ooo_object_type_name) + '" type="main">';
+					
+					_docs = XQuery("for $obj in " + _knowledge_parts_object.PrimaryKey + "s where $obj/knowledge_parts != null() return $obj");
+						
+					for (_doc in _docs)
+					{
+					
+						if (_exchange_type != undefined)
+							_ooo_name = _doc.EvalPath(_exchange_type.disp_name);
+						else
+							_ooo_name = '???';
+							
+						MEGASTR = MEGASTR + '<word id="' + _doc.id + '" value="' + XmlAttrEncode(_ooo_name, '"', '&quot;') + '"/>';
+						
+						_knowledge_pack = String(_doc.knowledge_parts).split(";");
+						for (_kn_id in _knowledge_pack)
+							LINKSTR = LINKSTR + '<link a="' + _kn_id + '" b="' + _doc.id + '" /><link a="' + _doc.id + '" b="' + _kn_id + '"/>';	
+						
+					}
+					MEGASTR = MEGASTR + '</word>';
+				}
+		MEGASTR = MEGASTR + '			</word>';
+		MEGASTR = MEGASTR + '		</word>';
+		MEGASTR = StrReplace(MEGASTR, ")", "]") + '	</words>';
+			
+		LINKSTR = LINKSTR + "</links>";
+			
+		MEGASTR = StrReplace(MEGASTR, "(", "[") + LINKSTR + '</mindmap>';
+	}
+	//Response.Write(MEGASTR);
+//MEGASTR += "<!-- END " + (GetCurTicks() - iSTART) / 1000.0+ " -->";
+	Response.Write(EncodeCharset(MEGASTR, _encoding));
+	Cancel();
+%>

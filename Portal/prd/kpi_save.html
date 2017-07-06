@@ -1,0 +1,586 @@
+<%
+Server.Execute( "include/user_init.html" );
+
+	//alert("!! START SAVING KPI !!!");
+	
+	docPaResponse = OpenDoc( UrlFromDocID( Int(Request.Form.pa_id) ) )
+	
+	curAssessmentAppraiseID = docPaResponse.TopElem.assessment_appraise_id;
+	curAssessmentAppraise = OpenDoc( UrlFromDocID( curAssessmentAppraiseID )).TopElem;
+
+	/* ---=== IMPERSONATE BLOCK ===--- */
+	try
+	{
+		Session.ImpersonatePersonID = Int(Session.ImpersonatePersonID);
+	}
+	catch(_no_trace_)
+	{
+		Session.ImpersonatePersonID = null;
+	}
+	arrImpersonates = ArraySelect(curAssessmentAppraise.impersonate_persons, "impersonator_id == " + curUserID + " && face_person_id.HasValue && (from_date.HasValue == false || from_date <= DateNewTime(Date())) && (to_date.HasValue == false || to_date >= DateNewTime(Date()))");
+	
+	if (Session.ImpersonatePersonID != null && ArrayOptFind(arrImpersonates, "face_person_id == " + Session.ImpersonatePersonID) != undefined)
+		_bIsFakePerson = true;
+	else
+		_bIsFakePerson = false;
+	
+	if (_bIsFakePerson)
+	{
+		curPersonID = Session.ImpersonatePersonID;
+		curPerson = OpenDoc(UrlFromDocID(curPersonID)).TopElem;
+		Session.ImpersonatePersonID = curPersonID;
+	}
+	else
+	{
+		curPersonID = curUserID;
+		curPerson = curUser;
+		Session.ImpersonatePersonID = null;
+	}
+	
+	/* ---=== ================= ===--- */
+	if (global_settings.settings.check_wf_access_assessment)
+	{
+		curPA = docPaResponse.TopElem;
+		IS_HUMAN = !curPA.flag_appraise_department;
+		
+		_temp_assessment_plan = ArrayFirstElem(XQuery( 'for $assessment_plan in assessment_plans where $assessment_plan/assessment_appraise_id = ' + docPaResponse.TopElem.assessment_appraise_id +(IS_HUMAN ? ' and $assessment_plan/person_id = ' + curPA.person_id : ' and $assessment_plan/department_id = ' + curPA.department_id) + ' return $assessment_plan' ));
+		
+		if (curAssessmentAppraise.flag_use_plan)
+		{
+			curAssessmentPlanID = _temp_assessment_plan.id;
+			curAssessmentPlan = OpenDoc( UrlFromDocID( curAssessmentPlanID ) ).TopElem;	
+		}
+		else
+		{
+			curAssessmentPlanID = docPaResponse.DocID;
+			curAssessmentPlan = curPA;
+		}
+	
+		Server.Execute( "view_assessment_access_variables.html" );
+		if (IS_MODIFY == false)
+		{
+			Response.Redirect( "view_doc.html" );
+			Cancel();
+		}
+	}	
+	
+	kpisunid_all = "";
+	kpidescs_all = "";
+	kpirate_all = "";
+	kpifacts_all = "";
+	kpiweights_all = "";
+	
+	kpivisible_all="";
+	kpi_wf_info = "";
+	kpi_wf_values = "";
+	
+	
+	try
+	{
+		PLAN = Request.Form.plan;
+	}
+	catch(_oops_)
+	{
+		PLAN = "0";
+	}
+	
+	try
+	{		
+		isflawed = Request.Form.isflawed;
+		comment = ( Request.Form.HasProperty("comment") ? Request.Form.comment : '');
+		overall = Real(Request.Form.field_mbo);
+	}
+	catch(_hren_)
+	{
+		overall = undefined;
+	}
+	
+	
+	try
+	{		
+		chech_resp = eval(Request.Form.chech_resp);
+	}
+	catch(_hren_)
+	{
+		chech_resp = false;
+	}
+		
+	if (overall == undefined && Request.Form.HasProperty("field_project_mbo") && Request.Form.GetProperty("field_project_mbo") != "")
+	{
+		try
+		{
+			overall = Real(Request.Form.GetProperty("field_project_mbo"));
+		}
+		catch(_epta_)
+		{
+			overall = undefined;
+		}
+	}
+
+
+
+	try
+	{				
+		kpisunid_all = Request.Form.multi_ids;
+		kpiplans_all = Request.Form.multi_plans;
+		if ( PLAN != "1" )
+		{
+			if (Request.Form.HasProperty("multi_rates"))
+				kpirate_all = Request.Form.multi_rates;
+			else
+				kpirate_all = undefined;
+			if (Request.Form.HasProperty("multi_facts"))
+				kpifacts_all = Request.Form.multi_facts;
+			else
+				kpifacts_all = undefined;
+		}
+		kpiweights_all = Request.Form.multi_weights;
+		
+		kpi_wf_info = Request.Form.multi_wfinfo + "";
+	
+		if (kpi_wf_info != "")
+		{
+			kpi_wf_values = Request.Form.multi_wfvalues;
+		}
+		
+		if (chech_resp)
+		{
+			if (Request.Form.HasProperty("multi_visibles"))
+				kpivisible_all= Request.Form.multi_visibles;
+			else
+				kpivisible_all= undefined;	
+		}
+		
+	}
+	catch(_hren_)
+	{
+	}
+	
+	count = 0;
+	try
+	{
+	
+	kpisunid = String(kpisunid_all).split('^');
+	kpiplans = String(kpiplans_all).split('^');
+	if ( PLAN != "1")
+	{
+		if (kpirate_all != undefined)
+			kpirate = String(kpirate_all).split('^');
+		if (kpifacts_all != undefined)
+			kpifacts = String(kpifacts_all).split('^');
+	}
+	
+	if (chech_resp)
+	{
+		if (kpivisible_all != undefined)
+			kpivisible= String(kpivisible_all).split('^');
+	}
+	
+	kpiweights = String(kpiweights_all).split('^');
+			
+	count = ArrayCount(kpisunid);
+	
+	wf_info = String(kpi_wf_info).split("^");
+	wf_values = String(kpi_wf_values).split("^");
+		
+	for (_t_kpi in ArraySelectAll(docPaResponse.TopElem.kpis))
+	{
+		flag = 0;
+		for (_kunid in kpisunid)
+		{
+				if (StrInt(_t_kpi.PrimaryKey) == _kunid)
+				{					
+					flag = 1;
+					break;
+				}			
+		}
+		
+		if (flag == 0)
+		{
+			//alert("deleted!");
+			_t_kpi.Delete();
+		}				
+	}
+	
+	i=0;
+	for (_kunid in kpisunid)
+	{	
+		if(_kunid != '')
+		{
+			//alert('chech_resp='+chech_resp+' kpivisible_all='+kpivisible_all+' kpivisible['+i+']='+kpivisible[i])
+			if (chech_resp)
+			{
+				if (kpivisible_all != undefined)
+				{
+					if (kpivisible[i]!='1')
+					{
+						i++;
+						continue;
+					}
+				}
+			}
+			_kpi = docPaResponse.TopElem.kpis.ObtainChildByKey(Int(_kunid));
+					
+			_kpi.plan = kpiplans[i];
+			if ( PLAN != "1")
+			{	if (kpirate_all != undefined)
+					_kpi.fact = kpifacts[i];
+				if (kpifacts_all != undefined)
+					_kpi.mark = kpirate[i];
+			}	
+			_kpi.weight = kpiweights[i];
+			
+			
+			if (kpi_wf_info != "" && ArrayCount(wf_info) > i && wf_info[i] + "" != "")
+			{
+				this_wf_info = String(wf_info[i]).split("&|&");
+				this_wf_values = String(wf_values[i]).split("&|&");
+				_z = 0;
+				
+				for (_this_wf_info in this_wf_info)
+				{
+					if (_this_wf_info != "")
+					{
+						_this_wf_info_open = String(_this_wf_info).split("$$$$");
+						if (String(_this_wf_info_open[0]) != "")
+						{
+							_cur_wf = _kpi.workflow_fields.ObtainChildByKey(_this_wf_info_open[0]);
+							_cur_wf.field_group_id = _this_wf_info_open[1];
+							_cur_wf.type = _this_wf_info_open[2];
+							_cur_wf.title = _this_wf_info_open[3];
+							if (ArrayCount(this_wf_values) > _z)
+								_cur_wf.value = this_wf_values[_z];
+							else
+								_cur_wf.value.Clear();
+						}
+					}
+					_z++;
+				}
+				
+			}
+			
+			
+			
+			i++;
+		}
+	}	
+	}
+	catch(_op_)
+	{
+		
+	}
+	
+	ex_kpisunid_all = "";
+	ex_kpisnames_all = "";
+	ex_kpiplans_all = "";
+	ex_kpirate_all = "";
+	ex_kpifacts_all = "";
+	ex_kpiweights_all = "";
+	ex_kpithresholds_all = "";
+	ex_kpichallenges_all = "";
+	ex_kpistdprojids_all="";
+	
+	ex_kpivisible_all="";
+	
+	
+	ex_wf_info = "";
+	ex_wf_values = "";
+	
+		
+	try
+	{			
+		ex_kpisunid_all = Request.Form.multi_ex_ids;
+		ex_kpisname_all = Request.Form.multi_ex_names;
+		ex_kpiplans_all = Request.Form.multi_ex_plans;
+		if ( PLAN != "1")
+		{
+			if (Request.Form.HasProperty("multi_ex_rates"))
+				ex_kpirate_all = Request.Form.multi_ex_rates;
+			else
+				ex_kpirate_all = undefined;
+				
+			if (Request.Form.HasProperty("multi_ex_facts"))
+				ex_kpifacts_all = Request.Form.multi_ex_facts;
+			else
+				ex_kpifacts_all = undefined;
+		}
+		
+		ex_kpiweights_all = Request.Form.multi_ex_weights;		
+		if (Request.Form.HasProperty("multi_ex_thresholds"))
+			ex_kpithresholds_all = Request.Form.multi_ex_thresholds;
+		if (Request.Form.HasProperty("multi_ex_challenges"))
+			ex_kpichallenges_all = Request.Form.multi_ex_challenges;
+		
+		if (Request.Form.HasProperty("multi_ex_standard_project_ids"))
+			ex_kpistdprojids_all = Request.Form.multi_ex_standard_project_ids;	
+			
+			
+		ex_wf_info = Request.Form.multi_ex_wfinfo + "";
+	
+		if (ex_wf_info != "")
+		{
+			ex_wf_values = Request.Form.multi_ex_wfvalues;
+			
+		}
+		
+		if (chech_resp)
+		{
+			if (Request.Form.HasProperty("multi_ex_visibles"))
+				ex_kpivisible_all= Request.Form.multi_ex_visibles;
+			else
+				ex_kpivisible_all= undefined;	
+		}
+			
+	}
+	catch(_hren_)
+	{
+	}
+	
+	try
+	{
+	
+	ex_kpisunid = String(ex_kpisunid_all).split('^');
+	ex_kpisname = String(ex_kpisname_all).split('^');
+	ex_kpiplans = String(ex_kpiplans_all).split('^');
+	ex_kpistdprojids = String(ex_kpistdprojids_all).split('^');
+	if ( PLAN != "1")
+	{
+		if (ex_kpirate_all != undefined)
+			ex_kpirate = String(ex_kpirate_all).split('^');
+		if (ex_kpifacts_all != undefined)
+			ex_kpifacts = String(ex_kpifacts_all).split('^');
+	}
+	ex_kpiweights = String(ex_kpiweights_all).split('^');
+			
+	ex_kpithresholds = String(ex_kpithresholds_all).split('^');
+	ex_kpichallenges = String(ex_kpichallenges_all).split('^');
+	
+	
+	if (chech_resp)
+	{
+		if (ex_kpivisible_all != undefined)
+			ex_kpivisible= String(ex_kpivisible_all).split('^');
+	}
+	
+	ex_count = ArrayCount(ex_kpisunid);	
+	
+	wf_info = String(ex_wf_info).split("^");
+	wf_values = String(ex_wf_values).split("^");
+	
+	arrDeadOnes = Array();
+	for (_t_project in docPaResponse.TopElem.projects)
+	{
+		flag = 0;
+		for (_punid in ex_kpisunid)
+		{					
+				if (_t_project.project_id == _punid)
+				{					
+					flag = 1;
+					break;
+				}			
+		}
+		
+		if (flag == 0)
+		{			
+			arrDeadOnes[ArrayCount(arrDeadOnes)] = _t_project;
+		}				
+	}
+	
+	for (elemDead in arrDeadOnes)
+		elemDead.Delete();
+	
+	
+	k=0;
+	for (_punid in ex_kpisunid)
+	{	
+		if(_punid != '')	
+		{
+			//alert('chech_resp='+chech_resp+' ex_kpivisible_all='+ex_kpivisible_all+' ex_kpivisible['+k+']='+ex_kpivisible[k])
+			if (chech_resp)
+			{
+				if (ex_kpivisible_all != undefined)
+				{
+					if (ex_kpivisible[k]!='1')
+					{
+						k++;
+						continue;
+					}
+				}
+			}
+			_project = docPaResponse.TopElem.projects.ObtainChildByKey(_punid);
+			_project.name = ex_kpisname[k];
+			_project.plan = ex_kpiplans[k];
+			//alert("_project.name="+_project.name)
+			kpi_type ='';
+			if (ex_kpistdprojids_all != "")
+			{
+				_project.standard_project_id = ex_kpistdprojids[k];
+				if (Request.Form.HasProperty("kpi_type_"+ex_kpistdprojids[k]))
+				{
+					kpi_type = Request.Form.GetProperty("kpi_type_"+ex_kpistdprojids[k]);
+				}
+			}
+			
+			if ( PLAN != "1")
+			{
+				if (ex_kpifacts_all != undefined)
+					_project.fact = ex_kpifacts[k];
+				if (ex_kpirate_all != undefined)
+					if (ex_kpirate[k] != "N")
+					{
+						try
+						{
+							if (kpi_type =='scale')
+							{
+								try
+								{
+									teKPI=OpenDoc( UrlFromDocID( Int(_project.standard_project_id) ) ).TopElem
+									_scale = teKPI.scales.GetChildByKey(ex_kpirate[k]);
+									//alert(_scale.name);
+									if (_scale.percent != null)
+										_mark=_scale.percent;
+									else
+										_mark=Real(_scale.name);
+								}
+								catch(_snyaga_)
+								{
+									try
+									{
+										_mark=Real(ex_kpirate[k]);
+									}
+									catch(ex)
+									{
+										_mark='';
+									}
+									
+								}
+								_project.mark = _mark;
+							}
+							else
+							{
+								_project.mark = ex_kpirate[k];
+							}
+						}
+						catch(ex)
+						{
+						
+						}
+						
+					}
+			}	
+			
+			
+						
+			if (ex_kpithresholds_all != "")
+				_project.threshold = ex_kpithresholds[k];
+			if (ex_kpichallenges_all != "")
+				_project.challenge = ex_kpichallenges[k];
+
+			
+			
+			_weight = ex_kpiweights[k];
+			_project.weight = _weight;
+				
+			
+			if (ex_wf_info != "" && ArrayCount(wf_info) > k && wf_info[k] + "" != "")
+			{
+				this_wf_info = String(wf_info[k]).split("&|&");
+				this_wf_values = String(wf_values[k]).split("&|&");
+				_z = 0;
+				
+				for (_this_wf_info in this_wf_info)
+				{
+					if (_this_wf_info != "")
+					{
+						_this_wf_info_open = String(_this_wf_info).split("$$$$");
+						if (String(_this_wf_info_open[0]) != "")
+						{
+							_cur_wf = _project.workflow_fields.ObtainChildByKey(_this_wf_info_open[0]);
+							_cur_wf.field_group_id = _this_wf_info_open[1];
+							_cur_wf.type = _this_wf_info_open[2];
+							_cur_wf.title = _this_wf_info_open[3];
+							if (ArrayCount(this_wf_values) > _z)
+								_cur_wf.value = this_wf_values[_z];
+							else
+								_cur_wf.value.Clear();
+						}
+					}
+					_z++;
+				}
+				
+			}
+			
+			
+			k++;
+		}
+	}	
+	
+	}
+	catch(_op_)
+	{}
+	
+	if (isflawed =="1")
+		docPaResponse.TopElem.is_done = false;
+	else
+		docPaResponse.TopElem.is_done = true;
+	
+	if (Request.Form.HasProperty("save_comment") && Request.Form.GetProperty("save_comment") == "1")
+		docPaResponse.TopElem.comment = comment;
+	else
+		tools_ass.place_pa_comment( docPaResponse, curPersonID, undefined, comment);
+	
+	qcount = (Request.Form.HasProperty("stq_count") ?  Int(Request.Form.stq_count) : 0);
+	for (j = 0; j<qcount; j++)
+	{
+		try
+		{
+			q_id = Int(Request.Form.GetProperty("stq_id_" + j));
+			teQ = OpenDoc(UrlFromDocID(q_id)).TopElem;
+		}
+		catch(_zhopa_)
+		{
+			continue;
+		}
+		
+		if (teQ.type == "3")
+		{
+			q_mark = "";
+			for (_scale in teQ.scales)
+				if (Request.Form.GetOptProperty("stq_mark_" + j + "_" + _scale.id, "") == "1")
+					q_mark += (q_mark != "" ? ";" : "") + _scale.id;
+		}		
+		else
+			q_mark = Request.Form.GetOptProperty("stq_mark_" + j, "");
+		_questions = docPaResponse.TopElem.supplementary_questions.ObtainChildByKey(q_id);
+		_questions.supplementary_question_mark = q_mark;
+	}
+	
+	
+	if (overall != undefined)
+	{
+		docPaResponse.TopElem.overall = Real(StrReal(overall, 2));
+	}
+	else
+	{
+		docPaResponse.TopElem.overall.Clear();
+	}
+		
+		
+	_href = 'view_doc.html?mode=assessment_appraise&doc_id=' + Request.Form.doc_id +'&pa_id='+Request.Form.pa_id + '&assessment_appraise_id=' + Request.Form.assessment_appraise_id + '&assessment_appraise_type=' + Request.Form.assessment_appraise_type +'&f_id=' + Random(0, 9999999);
+	if (Request.Form.HasProperty("is_post") && Request.Form.GetProperty("is_post") == "1")
+	_href = _href + '&is_post=1';
+		
+	if (Request.Form.HasProperty("custom_post_web_template_id"))
+	try
+	{
+		tools_web.insert_custom_code(Int(Request.Form.GetProperty("custom_post_web_template_id")), null,true,true);
+	}
+	catch(_oi_)
+	{}
+		
+	docPaResponse.TopElem.flag_is_processed = true;
+	docPaResponse.TopElem.appraise_date = Date();
+	docPaResponse.Save();
+	
+	Response.Redirect( _href );
+%>

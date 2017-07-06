@@ -1,0 +1,21 @@
+<%
+Server.Execute( 'server_init.html' );
+
+curUpdateList = OpenNewDoc( "x-local://wtv/wtv_form_download_packages.xmd" ).TopElem;
+if ( ArrayCount( upload_packages ) > 0 )
+{
+	for ( _package in upload_packages )
+	{
+		_child = curUpdateList.AddChild();
+		_child.AssignElem( _package );
+		_child.id = _package.code;
+		_child.url = '/get_update_file.html?id=' + _package.code;
+	}
+	
+	Response.Write( '<?xml version="1.0" encoding="windows-1251"?>' + curUpdateList.Xml );
+}
+else
+{
+	Response.Write( '<?xml version="1.0" encoding="windows-1251"?><download_packages/>' );
+}
+%>

@@ -1,0 +1,717 @@
+<%
+isNew = ( curObjectID == null );
+
+_flag_continue = true;
+if ( isNew )
+{
+	if ( curUser.in_request_black_list )
+	{
+%>
+<center><b><%=tools.get_web_str('veb_text_in_request_black_list')%></b></center>
+<%
+		_flag_continue = false;
+	}
+	else if ( curObject.object_id.HasValue )
+	{
+		if ( curObject.ChildExists( 'date_request_over' ) && curObject.date_request_over.HasValue && curObject.date_request_over < Date() )
+		{
+%>
+<center><b><%=tools.get_web_str('veb_request_time_expired')%></b></center>
+<%
+			_flag_continue = false;
+		}
+		else if ( curObject.ChildExists( 'date_request_begin' ) && curObject.date_request_begin.HasValue && curObject.date_request_over > Date() )
+		{
+%>
+<center><b><%=tools.get_web_str('veb_request_time_begin')%></b></center>
+<%
+			_flag_continue = false;
+		}
+	}
+}
+
+
+
+if ( _flag_continue )
+{
+
+	_mode = '0';
+	if ( Request.QueryString.HasProperty( 'm' ) )
+		_mode = Request.QueryString.m;
+
+	curEducationMethod = null;
+	if ( isNew )
+	{
+		dispDismiss = ( Request.QueryString.HasProperty( 'disp_dismiss' ) && Request.QueryString.disp_dismiss == '1' );
+		dispBlackList = ( Request.QueryString.HasProperty( 'disp_black_list' ) && Request.QueryString.disp_black_list == '1' );
+		dispNonAccess = ( Request.QueryString.HasProperty( 'disp_non_access' ) && Request.QueryString.disp_non_access == '1' );
+
+		dispNonAccessControl = ( curObject.type == 'event' && curObject.object_id.HasValue );
+		if ( dispNonAccess && dispNonAccessControl )
+			try
+			{
+				if ( curRequestObject.education_method_id.HasValue )
+					curEducationMethod = OpenDoc( UrlFromDocID( curRequestObject.education_method_id ) ).TopElem;
+				else
+					dispNonAccessControl = false;
+			}
+			catch ( err )
+			{
+				dispNonAccessControl = false;
+			}
+	}
+
+	try
+	{
+		dispRequestTypeSelector;
+	}
+	catch ( t )
+	{
+		dispRequestTypeSelector = false;
+	}
+
+	try
+	{
+		curRedirectMode;
+	}
+	catch ( ss )
+	{
+		curRedirectMode = 'requests';
+	}
+
+	try
+	{
+		isGroup;
+		try
+		{
+			dispGroup;
+		}
+		catch ( ff )
+		{
+			dispGroup = isGroup;
+		}
+	}
+	catch ( ss )
+	{
+		isGroup = isNew ? ( curRequestTypeID == null || curRequestType.is_can_be_group ) : curObject.is_group;
+		dispGroup = true;
+	}
+
+	hideComment=false
+	try
+	{
+		hideComment=curRequestType.hide_portal_comment
+	}
+	catch ( ss )
+	{
+		hideComment=false;
+	}
+
+	forbidRejection=false
+	try
+	{
+		forbidRejection=curRequestType.forbid_rejection
+	}
+	catch ( ss )
+	{
+		forbidRejection=false;
+	}
+
+	forbidCopy=false
+	try
+	{
+		forbidCopy=curRequestType.forbid_copy
+	}
+	catch ( ss )
+	{
+		forbidCopy=false;
+	}
+
+	bossOnly=false
+	try
+	{
+		bossOnly=curRequestType.boss_only
+	}
+	catch ( ss )
+	{
+		bossOnly=false;
+	}
+	dispToAll=true;
+
+	curPersonsArray = Array();
+	if ( dispGroup )
+	{
+		if ( isNew )
+		{
+			if ( curRequestTypeID == null || curRequestType.is_can_be_group )
+			{
+				if ( Request.QueryString.HasProperty( 'isg' ) )
+					dispGroup = Request.QueryString.isg == '1';
+				else if ( curRequestTypeID != null )
+					dispGroup = curRequestType.is_group;
+
+				if ( curUser.access.access_role == 'admin' )
+				{
+					if ( dispGroup )
+						curPersonsArray = XQuery( 'for $elem in collaborators order by $elem/fullname return $elem' );
+				}
+				else
+				{
+					curPersonsArray = tools.get_sub_persons_by_func_manager_id( curUserID );
+					isGroup = ArrayCount( curPersonsArray ) != 0;
+
+					if ( isGroup && ( curRequestTypeID == null || curRequestType.is_can_be_add_youself ) && ArrayOptFindByKey( curPersonsArray, curUserID, 'PrimaryKey' ) == undefined )
+						curPersonsArray	= ArrayUnion( curPersonsArray, XQuery( 'for $elem in collaborators where $elem/id = ' + curUserID + ' return $elem' ) );
+				}
+
+				if ( ! dispDismiss || ! dispBlackList )
+					curPersonsArray = ArraySelect( curPersonsArray, ( ! dispDismiss ? '! is_dismiss' : '' ) + ( ! dispBlackList ? ( ! dispDismiss ? ' && ' : '' ) + '! in_request_black_list' : '' ) );
+
+				if ( curEducationMethod != null )
+				{
+					tempPersonsArray = Array();
+					tempPersonsArrayCounter = 0;
+
+					for ( _person in curPersonsArray )
+						try
+						{
+							if ( tools_web.check_access( curEducationMethod, _person.PrimaryKey ) == true )
+							{
+								tempPersonsArray[ tempPersonsArrayCounter ] = _person;
+								tempPersonsArrayCounter++;
+							}
+						}
+						catch ( err )
+						{
+						}
+
+					curPersonsArray = tempPersonsArray;
+				}
+
+				dispGroup = ( isGroup && dispGroup );
+
+
+			}
+			else
+			{
+				dispGroup = false;
+			}
+		}
+		else
+		{
+			dispGroup = isGroup;
+			if ( ArrayCount( curObject.persons ) != 0 )
+			{
+				dispGroup = true;
+				curPersonsArray = ArrayExtract( curObject.persons, 'PrimaryKey' );
+				curPersonsArray = QueryCatalogByKeys( 'collaborators', 'id', curPersonsArray );
+			}
+		}
+	}
+
+	if ( !dispGroup )
+	{
+		if (isNew)
+		{
+			if (bossOnly)
+			{
+				if ( curUser.access.access_role == 'admin' )
+				{
+					dispToAll=true;
+				}
+				else
+				{
+					curSubPersonsArray = tools.get_sub_persons_by_func_manager_id( curUserID );
+					dispToAll = ArrayOptFirstElem( curSubPersonsArray ) != undefined;
+				}
+			}
+		}
+	}
+
+
+	switch ( _mode )
+	{
+		case '1':
+%>
+	<br/><br/>
+	<center><font color="#009900"><b><%=tools.get_web_str('verb_message1')%></b></font></center>
+<%
+			break;
+
+		case '3':
+%>
+	<br/><br/>
+	<center><font color="#FF3333"><b><%=tools.get_web_str('verb_message2')%></b></font></center>
+<%
+			break;
+	}
+
+
+
+
+	if ( isNew )
+	{
+%>
+	<div class="headerText" style="margin-top:10px;margin-bottom:5px;margin-left:5px;"><%=tools.get_web_str('verb_title')%></div>
+<%
+	}
+
+	if (!dispToAll)
+	{
+%>
+<script language="JavaScript">
+	alert(<%=CodeLiteral( tools_web.get_web_str('vrb_boss_mess') )%>)
+</script>
+<%
+	}
+%>
+
+<table width="100%" cellspacing="5" cellpadding="0">
+<form action="request_create.html?redirect_mode=<%=curRedirectMode%>" name="set_request_form" method="POST" enctype="multipart/form-data">
+<input type="hidden" name="doc_id" value="<%=curDocID%>">
+<input type="hidden" name="sid" value="<%=tools.get_sum_sid( curDocID )%>">
+<input type="hidden" name="selected_object_ids" id="selected_object_ids" value=""/>
+<tr>
+	<td>
+
+	<table width="100%" cellspacing="0" cellpadding="0" class="tableBorder">
+<%
+	if ( dispRequestTypeSelector )
+	{
+		curQueryString = tools_web.get_query_string( true, 'request_type_id;request_object_id' );
+%>
+	<tr>
+		<td width="140" align="RIGHT"><b><%=tools.get_web_str('c_type')%>:</b>&nbsp;</td>
+		<td style="font-weight:normal">
+		<select name="request_type_id" id="request_type_ids" onchange="document.location.href='<%=curQueryString%>request_object_id='+(document.getElementById('object_ids')?document.getElementById('object_ids').value:'')+'&request_type_id='+this.value;return false;">
+<%
+			objectArray = XQuery( "for $elem in request_types " + ( curRequestObjectType != null ? "where $elem/object_type = '" + curRequestObjectType + "'" : "" ) + " order by $elem/name return $elem" );
+			for ( _object in objectArray )
+			{
+%>
+			<option value="<%=_object.PrimaryKey.Value%>"><%=tools_web.get_cur_lng_name( _object.name )%></option>
+<%
+			}
+%>
+	   </select>
+<script language="JavaScript">
+selcur=document.getElementById('request_type_ids');
+selcur.selectedIndex = -1;
+for (i=0;i<selcur.options.length;i++)
+	if (selcur.options[i].value=="<%=curObject.request_type_id%>")
+	{
+		selcur.selectedIndex=i;
+		break;
+	}
+</script>
+		</td>
+	</tr>
+<%
+	}
+	else if ( curObject.request_type_id.HasValue )
+	{
+%>
+	<input type="hidden" name="request_type_id" id="request_type_ids" value="<%=curObject.request_type_id%>">
+	<tr>
+		<td width="140" align="RIGHT"><b><%=tools.get_web_str('c_type')%>:</b>&nbsp;</td>
+		<td style="font-weight:normal"><%=tools_web.get_cur_lng_name( curObject.request_type_id.ForeignElem.name )%></td>
+	</tr>
+<%
+	}
+
+	if ( isNew )
+	{
+		if ( curObject.type.HasValue )
+		{
+			_common_obj = curLngCommon.exchange_object_types.GetChildByKey( curObject.type );
+%>
+	<tr>
+		<td width="140" align="RIGHT"><b><%=_common_obj.title%>:</b>&nbsp;</td>
+		<td style="font-weight:normal">
+<%
+		if ( curObject.object_id.HasValue )
+		{
+            if( StrBegins( curObject.type, "cc_" ) )
+			{
+				_url = "view_doc.html?mode=doc_type&object_id=" + curObject.object_id + "&doc_id=" + curDocID;
+			}
+			else
+            {
+				sObjectMode = _common_obj.web_template.HasValue ? _common_obj.web_template : "view_doc.html?mode=" + curObject.type;
+	            _url = sObjectMode + "&object_id=" + curObject.object_id + "&doc_id=" + curDocID;
+            }
+%>
+			<input type="hidden" id="object_ids" name="object_id" value="<%=curObject.object_id%>">
+			<a href="<%=_url%>" title="<%=tools.get_web_str('c_tip_event')%>"><%=tools_web.get_cur_lng_name( curRequestObject.Child( _common_obj.disp_name ) )%></a>
+<%
+		}
+		else
+		{
+%>
+			<select name="object_id" id="object_ids">
+				<option SELECTED value=""></option>
+<%
+			_where_str = '';
+			try
+			{
+				_catalog_doc = tools.new_doc_by_name(curObject.type + "s", true).TopElem.AddChild();
+				if ( curObject.type == 'assessment' )
+				{
+					_where_str = 'where $elem/is_open = false()';
+				}
+				else
+				{
+					if ( _catalog_doc.ChildExists( 'is_open' ) )
+						_where_str = 'where $elem/is_open = true()';
+					else if ( _catalog_doc.ChildExists( 'yourself_start' ) )
+							_where_str = 'where $elem/yourself_start = false()';
+				}
+			}
+			catch ( dd )
+			{
+				alert( dd );
+			}
+
+			_objs = XQuery( "for $elem in " + curObject.type + "s " + _where_str + " return $elem" );
+			for ( _obj in _objs )
+			{
+%>
+				<option value="<%=_obj.PrimaryKey.Value%>"><%=tools_web.get_cur_lng_name( _obj.Child( _common_obj.disp_name ) )%></option>
+<%
+			}
+%>
+		   </select>
+<script language="JavaScript">
+selcur=document.getElementById('object_ids');
+selcur.selectedIndex = -1;
+for (i=0;i<selcur.options.length;i++)
+	if (selcur.options[i].value=="<%=curRequestObjectID%>")
+	{
+		selcur.selectedIndex=i;
+		break;
+	}
+</script>
+<%
+		}
+%>
+		</td>
+	</tr>
+<%
+		}
+	}
+	else
+	{
+%>
+	<tr>
+		<td width="140" align="RIGHT"><b><%=tools.get_web_str('c_coll_in_req')%>:</b>&nbsp;</td>
+<%
+	try
+	{
+		 collabr_link = "view_doc.html?mode=collaborator&object_id=" + curObject.person_id + "&doc_id=" + curDocID ;
+	}
+	catch(ex)
+	{
+		collabr_link ='';
+	}
+%>
+		<td style=" font-weight:normal"><a href="<%=collabr_link%>"><%=curObject.person_fullname%></a></td>
+	</tr>
+	<tr>
+		<td width="140" align="RIGHT"><b><%=tools.get_web_str('c_position')%>:</b>&nbsp;</td>
+		<td style=" font-weight:normal"><%=tools_web.get_cur_lng_name( curObject.person_position_name )%></td>
+	</tr>
+	<tr>
+		<td width="140" align="RIGHT"><b><%=tools.get_web_str('c_subd')%>:</b>&nbsp;</td>
+		<td style=" font-weight:normal"><%=tools_web.get_cur_lng_name( curObject.person_subdivision_name )%></td>
+	</tr>
+<%
+		if ( curObject.type.HasValue )
+		{
+			_common_obj = curLngCommon.exchange_object_types.GetChildByKey( curObject.type );
+%>
+	<tr>
+		<td width="140" align="RIGHT"><b><%=_common_obj.title%>:</b>&nbsp;</td>
+		<td style=" font-weight:normal">
+<%
+			if( StrBegins( curObject.type, "cc_" ) )
+			{
+				_url = "view_doc.html?mode=doc_type&object_id=" + curObject.object_id + "&doc_id=" + curDocID;
+			}
+			else
+            {
+				sObjectMode = _common_obj.web_template.HasValue ? _common_obj.web_template : "view_doc.html?mode=" + curObject.type;
+	            _url = sObjectMode + "&object_id=" + curObject.object_id + "&doc_id=" + curDocID;
+            }
+%>
+
+        <a href="<%=_url%>" title="<%=tools.get_web_str('c_tip_event')%>"><%=tools_web.get_cur_lng_name( curObject.object_name )%></a></td>
+	</tr>
+<%
+		}
+	}
+
+	if (!hideComment)
+	{
+%>
+
+	<tr>
+		<td width="140" align="RIGHT"><b><%=tools.get_web_str('verb_comment')%>:</b>&nbsp;</td>
+		<td style=" font-weight:normal"><textarea rows="2" cols="50" name="comment" class="inputTextarea" style="width: 500px; height: 50px;"><%=curObject.comment%></textarea></td>
+	</tr>
+<%
+	}
+
+	if ( isGroup )
+	{
+		if ( isNew )
+			curQueryString = tools_web.get_query_string( true, 'request_type_id;request_object_id;isg;disp_dismiss;disp_black_list;disp_non_access' );
+%>
+	<tr>
+		<td>&nbsp;</td>
+		<td><input type="checkbox" name="is_group" id="is_groups" <%=( dispGroup ? 'checked="checked"' : '' )%> onclick="<%=( isNew ? "document.location.href='" + curQueryString + "request_type_id='+(document.getElementById('request_type_ids')?document.getElementById('request_type_ids').value:'')+'&request_object_id='+(document.getElementById('object_ids')?document.getElementById('object_ids').value:'')+'&disp_dismiss='+(document.getElementById('disp_dismiss')&&document.getElementById('disp_dismiss').checked?'1':'0')+'&disp_black_list='+(document.getElementById('disp_black_list')&&document.getElementById('disp_black_list').checked?'1':'0')+'&disp_non_access='+(document.getElementById('disp_non_access')&&document.getElementById('disp_non_access').checked?'1':'0')+'&isg='+(this.checked?'1':'0');" : "" )%>return false;"/><%=tools.get_web_str('vrb_is_group')%></td>
+	</tr>
+<%
+		if ( isNew && dispGroup )
+		{
+			if ( curWebCommon.disp_checkbox_dismiss )
+			{
+%>
+	<tr>
+		<td>&nbsp;</td>
+		<td><input type="checkbox" name="disp_dismiss" id="disp_dismiss" <%=( dispDismiss ? 'checked="checked"' : '' )%> onclick="<%=( isNew ? "document.location.href='" + curQueryString + "request_type_id='+(document.getElementById('request_type_ids')?document.getElementById('request_type_ids').value:'')+'&request_object_id='+(document.getElementById('object_ids')?document.getElementById('object_ids').value:'')+'&isg=1&disp_black_list='+(document.getElementById('disp_black_list')&&document.getElementById('disp_black_list').checked?'1':'0')+'&disp_non_access='+(document.getElementById('disp_non_access')&&document.getElementById('disp_non_access').checked?'1':'0')+'&disp_dismiss='+(this.checked?'1':'0');" : "" )%>return false;"/><%=tools.get_web_str('c_disp_dismiss')%></td>
+	</tr>
+<%
+			}
+
+			if ( curWebCommon.disp_checkbox_blacklist )
+			{
+%>
+	<tr>
+		<td>&nbsp;</td>
+		<td><input type="checkbox" name="disp_black_list" id="disp_black_list" <%=( dispBlackList ? 'checked="checked"' : '' )%> onclick="<%=( isNew ? "document.location.href='" + curQueryString + "request_type_id='+(document.getElementById('request_type_ids')?document.getElementById('request_type_ids').value:'')+'&request_object_id='+(document.getElementById('object_ids')?document.getElementById('object_ids').value:'')+'&isg=1&disp_dismiss='+(document.getElementById('disp_dismiss')&&document.getElementById('disp_dismiss').checked?'1':'0')+'&disp_non_access='+(document.getElementById('disp_non_access')&&document.getElementById('disp_non_access').checked?'1':'0')+'&disp_black_list='+(this.checked?'1':'0');" : "" )%>return false;"/><%=tools.get_web_str('vrb_disp_black_list')%></td>
+	</tr>
+<%
+			}
+
+			if ( dispNonAccessControl )
+			{
+%>
+	<tr>
+		<td>&nbsp;</td>
+		<td><input type="checkbox" name="disp_non_access" id="disp_non_access" <%=( dispNonAccess ? 'checked="checked"' : '' )%> onclick="<%=( isNew ? "document.location.href='" + curQueryString + "request_type_id='+(document.getElementById('request_type_ids')?document.getElementById('request_type_ids').value:'')+'&request_object_id='+(document.getElementById('object_ids')?document.getElementById('object_ids').value:'')+'&isg=1&disp_dismiss='+(document.getElementById('disp_dismiss')&&document.getElementById('disp_dismiss').checked?'1':'0')+'&disp_black_list='+(document.getElementById('disp_black_list')&&document.getElementById('disp_black_list').checked?'1':'0')+'&disp_non_access='+(this.checked?'1':'0');" : "" )%>return false;"/><%=tools.get_web_str('vrb_disp_non_access')%></td>
+	</tr>
+<%
+			}
+		}
+	}
+%>
+	</table>
+
+	</td>
+</tr>
+<tr>
+	<td>
+<%
+		readOnly = true;
+		isModify = isNew || curUserID == curObject.person_id;
+		Server.Execute( "view_custom_templates.html" );
+%>
+	</td>
+</tr>
+<%
+	if ( isNew )
+	{
+%>
+<tr>
+	<td>
+
+	<table width="100%" border="0" cellspacing="0" cellpadding="0" class="activator">
+	<tr>
+		<td align="CENTER" class="activator">
+<%
+			if (dispToAll)
+			{
+%>
+				<input type="button" value="<%=tools.get_web_str('c_text_create_request')%>" class="inputButton" onclick="doSubmit();" onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';">
+<%
+			}
+			else
+			{
+%>
+				<font color='red'><b><%=tools_web.get_web_str('vrb_boss_mess')%></b></font>
+<%
+			}
+%>
+		</td>
+	</tr>
+	</table>
+
+	</td>
+</tr>
+<%
+	}
+%>
+</form>
+
+<%
+	_allow_copy = false;
+	// if (curObject.status_id == 'active')
+	if ( ! isNew && curUserID == curObject.person_id && ! forbidCopy )
+	{
+		_href = "view_doc.html?mode=request_create&doc_id=" + curDocID + ( curObject.request_type_id.HasValue ? "&request_type_id=" + curObject.request_type_id : "" ) + "&source_request_id=" + curObjectID;
+		_allow_copy = true;
+	}
+
+	_allow_reject = false;
+	if ( ! isNew && curObject.status_id == 'active' && curUserID == curObject.person_id && ! forbidRejection )
+	{
+		_allow_reject = true;
+		if ( curObject.object_id.HasValue )
+			try
+			{
+				_baseObject = OpenDoc( UrlFromDocID( curObject.object_id ) ).TopElem;
+
+				if ( _baseObject.ChildExists('date_request_rejection_over') && _baseObject.date_request_rejection_over.HasValue && _baseObject.date_request_rejection_over < Date() )
+					_allow_reject = false;
+			}
+			catch(_heh_)
+			{
+			}
+	}
+
+	if ( _allow_reject || _allow_copy)
+	{
+%>
+<tr>
+<td>
+	<table width="100%" border="0" cellspacing="0" cellpadding="0" class="activator">
+	<form action="request_rejecting.html" name="reject_form" method="POST">
+	<tr>
+		<td align="CENTER" class="activator">
+<%
+		if ( _allow_reject)
+		{
+%>
+				<input type="hidden" name="doc_id" value="<%=curDocID%>">
+				<input type="hidden" name="sid" value="<%=tools.get_sum_sid( curDocID )%>">
+				<input type="hidden" name="object_id" value="<%=curObjectID%>">
+
+				<input type="submit" value="<%=tools.get_web_str('c_reject')%>" class="inputButton" onclick="if (!confirm('<%=tools.get_web_str('vrb_message_reject')%>')) return false;" onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';">
+<%
+		}
+
+		if ( _allow_copy)
+		{
+%>
+				<input type="button" value="<%=tools.get_web_str('vrb_request_copy')%>" class="inputButton" onclick="document.location.href = '<%=_href%>'" onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';"/>
+
+<%
+		}
+%>
+		</td>
+	</tr>
+	</form>
+	</table>
+</td>
+</tr>
+<%
+	}
+
+	if ( ! isNew )
+	{
+%>
+<tr>
+	<td>
+<%
+		if ( curObject.workflow_id.HasValue )
+			Server.Execute( "view_workflow.html" );
+%>
+	</td>
+</tr>
+<%
+	}
+
+	if ( dispGroup )
+	{
+%>
+<tr>
+	<td>
+<%
+		curView = new Object;
+		curView.SetProperty( 'catalog_name', 'collaborator' );
+		curView.SetProperty( 'disp_link', 'true' );
+		curView.SetProperty( 'disp_check_box', 'true' );
+		curView.SetProperty( 'title', tools.get_web_str('c_group') );
+		curView.SetProperty( 'disp_check_box', isNew ? 'true' : 'false' );
+		curView.SetProperty( 'array', curPersonsArray );
+
+		Server.Execute( "view_catalog_list.html" );
+%>
+	</td>
+</tr>
+<%
+	}
+%>
+
+
+</table>
+<script>
+function doSubmit()
+{
+	var sel_counter = 0;
+	if( document.getElementById( 'object_ids' ) && document.getElementById( 'object_ids' ).value == "" )
+		alert("<%=tools.get_web_str('verb_error1')%>");
+	else if ( document.getElementById( 'request_type_ids' ) && document.getElementById( 'request_type_ids' ).value == "" )
+		alert("<%=tools.get_web_str('verb_error2')%>");
+	else
+	{
+		try
+		{
+			_check_flag = check_required();
+		}
+		catch( dd )
+		{
+			_check_flag = true;
+		}
+
+		try
+		{
+			sel_counter = filling_selected_object_ids();
+
+			if ( sel_counter == 0 && document.getElementById( 'is_groups' ) && document.getElementById( 'is_groups' ).checked )
+			{
+				alert("<%=tools.get_web_str('vrb_message_no_pers')%>");
+				return false;
+			}
+		}
+		catch ( dd )
+		{
+		}
+
+		if ( _check_flag )
+		 	document.set_request_form.submit();
+	}
+}
+
+
+function change_person_group()
+{
+	if ( filling_selected_object_ids() == 0 )
+		return null;
+
+	var pars=new Object();
+	var strAttr="status:no;dialogWidth:700px;dialogHeight:550px;help:no;resizable:1";
+
+	xShowModalDialog('view_dlg_select_persons.html', pars, strAttr);
+	if ( ! pars.handle )
+		return null;
+
+	document.action_form.course_id.value = pars.selected_object_ids;
+	document.action_form.action = 'course_activate_admin.html';
+	document.action_form.submit();
+}
+
+</script>
+<%
+}
+%>

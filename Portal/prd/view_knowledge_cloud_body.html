@@ -1,0 +1,84 @@
+<table width="100%" cellspacing="0" cellpadding="20" class="tableBorder">
+	<tr valign="top">
+		<td style="font-weight:normal">
+<%
+	try
+	{
+		iCurTagID = Int(Request.QueryString.GetProperty("tag_id"));
+		teCurTag = OpenDoc(UrlFromDocID(iCurTagID)).TopElem;
+	}
+	catch(_x_)
+	{
+		iCurTagID = null;
+		teCurTag = null;
+	}
+
+	var _arrOfCatObjz = Array();
+	var _arrOfStrCatalogs = Array();
+	for (commonKnowledgePartsObject in common.knowledge_parts_objects)
+	{
+		_xarrTaggedObjects = XQuery ( "for $obj in " + commonKnowledgePartsObject.PrimaryKey + "s where $obj/tags != null() return $obj");
+		if (ArrayOptFirstElem(_xarrTaggedObjects) != undefined)
+		{
+			_arrOfCatObjz = ArrayUnion(_arrOfCatObjz, _xarrTaggedObjects);
+			_arrOfStrCatalogs[ArrayCount(_arrOfStrCatalogs)] = commonKnowledgePartsObject.PrimaryKey;
+		}
+	}
+
+	_cloudArray = Array();
+	_i = 0;
+	for (_catTag in tags)
+	{
+		_oPuffyCloud = ArrayOptFind(_cloudArray, "tag_id == " + _catTag.PrimaryKey);
+		if (_oPuffyCloud == undefined)
+		{
+			_oPuffyCloud = new Object;
+			_oPuffyCloud.tag_id = _catTag.PrimaryKey;
+			_oPuffyCloud.tag_name = _catTag.name;
+			_oPuffyCloud.count = 0;
+			_cloudArray[_i] = _oPuffyCloud;
+			_i++;
+		}
+		_oPuffyCloud.count+=ArrayCount(ArrayUnion(XQuery("for $kp in knowledge_parts where contains($kp/tags, " + CodeLiteral(_catTag.id) + ") return $kp"), ArraySelect(_arrOfCatObjz, "StrContains(tags,"+CodeLiteral(_catTag.id)+")")));
+	}
+	for (_oTag in _cloudArray)
+	if (_oTag.count > 0)
+	{
+%>
+					<font style="font-color: red; font-size: <%=(( _oTag.count < 8 ? _oTag.count * 2 : _oTag.count) + 7)%>pt">&nbsp;<a href="view_doc.html?mode=knowledge_cloud&tag_id=<%=_oTag.tag_id%>&doc_id=<%=curDocID%>" <%=( iCurTagID == _oTag.tag_id ? 'style="color: red; font-weight: bold"' : '')%>><%=tools_web.get_cur_lng_name(_oTag.tag_name, curLng.short_id)%></a>&nbsp;</font>
+<%
+	}
+%>
+		</td>
+	</tr>
+</table>
+
+<%
+	if (iCurTagID != null)
+	{
+		curView = new Object;
+		curView.SetProperty("id", "knowledge_parts_list");
+		curView.SetProperty("catalog_name", "knowledge_part");
+		curView.SetProperty("xquery_qual", "contains($elem/tags, " + CodeLiteral(iCurTagID) + ")");
+		curView.SetProperty("disp_link", "true");
+		curView.SetProperty("disp_check_box", "false");
+		curView.SetProperty("link_field_index",0-1);
+		Server.Execute( "view_catalog_list.html" );
+
+		for (_sTaggedcatalog in _arrOfStrCatalogs)
+		{
+			_aObjzArray = ArraySelect(_arrOfCatObjz, "Name == " + CodeLiteral(_sTaggedcatalog) + " && StrContains(tags, "+CodeLiteral(iCurTagID)+")");
+			if (ArrayOptFirstElem(_aObjzArray) != undefined)
+			{
+				curView = new Object;
+				curView.SetProperty("id", _sTaggedcatalog+"_list");
+				curView.SetProperty("catalog_name", _sTaggedcatalog);
+				curView.SetProperty("array",_aObjzArray);
+				curView.SetProperty("disp_link", "true");
+				curView.SetProperty("link_field_index",0-1);
+				curView.SetProperty("disp_check_box", "false");
+				Server.Execute( "view_catalog_list.html" );
+			}
+		}
+	}
+%>

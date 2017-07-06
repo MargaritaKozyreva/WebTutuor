@@ -1,0 +1,126 @@
+<%
+	Server.Execute( "include/sid_access_init.html" );
+	
+	_mode = '0';
+	if ( Request.Form.HasProperty( 'mode' ) )
+		_mode = Request.Form.mode;
+	
+	_pos_num = 0;
+	if ( Request.Form.HasProperty( 'position_num' ) && Request.Form.position_num != '' )
+		_pos_num = Int( Request.Form.position_num );
+		
+	_redirect = 'set_course';
+	if ( Request.Form.HasProperty( 'redirect' ) )
+		_redirect = Request.Form.redirect;
+	
+	try
+	{
+		_duration = ( Request.Form.HasProperty( 'day_num' ) && Request.Form.day_num != "" ? Int( Request.Form.day_num ) : null );
+	}
+	catch(err)
+	{
+		_duration = null;
+	}
+	
+	_start_learning_date = Date();
+	try
+	{
+		if ( Request.Form.HasProperty( 'start_learning_date' )  && Request.Form.HasProperty( 'start_learning_time' )  )
+		{
+			_start_learning_date = Date( StrDate( Date( Request.Form.start_learning_date ), false ) + ' ' + Request.Form.start_learning_time );
+			_start_learning_date = ( _start_learning_date < Date() ? Date() : _start_learning_date )
+		}
+	}
+	catch(err)
+	{
+	}
+	
+	_attempts_num = null;
+	if ( Request.Form.HasProperty( 'attempts_num' ) && Request.Form.attempts_num != "" )
+		_attempts_num = Int( Request.Form.attempts_num );
+	
+	courseDoc = OpenDoc( UrlFromDocID( Int( Request.Form.course_id ) ) ).TopElem;
+	
+	_message_text = "";
+	
+	function set_course( _person_id )
+	{
+		try
+		{
+		
+		if ( ArrayCount( XQuery( 'for $active_learning in active_learnings where $active_learning/person_id = ' + _person_id + ' and $active_learning/course_id = ' + Request.Form.course_id + ' return $active_learning' ) ) )
+		{
+			_message_text = tools.get_web_str('caa_message1');
+		}
+		else
+		{	
+			doc = OpenNewDoc( 'x-local://wtv/wtv_active_learning.xmd' );
+			collDoc = OpenDoc( UrlFromDocID( Int( _person_id ) ) ).TopElem;
+						
+			doc.active_learning.course_id = Int( Request.Form.course_id );
+			doc.active_learning.person_id = Int( _person_id );
+			doc.TopElem.start_learning_date = _start_learning_date;
+			tools.common_filling( 'collaborator', doc.active_learning, doc.active_learning.person_id, collDoc );
+			tools.common_filling( 'course', doc.active_learning, doc.active_learning.course_id, courseDoc );
+			
+			
+			if ( _duration != null )
+				doc.active_learning.duration = _duration;
+			
+			doc.active_learning.max_end_date = doc.active_learning.calc_max_end_date();
+			doc.active_learning.attempts_num = _attempts_num;
+		
+			doc.TopElem.parts.AssignElem( courseDoc.parts );
+				
+			if ( global_settings.disp_fin && collDoc.org_id != null )
+				tools.pay_courses( collDoc.org_id, courseDoc.price, tools.get_web_str('caa_comment') );
+	
+			doc.BindToDb( DefaultDb );
+			doc.Save();
+			
+			tools.create_notification( 30, doc.DocID );
+			tools.create_notification( 32, doc.DocID );
+		}
+		
+		}
+		catch ( err )
+		{
+			//alert( err );
+		}
+	}
+	
+	if ( _mode == '0' )
+	{
+		set_course( Request.Form.collaborator_id );
+	}
+	else
+	{
+		if ( Request.Form.HasProperty( 'selected_object_ids' ) )
+		{
+			for ( _pers in Trim( Request.Form.selected_object_ids ).split( ';' ) )
+				if ( _pers != '' )
+					set_course( _pers );	
+		}
+		else
+		{
+			for ( m = 0; m < _pos_num; m++ )
+				if ( Request.Form.HasProperty( 'pos_' + m ) )
+					set_course( Request.Form.GetProperty( 'pos_' + m ) );
+		}
+	}	
+	
+	if ( _message_text != "" )
+	{
+%>
+<script language="JAVASCRIPT">
+	alert( "<%=_message_text%>" );
+	location.href="<%=( 'view_doc.html?mode=' + _redirect + '&doc_id=' + Request.Form.doc_id )%>";
+</script>
+<%
+	}
+	else
+	{
+		Response.Redirect( 'view_doc.html?mode=' + _redirect + '&s=1&doc_id=' + Request.Form.doc_id );
+	}
+	Cancel();
+%>

@@ -1,0 +1,75 @@
+<% Server.Execute("../../../include/user_init.html");%><html xmlns:v="urn:schemas-microsoft-com:vml"  xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<title></title>
+<style>
+v\:* {behavior:url(#default#VML);}
+o\:* {behavior:url(#default#VML);}
+</style>
+<link href="images/course.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="../courseimages/courselab.js"></script>
+<script type="text/javascript" src="../courseimages/lms.js"></script>
+<script type="text/javascript" src="../courseimages/legacy.js"></script>
+<script type="text/javascript" src="module.js"></script>
+<script language="VBScript">
+Sub agentFSCHub_FSCommand(ByVal command, ByVal args)
+Call agentFSCHub_DoFSCommand(command, args)
+End Sub
+</script>
+<script language="JavaScript">
+<%
+	iW = 750;
+	iH = 530;
+	try
+	{
+		iModuleID = Int(Request.QueryString.GetProperty("module_id"));
+		catCLModule = ArrayFirstElem(XQuery("for $elem in cl_modules where $elem/id = " + iModuleID + " return $elem"));
+		if (catCLModule.slide_width.HasValue) iW = catCLModule.slide_width;
+		if (catCLModule.slide_height.HasValue) iH = catCLModule.slide_height;
+	}
+	catch(_OoO_)
+	{
+		iModuleID = null;
+	}
+%>
+var g_sModuleId = <%=( iModuleID != null ? "'" + iModuleID + "'" : "null")%>;
+function agentFSCHub_DoFSCommand(command, args)
+{
+TranslateFSCommand(command, args);
+return true;
+}
+/*
+function GetModuleId()
+{
+	var sSearch = window.location.search;
+	if(sSearch==null || sSearch=="") return null;
+	sSearch = unescape(sSearch);
+	if(sSearch.charAt(0)=="?") sSearch = sSearch.substr(1);
+	var aPairs = sSearch.split("&");
+	var aParam = new Array();
+	for(var i=0; i<aPairs.length; i++)
+	{
+		aParam = aPairs[i].split("=");
+		if(aParam[0]=="module_id") return aParam[1];
+	}
+	return null;
+}
+*/
+</script>
+</head>
+<body style="margin-left:0px;margin-top:0px;margin-right:0px;margin-bottom:0px;" onload="Run(true, g_sModuleId)" onunload="Shutdown()" oncontextmenu="return false">
+<div id="boardFrame" style="position:absolute;left:0px;top:0px;width:<%=iW%>;height:<%=iH%>">
+</div>
+<div style="position:absolute; width:100px;height:100px;top:-110px;left:-110px;">
+<object  classid="clsid:D27CDB6E-AE6D-11cf-96B8-444553540000" width="100" height="100" id="agentFSCHub">
+<param name="Movie" value="../courseimages/agenthub.swf"/>
+<param name="WMode" value="transparent"/>
+<param name="BGColor" value="#FF9900"/>
+<param name="FlashVars" value="objID=agentFSCHub" />
+<param name="SWLiveConnect" value="1"/>
+<param name="Play" value="-1"/>
+<param name="AllowScriptAccess" value="always"/>
+<embed src="../courseimages/agenthub.swf" width="100" height="100" name="agentFSCHub" id="agentFSCHub" FlashVars="objID=agentFSCHub" type="application/x-shockwave-flash" pluginspage="http://www.macromedia.com/go/getflashplayer"></embed>
+</object>
+</div>
+</body>
+</html>

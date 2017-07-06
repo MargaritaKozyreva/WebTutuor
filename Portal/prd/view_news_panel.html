@@ -1,0 +1,13 @@
+<%
+	try
+	{
+		if ( Session.news_cache == undefined )
+			throw '=undefined';
+	}
+	catch ( ff )
+	{
+		Session.news_cache = EvalCodePageUrl( 'view_news_panel_cach.html' );
+	}
+	
+	Response.Write( Session.news_cache );
+%>

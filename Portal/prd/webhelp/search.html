@@ -1,0 +1,53 @@
+<%
+RootBookID = 0;
+if ( Request.QueryString.HasProperty("book_id") )
+{
+	try
+    {
+		RootBookID = Int(Request.QueryString.GetProperty("book_id"));
+	}
+    catch(err)
+    {
+		alert(tools.get_web_str('rp_err_not_resourse'));
+    }
+}
+try
+{
+	curDocID = Int(Request.Query.doc_id);
+}
+catch(_X_)
+{
+	curDocID = null;
+}
+%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1251" />
+<title>Search</title>
+<link href="../style.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="../scripts/jquery.js"></script>
+<script language="javascript">
+function do_search(sform)
+{
+	$.post("search_result.html?doc_id=<%=curDocID%>&book_id=" + sform.book_id.value + "&keyword=" + escape(sform.keyword.value),
+		   {},
+		   function(data){
+			   $("div#result").html(data);
+		   },
+		   "html");
+}
+</script>
+</head>
+<body class="libraryLeftPanel">
+<form name="search" onSubmit="do_search(search);return false">
+ <input type="hidden" name="book_id" id="book_id" value="<%=RootBookID%>">
+ <input type="text" name="keyword" id="keyword">
+ <input type="button" value="<%=tools.get_web_str('vkpb_search')%>" onClick="do_search(search)">
+</form>
+<div id="result">
+<P><%=tools.get_web_str('sear_mess_enter_word')%><BR/><BR/></P>
+<P><%=tools.get_web_str('sear_mess_can_on')%></P>
+</div>
+</body>
+</html>

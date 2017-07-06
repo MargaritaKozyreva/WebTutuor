@@ -1,0 +1,158 @@
+<%
+try
+{
+	ElemsToShow
+}
+catch(ex)
+{
+	ElemsToShow=3
+}
+
+try
+{
+	DispFoto
+}
+catch(ex)
+{
+	DispFoto=true
+}
+
+try
+{
+	DispUserStatus
+}
+catch(ex)
+{
+	DispUserStatus=true
+}
+
+oRegExp = tools_web.reg_exp_init();
+
+function writeCommentLine( iCommentEntryIDParam, teCommentEntryParam)
+{
+%>
+		<tr valign="top">
+			<td class="CL_forum_answer_form_table">
+				<table cellspacing="0" cellpadding="0" width="100%" border="0">
+					<tr>
+						<td class="CL_forum_topic_author">
+<%
+	Response.Write( tools_web.get_web_str('vfb_author') + ":&nbsp;" );
+	
+	_user_line = "";
+	avatar = "";
+	_status = "";
+	try
+	{
+		tePersonEntry = OpenDoc( UrlFromDocID( teCommentEntryParam.user_id ) ).TopElem;
+		
+		if ( teCommentEntryParam.how2show != "anonymous") 
+		{
+			if ( DispFoto )
+			{
+				avatar_filename = tePersonEntry.pict_url;
+				avatar = tePersonEntry.pict_url.HasValue ? "<img src=\"http://" + curHost + avatar_filename + "\" border=\"0\"><br>" : "";
+			}
+			else
+			{
+				avatar_filename = tePersonEntry.personal_config.avatar_filename;
+				avatar = tePersonEntry.personal_config.avatar_filename.HasValue ? "<img src=\"http://" + curHost + "/avatars/"+avatar_filename+"\" border=\"0\"><br>" : "";
+			}
+		}
+		
+		if ( teCommentEntryParam.how2show == "realname" )
+		{
+			_tip_html = '<b>' + tools_web.get_web_str('c_fio') + ':</b>&nbsp;' + HtmlEncode( tePersonEntry.fullname ) + '<br/>';
+			_tip_html += '<b>' + tools_web.get_web_str('c_position') + ':</b>&nbsp;' + HtmlEncode( tePersonEntry.position_name ) + '<br/>';
+			_tip_html += '<b>' + tools_web.get_web_str('c_subd') + ':</b>&nbsp;' + HtmlEncode( tePersonEntry.position_parent_name ) + '<br/>';
+			_tip_html += '<b>' + tools_web.get_web_str('c_org') + ':</b>&nbsp;' + HtmlEncode( tePersonEntry.org_name );
+			_user_line = '<a id=CL_forum_topic_author_name_' + iCommentEntryIDParam + ' href="view_doc.html?mode=collaborator&object_id=' + teCommentEntryParam.user_id + '&doc_id=' + curDocID + '" onmouseover="Tip(' + CodeLiteral( _tip_html ) + ',SHADOW,true,BGCOLOR,\'whitesmoke\')">' + tePersonEntry.fullname + '</a>';
+		}
+		else
+		{
+			_user_line = '<span id=CL_forum_topic_author_name_' + iCommentEntryIDParam + '>' + teCommentEntryParam.author_info( tePersonEntry ) + '</span>';
+		}
+
+		if ( DispUserStatus )
+			_status = tools_web.get_web_str( 'c_status' )  + ": " +  tePersonEntry.personal_config.status + "<br/>";
+	}
+	catch( err )
+	{
+		alert( err );
+	}
+
+	Response.Write( _user_line + "<br/>" + _status + avatar );
+	CommentText=StrLeftRange(UnifySpaces(HtmlToPlainText(teCommentEntryParam.text_area)),300)+'...'
+	ReadMoreHref='<a href="view_doc.html?mode=document_comment_entry&doc_id='+curDocID+'&portal_doc_id='+curDocID+'&entry_id='+iCommentEntryIDParam+'">'+tools.get_web_str('dc_read_next')+'</a>'
+	AnswerMoreHref='<a href="view_doc.html?mode=document_comment_entry&doc_id='+curDocID+'&portal_doc_id='+curDocID+'&entry_id='+iCommentEntryIDParam+'&replay=1">'+tools_web.get_web_str('veqb_answer')+'</a>'
+%>
+						</td>
+					</tr>
+					<tr>
+						<td class="CL_forum_topic_date">
+							<%=tools_web.get_web_str('c_date')%>:&nbsp;<%=StrDate( teCommentEntryParam.create_date, true, false )%>
+						</td>
+					</tr>
+				</table>
+				<img src="pics/1blank.gif" width="200" height="0" border="0"/>
+			</td>
+			<td width="100%" class="CL_forum_answer_form_table">
+
+				<table cellspacing="0" cellpadding="0" width="100%" border="0">
+					<tr>
+						<td colspan="2"class="CL_forum_topic_body">
+							<div class="CL_forum_topic_content" id="CL_forum_topic_content_<%=iCommentEntryIDParam%>"><%=tools_web.convert_bbcode_to_html( CommentText, oRegExp )%></div>
+						</td>
+					</tr>
+					<tr>
+						<td align="left"  width="20%"class="CL_forum_topic_body">
+							<%=ReadMoreHref%>
+						</td>
+						<td align="left" class="CL_forum_topic_body">
+							<%=AnswerMoreHref%>
+						</td>
+					</tr>
+				</table>
+
+			</td>
+		</tr>
+<%
+}
+%>
+<script language="JavaScript" src="scripts/tooltip/wz_tooltip_late.js"></script>
+<a href="view_doc.html?mode=document_comment_entry&doc_id=<%=curDocID%>&portal_doc_id=<%=curDocID%>&new_comment=1"><%=tools.get_web_str('dc_write_comment')%></a>
+<hr/>
+<table id="table_comment_themes" width="100%" border="0" cellspacing="0" cellpadding="3">
+<%
+
+	counter = 0;
+	
+	xarrCommentEntry = XQuery( 'for $elem in document_comment_entrys where $elem/portal_doc_id = ' + curDocID + ' and $elem/deleted = false() and $elem/parent_document_entry_id = null() order by $elem/last_create_date ascending return $elem' );
+	commentCount=ArrayCount(xarrCommentEntry)
+	for ( catCommentEntryElem in xarrCommentEntry )
+	{
+		teCommentEntry = OpenDoc( UrlFromDocID( catCommentEntryElem.id ) ).TopElem;
+		writeCommentLine(catCommentEntryElem.id, teCommentEntry);
+		
+		counter++
+		if (counter>=ElemsToShow)
+		{
+			break;
+		}
+		
+	}
+
+%>	
+</table>
+<%
+	if(commentCount>0)
+	{
+		ShowAllHref='<a href="view_doc.html?mode=document_comment_entry&doc_id='+curDocID+'&portal_doc_id='+curDocID+'">'+tools.get_web_str('dc_read_all') + ' ('+commentCount+')'+'</a>'
+%>
+
+				<%=ShowAllHref%>
+
+<%
+	}
+%>
+<br/>

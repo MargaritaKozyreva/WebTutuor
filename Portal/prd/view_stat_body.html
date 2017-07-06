@@ -1,0 +1,316 @@
+<%
+	_mode = Request.QueryString.HasProperty( 'm' ) ? Request.QueryString.m : '0';
+	
+	curPositionID = curUser.position_id;
+	_is_boss = false;
+	
+	if ( curPositionID != null )
+	{
+		curPosition = OpenDoc( UrlFromDocID( curPositionID ) ).TopElem;
+		_is_boss = curPosition.is_boss;
+	}
+	
+	_collaborators = Array();
+	_coll_counter = 0;
+	
+	_positions = Array();
+	_pos_counter = 0;
+	
+	function sub_nodes( _p_id, _depth )
+	{
+		var _subs =  XQuery( "for $obj in subs where $obj/parent_id = " + _p_id + " return $obj" );
+		var _sub;
+		
+		for ( _sub in _subs )
+		{
+			if ( _sub.type == 'position' && _sub.basic_collaborator_id != null )
+				try
+				{
+					_collaborators[ _coll_counter ] = _sub.basic_collaborator_id.ForeignElem;
+					_coll_counter++;
+				}
+				catch ( ff )
+				{
+				}
+			if (_depth < 10)
+				sub_nodes( _sub.id, _depth + 1 );
+		}
+	}
+		
+%>
+	
+<BR>	
+
+<%Server.Execute( 'view_text_area.html' )%>
+
+<FORM ACTION="view_doc.html?mode=stat&doc_id=<%=curDocID%>&m=<%=_mode%>" NAME="set_person_form" METHOD="POST">
+<TABLE width="100%" cellspacing="0" cellpadding="5" >
+	<TR>
+		<TD>
+		
+		<TABLE width="100%" cellspacing="0" cellpadding="4" CLASS="tableBorder">	
+		
+<%		
+	if ( _mode == '0' )
+	{
+%>	
+			<TR>
+				<TD WIDTH="140" ALIGN="RIGHT"><b><%=tools.get_web_str('c_coll')%>:</b></TD>
+				<TD><select name="collaborator_id" onChange="if ( document.set_person_form.collaborator_id.value != '' ) document.location.href = 'view_doc.html?mode=stat&doc_id=<%=curDocID%>&person_id=' + document.set_person_form.collaborator_id.value">
+					<option selected value=""></option>
+<%
+		if ( _is_boss )
+		{
+			if ( curPosition.org_id.HasValue && ! curPosition.parent_object_id.HasValue )
+			{
+				_collaborators = XQuery( "for $obj in collaborators where $obj/org_id = " + curPosition.org_id + " order by $obj/fullname return $obj" );
+			}
+			else if ( curPosition.parent_object_id != null ) 
+			{
+				sub_nodes( curPosition.parent_object_id, 0 );
+				ArraySort( _collaborators, 'fullname', '+' );
+			}
+		}
+		else
+		{
+			_collaborators = XQuery( "for $collaborator in collaborators order by $collaborator/fullname return $collaborator" );
+		}
+	
+		for ( _collaborator in _collaborators )
+		{
+%>
+				<option value="<%=_collaborator.id%>"><%=_collaborator.fullname%></option>
+<%
+		}
+%>
+				</select>&nbsp;<A HREF="view_doc.html?mode=stat&doc_id=<%=curDocID%>&m=1"><%=tools.get_web_str('c_detail')%></A>		
+			</TD>
+		</TR>
+<%
+	}
+	else
+	{
+%>				
+		<TR>
+			<TD WIDTH="140" ALIGN="RIGHT"><b><%=tools.get_web_str('c_subd')%>:</b></TD>
+			<TD ALIGN="LEFT"><select name="subdivision_id" id="subdivision_ids" onChange="if ( document.set_person_form.subdivision_id.value != '' ) document.set_person_form.submit();">
+				<option selected value=""></option>
+				<option value="all"><%=tools.get_web_str('c_all')%></option>
+<%	
+
+	function node_subdivision( _p_id, _indent )
+	{
+		var _cur_sub_array = XQuery( "for $obj in subs where $obj/parent_id = " + ( _p_id == null ? 'null()' : _p_id ) + " order by $obj/type, $obj/name return $obj" );
+		var _cur_sub;
+		
+		for ( _cur_sub in _cur_sub_array )
+		{
+			if ( _cur_sub.type != 'position' )
+			{
+%>
+				<option value="<%=_cur_sub.id%>"><%=( _indent + tools_web.get_cur_lng_name( _cur_sub.name ) )%></option>
+<%
+			}	
+			
+			if ( _cur_sub.type == 'position' && _cur_sub.basic_collaborator_id != null )
+			{
+				_positions[ _pos_counter ] = _cur_sub;
+				_pos_counter++;
+			}
+		
+			node_subdivision( _cur_sub.id, _indent + '&nbsp;&nbsp;&nbsp;&nbsp;' );
+		}
+	}
+	
+	
+	if ( _is_boss )
+	{
+		if ( curPosition.org_id != null && curPosition.parent_object_id == null )
+		{
+%>
+				<option value="<%=curPosition.org_id%>"><%=tools_web.get_cur_lng_name( curPosition.org_id.ForeignElem.disp_name )%></option>
+<%
+			node_subdivision( curPosition.org_id, '&nbsp;&nbsp;&nbsp;&nbsp;' );
+		}
+		else
+		{
+			if ( curPosition.parent_object_id != null )
+			{
+				curParentObject = OpenDoc( UrlFromDocID( curPosition.parent_object_id ) ).TopElem;
+%>
+				<option value="<%=curPosition.parent_object_id%>"><%=tools_web.get_cur_lng_name( curParentObject.name )%></option>
+<%			
+				node_subdivision( curPosition.parent_object_id, '&nbsp;&nbsp;&nbsp;&nbsp;' );
+			}
+		}
+	}
+	else
+	{
+		node_subdivision( null, '' );
+	}
+	
+%>
+         </select>&nbsp;<A HREF="view_doc.html?mode=stat&doc_id=<%=curDocID%>&m=0"><%=tools.get_web_str('c_shortly')%></A>
+<%
+	try
+	{
+		_sub_id = Request.Form.subdivision_id;
+%>
+<SCRIPT language="JavaScript">
+selcur=document.forms['set_person_form'].subdivision_id;
+for (i=0;i<selcur.options.length;i++) {
+    if (selcur.options[i].value=="<%=_sub_id%>") {
+        selcur.selectedIndex=i;
+    }
+	
+if (selcur.selectedIndex==-1) {selcur.selectedIndex=0;}
+}
+</SCRIPT>
+<%
+	}
+	catch ( e )
+	{ 
+		_sub_id = null;
+	}
+%>
+				</TD>
+			</TR>
+			<TR>
+				<TD WIDTH="140" ALIGN="RIGHT"><b><%=tools.get_web_str('c_sort')%>:</b></TD>
+				<TD ALIGN="LEFT">
+					<SELECT NAME="sort_type" onChange="if ( document.set_person_form.subdivision_id.value != '' ) document.set_person_form.submit();">
+						<option SELECTED value=pos><%=tools.get_web_str('c_position')%></option>
+						<option value=coll><%=tools.get_web_str('c_coll')%></option>						
+					</SELECT>
+<%
+	if ( _sub_id != null )
+	{
+
+%>
+<SCRIPT language="JavaScript">
+selcur=document.forms['set_person_form'].sort_type;
+for (i=0;i<selcur.options.length;i++) {
+    if (selcur.options[i].value=="<%=Request.Form.sort_type%>") {
+        selcur.selectedIndex=i;
+    }
+	
+if (selcur.selectedIndex==-1) {selcur.selectedIndex=0;}
+}
+</SCRIPT>
+<%
+	}
+%>
+				</TD>
+			</TR>
+<%
+	}
+%>
+		</TABLE>
+		
+		</TD>
+	</TR>
+
+<%	
+	if ( _mode != '0' )
+	{
+%>	
+	<TR>
+		 <TD> 
+		 
+		 <table width="100%"  border="0" cellspacing="0" cellpadding="3">
+			<tr>
+				<td class="tableHeaderWithText" WIDTH="40">#</td>
+				<td class="tableHeaderWithText"><%=tools.get_web_str('c_position')%></td>
+				<td class="tableHeaderWithText"><%=tools.get_web_str('c_coll')%></td>
+				<td class="tableHeaderWithText" width="100"><%=tools.get_web_str('c_stat')%></td>
+			</tr>
+			<tr>
+				<td class="tableHeaderNoText" WIDTH="40"><img src="pics/1blank.gif" width="1" height="1" /></td>
+				<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+				<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+				<td class="tableHeaderNoText" WIDTH="100"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			</tr>
+<%
+		if ( _sub_id != null )
+		{
+			_order_str = '';
+			switch ( Request.Form.sort_type )
+			{
+				case 'pos':
+					_order_str = 'name';
+					break;
+				case 'coll':
+					_order_str = 'basic_collaborator_fullname';
+					break;
+			}
+			
+			if ( _sub_id == 'all' )
+			{
+				_positions = ArraySort( _positions, _order_str, '+' );
+			}
+			else
+			{
+				_sub_doc = ArrayFirstElem( XQuery( "for $obj in subs where $obj/id = " + _sub_id + " return $obj" ) );
+				if ( _sub_doc.type == 'org' )
+				{
+					_positions = XQuery( "for $position in positions where $position/org_id = " + _sub_id + " order by $position/" + _order_str + " return $position" );
+				}
+				else
+				{
+					_positions = XQuery( "for $position in positions where $position/parent_object_id = " + _sub_id + " order by $position/" + _order_str + " return $position" );
+				}
+			}
+		 
+			_counter = 0;
+			for ( _position in _positions )
+			{
+				try 
+				{
+					if ( _position.basic_collaborator_id == null )
+						continue;
+					
+					_counter++;
+					_class = _counter % 2 ? 'tableRowEven' : 'tableRowOdd';
+%>
+			<TR>
+				<TD class="<%=_class%>" width="40" align="center"><%=_counter%></TD>
+				<TD class="<%=_class%>"><%=tools_web.get_cur_lng_name( _position.name )%></TD>
+				<TD class="<%=_class%>"><%=_position.basic_collaborator_fullname%></TD>
+				<TD class="<%=_class%>" align="center" width="100"><A href="view_doc.html?mode=stat&doc_id=<%=curDocID%>&person_id=<%=_position.basic_collaborator_id%>"><%=tools.get_web_str('c_go')%></A></TD>
+			</TR>
+<%
+				}
+				catch ( k )
+				{
+				}
+			}
+		}
+%>
+			<tr>
+				<td class="tableFooter" WIDTH="40"><img src="pics/1blank.gif" width="1" height="1" /></td>
+				<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+				<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+				<td class="tableFooter" WIDTH="100"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			</tr>
+		</table>
+		
+		</TD>
+	</TR>
+	<TR>
+		<TD>
+			
+		<table width="100%" border="0" cellspacing="0" cellpadding="0" class="activator">
+			<TD ALIGN="CENTER" class="activator">
+				<INPUT TYPE="SUBMIT" VALUE="<%=tools.get_web_str('c_refresh')%>" CLASS="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';">
+			</TD>
+		</table>
+		
+		</TD>
+	</TR>
+
+<%
+	}
+%>
+</TABLE>
+</FORM>	
+<BR/>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="windows-1251"?>
+<staff>
+<%
+try
+{
+	_qid = Request.QueryString.qid;
+}
+catch(_qid_fucked_)
+{
+	_qid = "";
+}
+
+if (_qid != "")
+{
+	_query = "for $collaborator in collaborators where contains($collaborator/fullname, '"+_qid+"') return $collaborator";
+	_collaborators = XQuery(_query);
+
+
+	for (_collaborator in _collaborators)
+	{
+%>
+	<collaborator id="<%=_collaborator.id%>" fullname="<%=_collaborator.fullname%>" login="<%=_collaborator.login%>" email="<%=_collaborator.email%>" position_id="<%=_collaborator.position_id%>" position_name="<%=_collaborator.position_name%>" org_id="_collaborator.org_id" org_name="<%=_collaborator.org_name%>"/>
+<%
+	}
+}
+%>
+</staff>

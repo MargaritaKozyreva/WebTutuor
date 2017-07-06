@@ -1,0 +1,419 @@
+<%
+bSharePoint = false;
+sSPPrefix = "/_layouts/webtutor/proxy";
+%>
+<head>
+<title><%=tools.get_web_str('title_general')%></title>
+<link rel="SHORTCUT ICON" type="image/x-icon" href="/pics/favicon.ico"/>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1251" />
+<script type="text/javascript" src="scripts/browser.js" language="javascript"></script>
+<script type="text/javascript" src="scripts/jquery.js"></script>
+<script type="text/javascript" src="scripts/ajax.js" ></script>
+<script type="text/javascript" language="javascript">
+//<!--
+evalAfterPaintActions = Array();
+evalResizeActions = Array();
+
+isIE = (document.all ? true : false);
+isDOM = (document.getElementById ? true : false);
+window.onerror = null;
+
+if(navigator.appName == "Netscape") {
+  layerStyleRef="layer.";
+  layerRef="document.layers";
+  styleSwitch="";
+} else {
+  layerStyleRef="layer.style.";
+  layerRef="document.all";
+  styleSwitch=".style";
+}
+
+function registerHP() {
+	var hpurl = window.location.href;
+	oHomePage.style.behavior='url(#default#homepage)';
+	oHomePage.setHomePage(hpurl);
+	event.returnValue = false;
+}
+
+function MM_swapImgRestore() { //v3.0
+  var i,x,a=document.MM_sr; for(i=0;a&&i<a.length&&(x=a[i])&&x.oSrc;i++) x.src=x.oSrc;
+}
+
+function MM_preloadImages() { //v3.0
+  var d=document; if(d.images){ if(!d.MM_p) d.MM_p=new Array();
+    var i,j=d.MM_p.length,a=MM_preloadImages.arguments; for(i=0; i<a.length; i++)
+    if (a[i].indexOf("#")!=0){ d.MM_p[j]=new Image; d.MM_p[j++].src=a[i];}}
+}
+
+function MM_findObj(n, d) { //v4.01
+  var p,i,x;  if(!d) d=document; if((p=n.indexOf("?"))>0&&parent.frames.length) {
+    d=parent.frames[n.substring(p+1)].document; n=n.substring(0,p);}
+  if(!(x=d[n])&&d.all) x=d.all[n]; for (i=0;!x&&i<d.forms.length;i++) x=d.forms[i][n];
+  for(i=0;!x&&d.layers&&i<d.layers.length;i++) x=MM_findObj(n,d.layers[i].document);
+  if(!x && d.getElementById) x=d.getElementById(n); return x;
+}
+
+function MM_swapImage() { //v3.0
+  var i,j=0,x,a=MM_swapImage.arguments; document.MM_sr=new Array; for(i=0;i<(a.length-2);i+=3)
+   if ((x=MM_findObj(a[i]))!=null){document.MM_sr[j++]=x; if(!x.oSrc) x.oSrc=x.src; x.src=a[i+2];}
+}
+
+function loadThemAll() {
+	MM_preloadImages('pics/icon_home_1.gif','pics/icon_mail_1.gif','pics/icon_search_1.gif','pics/icon_map_1.gif');
+}
+
+
+var listSelHide = new Array;
+function restoreSelectors() {
+	var sel = document.getElementsByTagName("select");
+	for(var i=0;i<listSelHide.length;i++) {
+		listSelHide[i].style.visibility = "visible";
+	}
+	listSelHide = new Array;
+}
+
+
+function getElementPosition(selem)   
+{   
+    var elem=selem;
+       
+    var w = elem.offsetWidth;   
+    var h = elem.offsetHeight;   
+       
+    var l = 0;   
+    var t = 0;   
+       
+    while (elem)   
+    {   
+        l += elem.offsetLeft;   
+        t += elem.offsetTop;   
+        elem = elem.offsetParent;   
+    }   
+  
+    return {"left":l, "top":t, "width": w, "height":h};   
+}  
+
+
+function hideSelectors(overitem) {
+
+
+	if (overitem==null)
+		return;
+
+	var overitemSize=getElementPosition(overitem);
+	
+	var sel = document.getElementsByTagName("select");
+	for(var i=0;i<sel.length;i++)
+	{
+		curSel = sel[i];
+		if(curSel.getAttribute("id") == "persMenu") continue;
+	
+		if (overitem!=null)
+		{
+	   		var curSelSize=getElementPosition(curSel);
+	
+		   	if (overitemSize.top+overitemSize.height>=curSelSize.top && 
+					overitemSize.left+overitemSize.width>=curSelSize.left
+					&& overitemSize.left<curSelSize.left+curSelSize.width
+				)
+	   		{
+				curSel.style.visibility = "hidden";
+				listSelHide.push(curSel);
+			}
+		}
+	}
+}
+
+
+
+var divArray = new Array;
+var refArray = new Array;
+var timeOn = null;
+var baseIndex = 100;
+var menuDivPreffix = "menu_";
+var menuDivLen = menuDivPreffix.length;
+var menu_vert_shift_x = -16;
+var menu_vert_shift_y = -3;
+var timerOut = 100;
+
+function tabOut() {
+	clearTimeout(timeOn);
+	
+	var sel = document.getElementsByTagName("div");
+	var attr;
+	for(var i=0;i<sel.length;i++) {
+		attr = sel[i].getAttribute("id");
+		if(attr != null && attr.substr(0,menuDivLen) == menuDivPreffix) {
+			sel[i].style.visibility = "hidden";
+		}
+	}
+
+	divArray = new Array;
+	refArray = new Array;
+	
+	restoreSelectors();
+}
+
+function menuOver(tab) {
+	clearTimeout(timeOn);
+	hideSelectors(tab);
+}
+
+function menuOut(tab) {
+	timeOn = setTimeout("tabOut()", timerOut);
+}
+
+function showElement(divname,referer,curdiv,type) {
+	clearTimeout(timeOn);
+
+	var divstyle = getDivStyle(divname);	
+	var tempDivArray = new Array;
+	var tempRefArray = new Array;
+	var tempIndex = 0;
+	var len = divArray.length;
+	var i = 0;
+	
+	while(i<len) {
+		tempDivArray[i] = divArray[i];
+		tempRefArray[i] = refArray[i];
+		
+		if(curdiv==divArray[i]) break;	
+		i++;	
+	}
+	i++;
+	while(i<len) {
+		refArray[i].visibility = "hidden";
+		i++;
+	}
+
+	if ( divstyle == false ) {
+		divArray = tempDivArray;
+		refArray = tempRefArray;
+		return;
+	}
+		
+	tempDivArray.push(divname);
+	tempRefArray.push(divstyle);	
+	divArray = tempDivArray;
+	refArray = tempRefArray;
+	
+	var rect=getRect(referer);
+	if(type=='g') {
+		divstyle.top=rect.shifty<%try { Response.Write( curWebCommon.dd_menu_shift_y ) } catch ( gg ) {}%>;
+		divstyle.left=rect.shiftx<%try { Response.Write( curWebCommon.dd_menu_shift_x ) } catch ( gg ) {}%>;
+		if (divstyle.posLeft+divstyle.offsetWidth>rect.bodywidth) divstyle.posLeft=rect.bodywidth-divstyle.divnode.offsetWidth-10;
+	} else {
+		divstyle.top=rect.shifty+menu_vert_shift_y;
+		divstyle.left=rect.shiftx+rect.tdwidth+menu_vert_shift_x;
+	}
+	divstyle.visibility = "visible";
+	divstyle.zIndex = baseIndex+divArray.length;
+}
+
+function getDivStyle(divname) {
+	var byId;
+	if(isDOM) {
+		byId = document.getElementById(divname);
+		return byId ? byId.style : false; 
+	} else if(isIE){
+		byId = document.all[divname];
+		return byId ? byId.style : false;
+	} else {
+		byId = document.layers[divname];
+		return byId ? byId : false;
+	} // NS4
+}
+
+function getRect(ref)
+{	
+   var linkx=0;
+   var linky=0;
+   var linkt=0;
+   var linkb=0;
+   var parent=ref;
+		
+   while(parent) {
+   		if(parent.getAttribute("id")=="main_block") {
+			linkx+=parent.style.left;
+			linky+=parent.style.top;
+			break;
+		} 
+		else {
+			linkx+=parent.offsetLeft;
+			linky+=parent.offsetTop;
+		}
+	  
+		if(parent.nodeName=="TD" && linkt==0) linkt=parent.offsetWidth;
+		if(parent.nodeName=="TD") parent=parent.parentNode;		
+		if(parent.nodeName=="BODY" && linkb==0) linkb=parent.offsetWidth;
+		if(parent.nodeName=="BODY") break;
+		
+		parent=parent.offsetParent;
+   }
+
+   this.shiftx=linkx;
+   this.shifty=linky;
+   this.tdwidth=linkt;
+   this.bodywidth=linkb;
+   return this;
+}
+
+
+function fixPNG(element)
+{
+  if (/MSIE (5\.5|6).+Win/.test(navigator.userAgent))
+  {
+    var src;
+	
+    if (element.tagName=='IMG')
+    {
+      if (/\.png$/.test(element.src))
+      {
+        src = element.src;
+        element.src = "pics/1blank.gif";
+      }
+    }
+    else 
+    {
+      src = element.currentStyle.backgroundImage.match(/url\("(.+\.png)"\)/i);
+      if (src)
+      {
+        src = src[1];
+        element.runtimeStyle.backgroundImage="none";
+      }
+    }
+    if (src) element.runtimeStyle.filter = "progid:DXImageTransform.Microsoft.AlphaImageLoader(src='" + src + "',sizingMethod='scale')";
+  }
+}
+
+function SwitchClass(oObj,sKey) {
+	if(oObj==null || sKey==null) return false;
+	var sClass = oObj.className;
+	if(sClass==null || sClass=="") return false;
+	switch(sKey) {
+		case "over":			
+			if(sClass.indexOf("_hover")!=-1) return false;
+			sClass += "_hover";
+			break;
+		case "out":
+			if(sClass.indexOf("_hover")==-1) return false;
+			sClass = sClass.substring(0,sClass.lastIndexOf("_hover"));
+			break;
+		default: return false;
+	}
+	oObj.className = sClass;
+	return false;	
+}
+
+function HandleClick(oObj,sURL) {
+	if(sURL!=null) {
+		window.document.location.href = sURL;
+		return false;
+	}
+	if(oObj==null) return false;
+	var sLevel = oObj.getAttribute("level");
+	if(sLevel==null) return false;
+	var sObjClass = oObj.className;
+	if(sObjClass.indexOf("_closed")==-1 && sObjClass.indexOf("_open")==-1) return false;
+	sObjClass = sObjClass.substring(0,sObjClass.lastIndexOf("_hover"));
+	var sSwitch = sObjClass.indexOf("_closed")==-1 ? "_closed" : "_open";
+
+	var aDivs;
+	var oParent;
+	sObjClass = sSwitch=="_open" ? sObjClass.substring(0,sObjClass.lastIndexOf("_closed")) : sObjClass.substring(0,sObjClass.lastIndexOf("_open"));	
+	oParent = oObj.parentNode;
+	aDivs = oParent.getElementsByTagName("div");
+	for(var i=0;i<aDivs.length;i++) {
+		if(aDivs[i].getAttribute("level")==null) continue;
+		if(aDivs[i].getAttribute("type")=="header") {
+			aDivs[i].setAttribute("state", sSwitch=="_closed" ? "closed" : "open");
+			continue;
+		}
+		if(aDivs[i].getAttribute("level")==sLevel && aDivs[i]!=oObj) aDivs[i].style.display = sSwitch=="_closed" ? "none" : "block";
+	}
+	oObj.className = sObjClass + sSwitch + "_hover";
+	return false;
+}
+
+function onGlobalResize()
+{
+	for(var evalIndex=0; evalIndex<evalResizeActions.length; evalIndex++)
+		try
+		{
+			eval(evalResizeActions[evalIndex]);
+		}
+		catch(e)
+		{
+		}
+}
+
+function xShowModalDialog( sURL, vArguments, sFeatures ) 
+{
+	if (sURL==null||sURL=="")
+	{ 
+		alert ("xShowModalDialog: Invalid URL input."); 
+		return false; 
+	} 
+	if (vArguments==null||vArguments=='') 
+	{ 
+		vArguments=''; 
+	} 
+	if (!sFeatures||sFeatures=='') 
+	{ 
+		sFeatures='status:no;dialogWidth:700px;dialogHeight:550px;help:no;resizable:1'; 
+	} 
+	if (window.showModalDialog) 
+	{ 
+		window.showModalDialog( sURL, vArguments, sFeatures );
+		return true;
+	}
+	sFeatures = sFeatures.replace(/ /gi,''); 
+	aFeatures = sFeatures.split(";"); 
+	sWinFeat = "modal=yes,directories=0,menubar=0,titlebar=0,toolbar=0,"; 
+	for ( x in aFeatures ) 
+	{ 
+		aTmp = aFeatures[x].split(":"); 
+		sKey = aTmp[0].toLowerCase(); 
+		sVal = aTmp[1]; 
+		switch (sKey) 
+		{ 
+			case "dialogheight": 
+				sWinFeat += "height="+sVal+","; 
+				pHeight = sVal; 
+				break; 
+			case "dialogwidth": 
+				sWinFeat += "width="+sVal+","; 
+				pWidth = sVal; 
+				break; 
+			case "dialogtop": 
+				sWinFeat += "screenY="+sVal+","; 
+				break; 
+			case "dialogleft": 
+				sWinFeat += "screenX="+sVal+","; 
+				break; 
+			case "resizable": 
+				sWinFeat += "resizable="+sVal+","; 
+				break; 
+			case "status": 
+				sWinFeat += "status="+sVal+","; 
+				break; 
+			case "center": 
+				if ( sVal.toLowerCase() == "yes" ) 
+				{ 
+					sWinFeat += "screenY="+((screen.availHeight-pHeight)/2)+","; 
+					sWinFeat += "screenX="+((screen.availWidth-pWidth)/2)+","; 
+				} 
+				break; 
+		} 
+	}
+	curModalWindow = window.open(sURL,"curModalWindow",sWinFeat);
+	if (vArguments!=null&&vArguments!="") 
+		curModalWindow.dialogArguments=vArguments;
+	return true;
+}
+
+
+//-->
+</script>
+<link href="style.css" rel="stylesheet" type="text/css"/>
+</head>

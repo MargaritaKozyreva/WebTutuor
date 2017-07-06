@@ -1,0 +1,252 @@
+<%
+_action = Request.Form.HasProperty( 'action' ) ? Request.Form.action : '0';
+
+_course_id = Request.Form.HasProperty( 'course_id' ) ? Request.Form.course_id : '';
+_col_id = Request.Form.HasProperty( 'col_id' ) ? Request.Form.col_id : '';
+_subdivision_id = Request.Form.HasProperty( 'subdivision_id' ) ? Request.Form.subdivision_id : '';
+
+_start_date = Request.Form.HasProperty( 'start_date' ) ? Request.Form.start_date : '';
+_end_date = Request.Form.HasProperty( 'end_date' ) ? Request.Form.end_date : '';
+
+_filter = Request.Form.HasProperty( 'filter_id' ) ? Request.Form.filter_id : 'all';
+_sort_type = Request.Form.HasProperty( 'sort_type' ) ? Request.Form.sort_type : 'coll';
+
+_all_flag = false;
+subdivisionArray = XQuery( "for $elem in subdivisions order by $elem/Hier(), $elem/name return $elem" );
+if ( ! curUser.org_id.HasValue && ! curUser.position_parent_id.HasValue )//curUser.access.access_role == 'admin' ||
+{
+	personArray = XQuery( "for $elem in collaborators order by $elem/fullname return $elem" );
+	personArrayDispFieldPrefix = '';
+	_all_flag = true;
+}
+else
+{
+	subAllArray = XQuery( "CatalogHierSubset('subs'," + ( curUser.position_parent_id.HasValue ? curUser.position_parent_id : curUser.org_id ) + ")" );
+	subArray = ArraySelectByKey( subAllArray, 'subdivision', 'type' );
+	
+	subdivisionArray = ArraySelect( subdivisionArray, "ArrayOptFindByKey(subArray,id,'id')!=undefined" );
+	
+	if ( _subdivision_id != '' )
+	{
+		if ( ArrayOptFindByKey( subArray, Int( _subdivision_id ), 'id' ) == undefined )
+			_subdivision_id = '';
+		else
+			subAllArray = XQuery( "CatalogHierSubset('subs'," + _subdivision_id + ")" );
+	}
+	
+	personArray = ArraySort( ArraySelect( subAllArray, 'basic_collaborator_id.HasValue' ), 'basic_collaborator_fullname', '+' );
+	personArrayDispFieldPrefix = 'basic_collaborator_';
+}
+
+if ( _col_id != '' && ArrayOptFind( personArray, personArrayDispFieldPrefix + 'id==' + _col_id ) == undefined )
+	_col_id = '';
+
+
+queryArray = null;
+_where_str = "";
+_where_str += ( _col_id == "" ? "" : ( _where_str == "" ? " " : " and" ) + " $elem/person_id = " + _col_id );
+_where_str += ( _course_id == "" ? "" : ( _where_str == "" ? " " : " and" ) + " $elem/course_id = " + _course_id );
+_where_str += ( _start_date == "" ? "" : ( _where_str == "" ? " " : " and" ) + " date('" + _start_date + "') <= $elem/start_usage_date" );
+_where_str += ( _end_date == "" ? "" : ( _where_str == "" ? " " : " and" ) + " date('" + _end_date + "') >= $elem/start_usage_date" );
+
+
+curView = new Object;
+curView.SetProperty( 'title', '' );
+
+_where_str2 = _where_str != "" ? " where" + _where_str : "";
+_catalog_name = _filter == 'active' ? 'active_learning' : 'learning';
+curView.SetProperty( 'catalog_name', _catalog_name );
+if ( _filter == 'all' )
+{
+	queryArray = ArrayUnion( XQuery( "for $elem in learnings" + _where_str2 + " return $elem" ), 
+							XQuery( "for $elem in active_learnings" + _where_str2 + " return $elem" ) );
+}
+else
+{
+	queryArray = XQuery( "for $elem in " + _catalog_name + "s" + _where_str2 + " return $elem" );
+}
+
+if ( _col_id == '' && ! _all_flag )
+	queryArray = ArraySelect( queryArray, "person_id.HasValue&&ArrayOptFind(personArray,'" + personArrayDispFieldPrefix + "id=='+person_id)!=undefined" );
+
+if ( queryArray == null )
+	curView.SetProperty( 'xquery_qual', _where_str );
+else
+	curView.SetProperty( 'array', queryArray );
+
+%>
+
+<br/>
+
+
+<script language="JavaScript">
+function do_submit()
+{
+	var re = new RegExp( "[0-9]{2}\.[0-9]{2}\.[0-9]{4}" );
+	
+	if ( document.stat_form.start_date.value != '' && document.stat_form.start_date.value.match(re) == null )
+	{
+		alert( "<%=tools.get_web_str('vanb_error1')%>" );
+		return;
+	}
+
+	if ( document.stat_form.end_date.value != '' && document.stat_form.end_date.value.match(re) == null )
+	{
+		alert( "<%=tools.get_web_str('vanb_error2')%>" );
+		return;
+	}
+
+	document.stat_form.submit();
+}
+</script>
+
+<%Server.Execute( 'view_text_area.html' )%>
+	
+<form action="view_doc.html?mode=analytic" name="stat_form" method="POST">
+<input type="HIDDEN" name="doc_id" value="<%=curDocID%>">
+<input type="HIDDEN" name="action" value="1">
+	
+<table width="100%" cellspacing="4" cellpadding="0">
+	<tr>
+		<td>
+			
+		<table width="100%" cellspacing="0" cellpadding="4" class="tableBorder">
+		
+			 <tr> 
+				<td width="160" align="RIGHT"><b><%=tools.get_web_str('c_course')%>:</b></td>
+				<td align="LEFT">
+					<select name="course_id" id="course_ids">
+						<option SELECTED value=""><%=tools.get_web_str('c_all')%></option>
+<%
+	for ( _course in XQuery( "for $elem in courses order by $elem/code return $elem" ) )
+	{
+		if ( global_settings.settings.check_access_on_lists && tools_web.check_access( OpenDoc( UrlFromDocID ( _course.PrimaryKey ), 'form=x-local://wtv/wtv_form_doc_access.xmd;ignore-top-elem-name=1' ).TopElem, curUserID, curUser, Session ) == false )
+			continue;
+%>
+						<option value="<%=_course.id%>"><%=_course.code%> <%=tools_web.get_cur_lng_name( _course.name )%></option>
+<%
+	}
+%>
+					</select> 
+<script language="JavaScript">
+selcur=document.forms['stat_form'].course_id;
+for(i=0;i<selcur.options.length;i++)
+    if(selcur.options[i].value=="<%=_course_id%>")
+	{
+        selcur.selectedIndex=i;
+		break;
+	}
+</script>
+				</td>
+			</tr>
+			
+			<tr> 
+				<td width="160" align="RIGHT"><b><%=tools.get_web_str('c_subd')%>:</b></td>
+				<td align="LEFT">
+					<select name="subdivision_id" id="subdivision_ids" onchange="document.stat_form.action.value='0';document.stat_form.submit();">
+						<option SELECTED value=""><%=tools.get_web_str('c_all')%></option>
+<%	
+	_indent = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
+	for ( _subdivision in subdivisionArray )
+	{
+%>
+						<option value="<%=_subdivision.id%>"><%=( _indent.slice( 0, _subdivision.__hlevel * 24 ) + _subdivision.name )%></option>
+<%
+	}
+%>
+					</select>
+<script language="JavaScript">
+selcur=document.forms['stat_form'].subdivision_id;
+for (i=0;i<selcur.options.length;i++)
+    if (selcur.options[i].value=="<%=_subdivision_id%>")
+	{
+        selcur.selectedIndex=i;
+		break;
+	}
+</script> 
+				</td>
+			</tr>
+
+			
+					  
+					  
+					  <tr> 
+                        <td width="160" align="RIGHT"><b><%=tools.get_web_str('c_coll')%>:</b></td>
+                        <td align="LEFT"> <select name="col_id" id="col_ids">
+                            <option SELECTED value=""><%=tools.get_web_str('c_all')%></option>
+<%
+	for ( _person in personArray )
+	{
+%>
+                            <option value="<%=_person.Child( personArrayDispFieldPrefix + 'id' )%>"><%=_person.Child( personArrayDispFieldPrefix + 'fullname' )%></option>
+<%
+	}
+%>
+                          </select> 
+<script language="JavaScript">
+selcur=document.forms['stat_form'].col_id;
+for (i=0;i<selcur.options.length;i++)
+    if (selcur.options[i].value=="<%=_col_id%>")
+	{
+        selcur.selectedIndex=i;
+		break;
+	}
+</script>
+					</td>
+                      </tr>
+					  
+					  
+					  					  <tr> 
+                        <td width="160" align="RIGHT" valign="TOP"><b><%=tools.get_web_str('c_filter')%>:</b></td>
+                        <td align="LEFT">
+		<select name="filter_id">
+<%
+	for ( _ff in curLngCommon.web_filter_types )
+	{
+%>		
+			<option value="<%=_ff.id%>" SELECTED><%=_ff.name%></option>
+<%
+	}
+%>
+         </select>
+<script language="JavaScript">
+selcur=document.forms['stat_form'].filter_id;
+for (i=0;i<selcur.options.length;i++) {
+    if (selcur.options[i].value=="<%=_filter%>")
+	{
+        selcur.selectedIndex=i;
+		break;
+    }
+	
+if (selcur.selectedIndex==-1) {selcur.selectedIndex=0;}
+}
+</script>		 
+						</td>
+                      </tr>
+					  
+					  
+					  <tr>
+					  	<td width="160" align="RIGHT"><b><%=tools.get_web_str('vanb_period')%>:</b></td>
+						<td align="LEFT"><b><input type="TEXT" name="start_date" value="<%=_start_date%>" size="10" class="inputEdit">&nbsp;=&gt;&nbsp;<input type="TEXT" name="end_date" value="<%=_end_date%>" size="10" class="inputEdit">
+						</b>
+					  	&nbsp;<b>(dd.mm.yyyy)</b></td>
+					  </tr>
+                    </table>
+
+		</td>
+	</tr>
+
+	<tr>
+		<td align="CENTER">
+			<table width="100%" border="0" cellspacing="0" cellpadding="0" class="activator">
+				<td align="CENTER" class="activator">
+					<input type="button" value="<%=HtmlEncode( tools.get_web_str('vanb_submit') )%>" onclick="do_submit();" class="inputButton" onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';">
+				</td>
+			</table>				
+		</td>
+	</tr>
+	
+</table>
+</form>
+
+<%Server.Execute( "view_catalog_list.html" )%>

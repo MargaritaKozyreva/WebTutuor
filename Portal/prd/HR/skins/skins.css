@@ -1,0 +1,259 @@
+/* CSS file */
+
+Application {
+   	backgroundImage: Embed(source="/skins/skins.swf", symbol="application_backgroundSkin");  
+}
+@font-face {
+	src: url("embeddedFlashTypeFonts.swf");
+    fontFamily: "Arial"; 
+} 		
+
+.radialToolTip {
+	color: #FFFFFF;
+	font-family:"Arial";
+	font-size: 8;
+}
+
+.radialSwitchButton {
+	up-skin: Embed(source="/skins/skins.swf", symbol="radialSwitch_upSkin");
+	over-skin: Embed(source="/skins/skins.swf", symbol="radialSwitch_overSkin");
+	down-skin: Embed(source="/skins/skins.swf", symbol="radialSwitch_downSkin");
+	disabled-skin: Embed(source="/skins/skins.swf", symbol="radialSwitch_upSkin");
+}
+
+.radialSwitchActiveButton {
+	up-skin: Embed(source="/skins/skins.swf", symbol="radialSwitch_downSkin");
+	over-skin: Embed(source="/skins/skins.swf", symbol="radialSwitch_overSkin");
+	down-skin: Embed(source="/skins/skins.swf", symbol="radialSwitch_downSkin");
+	disabled-skin: Embed(source="/skins/skins.swf", symbol="radialSwitch_upSkin");
+}
+
+.treeSwitchButton {
+	up-skin: Embed(source="/skins/skins.swf", symbol="treeSwitch_upSkin");
+	over-skin: Embed(source="/skins/skins.swf", symbol="treeSwitch_overSkin");
+	down-skin: Embed(source="/skins/skins.swf", symbol="treeSwitch_downSkin");
+	disabled-skin: Embed(source="/skins/skins.swf", symbol="treeSwitch_upSkin");
+}
+
+.treeSwitchActiveButton {
+	up-skin: Embed(source="/skins/skins.swf", symbol="treeSwitch_overSkin");
+	over-skin: Embed(source="/skins/skins.swf", symbol="treeSwitch_overSkin");
+	down-skin: Embed(source="/skins/skins.swf", symbol="treeSwitch_downSkin");
+	disabled-skin: Embed(source="/skins/skins.swf", symbol="treeSwitch_upSkin");
+}
+
+.dragButton {
+	up-skin: Embed(source="/skins/skins.swf", symbol="drag_upSkin");
+	over-skin: Embed(source="/skins/skins.swf", symbol="drag_overSkin");
+	down-skin: Embed(source="/skins/skins.swf", symbol="drag_downSkin");
+	disabled-skin: Embed(source="/skins/skins.swf", symbol="drag_upSkin");
+}
+
+.dragActiveButton {
+	up-skin: Embed(source="/skins/skins.swf", symbol="drag_downSkin");
+	over-skin: Embed(source="/skins/skins.swf", symbol="drag_overSkin");
+	down-skin: Embed(source="/skins/skins.swf", symbol="drag_downSkin");
+	disabled-skin: Embed(source="/skins/skins.swf", symbol="drag_upSkin");
+}
+
+.zoomInButton {
+	up-skin: Embed(source="/skins/skins.swf", symbol="zoomIn_upSkin");
+	over-skin: Embed(source="/skins/skins.swf", symbol="zoomIn_overSkin");
+	down-skin: Embed(source="/skins/skins.swf", symbol="zoomIn_downSkin");
+	disabled-skin: Embed(source="/skins/skins.swf", symbol="zoomIn_disabledSkin");
+}
+
+.zoomInButton {
+	up-skin: Embed(source="/skins/skins.swf", symbol="zoomIn_upSkin");
+	over-skin: Embed(source="/skins/skins.swf", symbol="zoomIn_overSkin");
+	down-skin: Embed(source="/skins/skins.swf", symbol="zoomIn_downSkin");
+	disabled-skin: Embed(source="/skins/skins.swf", symbol="zoomIn_disabledSkin");
+}
+
+.zoomOutButton {
+	up-skin: Embed(source="/skins/skins.swf", symbol="zoomOut_upSkin");
+	over-skin: Embed(source="/skins/skins.swf", symbol="zoomOut_overSkin");
+	down-skin: Embed(source="/skins/skins.swf", symbol="zoomOut_downSkin");
+	disabled-skin: Embed(source="/skins/skins.swf", symbol="zoomOut_disabledSkin");
+}
+
+.filtersButton {
+	up-skin: Embed(source="/skins/skins.swf", symbol="filtersButton_upSkin");
+	over-skin: Embed(source="/skins/skins.swf", symbol="filtersButton_overSkin");
+	down-skin: Embed(source="/skins/skins.swf", symbol="filtersButton_downSkin");
+	disabled-skin: Embed(source="/skins/skins.swf", symbol="filtersButton_upSkin");
+}
+
+.breadCrumbsLineStyle {
+   	borderSkin: Embed(source="/skins/skins.swf", symbol="breadCrumbs_borderSkin");  		
+}
+
+.treeOnDemandNodeLeaf {
+	up-skin: Embed(source="/skins/skins.swf", symbol="treeOnDemandNodeLeaf_upSkin");
+}
+
+.treeOnDemandNodeLeafOver {
+	up-skin: Embed(source="/skins/skins.swf", symbol="treeOnDemandNodeLeaf_overSkin");
+}
+
+.treeOnDemandNode {
+	up-skin: Embed(source="/skins/skins.swf", symbol="treeOnDemandNode_upSkin");
+}
+.treeOnDemandNodeOver {
+	up-skin: Embed(source="/skins/skins.swf", symbol="treeOnDemandNode_overSkin");
+}
+
+.treeNode {
+	borderSkin: Embed(source="/skins/skins.swf", symbol="tree_node_skin");
+}
+
+.toolbarPanel {
+   	borderSkin: Embed(source="/skins/skins.swf", symbol="toolbarPanel_borderSkin");  		
+}
+
+.filterLegend {
+	borderSkin: Embed(source="/skins/skins.swf", symbol="filterLegend_borderSkin");  	
+}
+
+.clearFilterButton {
+	up-skin: Embed(source="/skins/skins.swf", symbol="clearFilter_upSkin");
+	over-skin: Embed(source="/skins/skins.swf", symbol="clearFilter_overSkin");
+	down-skin: Embed(source="/skins/skins.swf", symbol="clearFilter_downSkin");
+	disabled-skin: Embed(source="/skins/skins.swf", symbol="clearFilter_upSkin");	
+}
+
+.runFilterButton {
+	up-skin: Embed(source="/skins/skins.swf", symbol="runFilterButton_upSkin");
+	over-skin: Embed(source="/skins/skins.swf", symbol="runFilterButton_downSkin");
+	down-skin: Embed(source="/skins/skins.swf", symbol="runFilterButton_downSkin");
+	disabled-skin: Embed(source="/skins/skins.swf", symbol="runFilterButton_upSkin");	
+}
+
+.shortInfoPanel {
+	closeButtonDisabledSkin: Embed(source="/skins/skins.swf",symbol="ShortInfoPanel_closeButtonDisabledSkin");
+	closeButtonDownSkin: Embed(source="/skins/skins.swf",symbol="ShortInfoPanel_closeButtonDownSkin");
+	closeButtonOverSkin: Embed(source="/skins/skins.swf",symbol="ShortInfoPanel_closeButtonOverSkin");
+	closeButtonUpSkin: Embed(source="/skins/skins.swf",symbol="ShortInfoPanel_closeButtonUpSkin");
+	borderSkin: Embed(source="/skins/skins.swf", symbol="ShortInfoPanel_borderSkin");
+	titleBackgroundSkin: Embed(source="/skins/skins.swf", symbol="ShortInfoPanel_titleBackgroundSkin");
+	borderThicknessLeft: 4;
+	borderThicknessRight: 7;
+	borderThicknessTop: 0;
+	borderThicknessBottom: -6;
+	headerHeight: 21;
+}
+
+.shortInfoBiggerPanel {
+	closeButtonDisabledSkin: Embed(source="/skins/skins.swf",symbol="ShortInfoPanel_closeButtonDisabledSkin");
+	closeButtonDownSkin: Embed(source="/skins/skins.swf",symbol="ShortInfoPanel_closeButtonDownSkin");
+	closeButtonOverSkin: Embed(source="/skins/skins.swf",symbol="ShortInfoPanel_closeButtonOverSkin");
+	closeButtonUpSkin: Embed(source="/skins/skins.swf",symbol="ShortInfoPanel_closeButtonUpSkin");
+	borderSkin: Embed(source="/skins/skins.swf", symbol="ShortInfoBiggerPanel_borderSkin");
+	titleBackgroundSkin: Embed(source="/skins/skins.swf", symbol="ShortInfoPanel_titleBackgroundSkin");
+	borderThicknessLeft: 4;
+	borderThicknessRight: 7;
+	borderThicknessTop: 0;
+	borderThicknessBottom: -6;
+	headerHeight: 31;
+}
+
+.infoPanel {
+   	borderSkin: Embed(source="/skins/skins.swf", symbol="infoPanel_borderSkin");  	
+}
+
+.infoPanelBar {
+	font-family: "Arial";
+	font-size: 10pt;
+	font-weight: bold;
+	color: #FFFFFF;
+}
+
+.infoPanelCloseButton {
+	up-skin: Embed(source="/skins/skins.swf", symbol="tab_close_up");
+	over-skin: Embed(source="/skins/skins.swf", symbol="tab_close_over");
+	down-skin: Embed(source="/skins/skins.swf", symbol="tab_close_down");
+	disabled-skin: Embed(source="/skins/skins.swf", symbol="tab_close_up");
+}
+
+.infoPanelScrollLeft {
+	up-skin: Embed(source="/skins/skins.swf", symbol="scrollTabsLeft_upSkin");
+	over-skin: Embed(source="/skins/skins.swf", symbol="scrollTabsLeft_overSkin");
+	down-skin: Embed(source="/skins/skins.swf", symbol="scrollTabsLeft_downSkin");
+	disabled-skin: Embed(source="/skins/skins.swf", symbol="scrollTabsLeft_disabledSkin");
+}
+
+.infoPanelScrollRight {
+	up-skin: Embed(source="/skins/skins.swf", symbol="scrollTabsRight_upSkin");
+	over-skin: Embed(source="/skins/skins.swf", symbol="scrollTabsRight_overSkin");
+	down-skin: Embed(source="/skins/skins.swf", symbol="scrollTabsRight_downSkin");
+	disabled-skin: Embed(source="/skins/skins.swf", symbol="scrollTabsRight_disabledSkin");
+}
+.infoPanelBarButton {
+	up-skin: Embed(source="/skins/skins.swf", symbol="infoPanelBarButton_upSkin");
+	over-skin: Embed(source="/skins/skins.swf", symbol="infoPanelBarButton_overSkin");
+	down-skin: Embed(source="/skins/skins.swf", symbol="infoPanelBarButton_downSkin");
+	disabled-skin: Embed(source="/skins/skins.swf", symbol="infoPanelBarButton_disabledSkin");
+}
+
+.infoPanelBarButtonSelected {
+	up-skin: Embed(source="/skins/skins.swf", symbol="infoPanelBarButton_overSkin");
+	over-skin: Embed(source="/skins/skins.swf", symbol="infoPanelBarButton_overSkin");
+	down-skin: Embed(source="/skins/skins.swf", symbol="infoPanelBarButton_downSkin");
+	disabled-skin: Embed(source="/skins/skins.swf", symbol="infoPanelBarButton_disabledSkin");
+}
+
+.shortInfoPanelTitleStyle {
+	font-family: "Arial";
+	font-size: 9pt;
+	font-weight: bold;
+	color: #FFFFFF;
+}
+
+.shortInfoPanelBarButton {
+	up-skin: Embed(source="/skins/skins.swf", symbol="shortInfoPanelBarButton_upSkin");
+	over-skin: Embed(source="/skins/skins.swf", symbol="shortInfoPanelBarButton_overSkin");
+	down-skin: Embed(source="/skins/skins.swf", symbol="shortInfoPanelBarButton_downSkin");
+	disabled-skin: Embed(source="/skins/skins.swf", symbol="shortInfoPanelBarButton_disabledSkin");
+}
+
+.shortInfoPanelBarButtonSelected {
+	up-skin: Embed(source="/skins/skins.swf", symbol="shortInfoPanelBarButton_overSkin");
+	over-skin: Embed(source="/skins/skins.swf", symbol="shortInfoPanelBarButton_overSkin");
+	down-skin: Embed(source="/skins/skins.swf", symbol="shortInfoPanelBarButton_downSkin");
+	disabled-skin: Embed(source="/skins/skins.swf", symbol="shortInfoPanelBarButton_disabledSkin");
+}
+
+ScrollBar
+{
+	downArrowDisabledSkin: Embed(source="/skins/skins.swf", symbol="ScrollArrowDown_disabledSkin");
+	downArrowDownSkin: Embed(source="/skins/skins.swf", symbol="ScrollArrowDown_downSkin");
+	downArrowOverSkin: Embed(source="/skins/skins.swf", symbol="ScrollArrowDown_overSkin");
+	downArrowUpSkin: Embed(source="/skins/skins.swf", symbol="ScrollArrowDown_upSkin");
+	thumbDownSkin: Embed(source="/skins/skins.swf", symbol="ScrollThumb_downSkin");
+	thumbIcon: Embed(source="/skins/skins.swf", symbol="ScrollBar_thumbIcon");
+	thumbOverSkin: Embed(source="/skins/skins.swf", symbol="ScrollThumb_overSkin");
+	thumbUpSkin: Embed(source="/skins/skins.swf", symbol="ScrollThumb_upSkin");
+	trackSkin: Embed(source="/skins/skins.swf", symbol="ScrollTrack_Skin");
+	upArrowDisabledSkin: Embed(source="/skins/skins.swf", symbol="ScrollArrowUp_disabledSkin");
+	upArrowDownSkin: Embed(source="/skins/skins.swf", symbol="ScrollArrowUp_downSkin");
+	upArrowOverSkin: Embed(source="/skins/skins.swf", symbol="ScrollArrowUp_overSkin");
+	upArrowUpSkin: Embed(source="/skins/skins.swf", symbol="ScrollArrowUp_upSkin");
+
+}
+.breadCrumbsScrollBar
+{
+	downArrowDisabledSkin: Embed(source="/skins/skins.swf", symbol="breadCrumbsScrollArrowDown_disabledSkin");
+	downArrowDownSkin: Embed(source="/skins/skins.swf", symbol="breadCrumbsScrollArrowDown_downSkin");
+	downArrowOverSkin: Embed(source="/skins/skins.swf", symbol="breadCrumbsScrollArrowDown_overSkin");
+	downArrowUpSkin: Embed(source="/skins/skins.swf", symbol="breadCrumbsScrollArrowDown_upSkin");
+	thumbDownSkin: Embed(source="/skins/skins.swf", symbol="breadCrumbsScrollThumb_downSkin");
+	thumbIcon: Embed(source="/skins/skins.swf", symbol="breadCrumbsScrollBar_thumbIcon");
+	thumbOverSkin: Embed(source="/skins/skins.swf", symbol="breadCrumbsScrollThumb_overSkin");
+	thumbUpSkin: Embed(source="/skins/skins.swf", symbol="breadCrumbsScrollThumb_upSkin");
+	trackSkin: Embed(source="/skins/skins.swf", symbol="breadCrumbsScrollTrack_Skin");
+	upArrowDisabledSkin: Embed(source="/skins/skins.swf", symbol="breadCrumbsScrollArrowUp_disabledSkin");
+	upArrowDownSkin: Embed(source="/skins/skins.swf", symbol="breadCrumbsScrollArrowUp_downSkin");
+	upArrowOverSkin: Embed(source="/skins/skins.swf", symbol="breadCrumbsScrollArrowUp_overSkin");
+	upArrowUpSkin: Embed(source="/skins/skins.swf", symbol="breadCrumbsScrollArrowUp_upSkin");
+
+}

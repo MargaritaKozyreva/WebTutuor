@@ -1,0 +1,35 @@
+<%
+Response.ContentType = "text/xml";
+Server.Execute( "include/user_init.html" );
+
+Response.Write( '<?xml version="1.0" encoding="windows-1251"?>\r\n' );
+sSessionID = Request.Query.HasProperty('session_id') ? Request.Query.session_id : "";
+if ( sSessionID == "" )
+{
+	Response.Write("ERROR=NO SESSION ID");
+	Cancel();
+}
+
+connection = ArrayFirstElem( XQuery( 'for $elem in connections where $elem/id = ' + session_id + ' return $elem' ) );
+switch ( connection.state )
+{
+	case 'deleted':
+		Response.Write( "ERROR=COURSE IS DELETED" );
+		Cancel();
+		break;
+
+	case 'finished':
+		Response.Write( "ERROR=COURSE IS FINISHED" );
+		Cancel();
+		break;
+}
+
+learningDoc = OpenDoc( UrlFromDocID( connection.active_learning_id ) ).TopElem;
+if ( learningDoc.Name != 'active_learning' )
+{
+	Response.Write( "ERROR=WRONG OBJECT TYPE" );
+	Cancel();
+}
+
+Response.Write( learningDoc.parts.Xml );
+%>

@@ -1,0 +1,390 @@
+<%
+var IMAGES_CACHE_TIME_START=0;
+var IMAGES_CACHE_TIME_END=0;
+var IMAGES_TO_CACHE=60;
+
+var method = "";
+var _err = "none";
+var _err_string = "";
+var _out = "";
+var _show_error = true;
+var authorized = false;
+if (Request.Query.HasProperty("method")) {
+    method = Request.Query.method;
+}
+else {
+    alert("Method not found");
+    _err = "Method not found";
+}
+try {
+    if (Request.Form.HasProperty("login") && Request.Form.HasProperty("password")) {
+        login = Request.Form.login;
+        password = Request.Form.password;
+        for (_host in global_settings.settings.vclass_hosts) {
+            if (_host.login == login && _host.password == password) {
+                authorized = true;
+                break;
+            }
+        }
+    }
+}
+catch (x) {
+    _err = x;
+}
+
+/*--------------------- Вспомогательные функции ------------------------*/
+
+function Decode(sData) {
+    return DecodeCharset(sData, "utf-8");
+}
+
+function GetObjectDocByID(objId, catalog_name) {
+    if (objId == null || objId == "")
+        return null;
+    try {
+        return OpenDoc(UrlFromDocID(Int(objId)));
+    }
+    catch (x) {
+        object_entry = ArrayOptFirstElem(XQuery(("for $elem in " + catalog_name + " where $elem/code = '" + objId + "' return $elem")));
+        if (object_entry != undefined)
+            return OpenDoc(UrlFromDocID(object_entry.PrimaryKey));
+        else
+            return null;
+    }
+}
+
+/*------------------ Константы -----------------*/
+
+var statusAccepted = "success";
+var statusNotFound = "statusNotFound";
+var statusBanned = "statusBanned";
+var statusRefusedOnNotStarted = "statusNotStarted";
+var statusRefusedOnError = "statusError";
+var statusFinished = "statusFinished";
+var statusNotStarted = "statusNotStarted";
+var statusRoomNotFound = "statusRoomNotFound";
+var statusCancelled = "statusCancelled";
+/*----------------------------------------------*/
+var userIsManager = false;
+var docEvent;
+var webinar;
+var docUser = null;
+var user;
+var iUserId = null;
+var access;
+function CheckAccess() {
+	if(Request.Form.HasProperty('user_id') && Request.Form.GetProperty('user_id')!='')
+	{
+		iUserId = Int(Request.Form.user_id)
+		docUser = GetObjectDocByID(iUserId, "collaborators");
+	}
+    docEvent = GetObjectDocByID(Request.Form.room_id, "events");
+    if (docEvent == null) {
+        //_out +="<status>" + statusRoomNotFound + "</status>";
+        return statusRoomNotFound;
+    }
+    webinar = docEvent.TopElem;
+    if (docUser != null) {
+		if(docUser.TopElem.Name == 'lector')
+			docUser = OpenDoc(UrlFromDocID(docUser.TopElem.person_id));
+        catResult = ArrayOptFirstElem(XQuery("for $elem in event_results where $elem/person_id=" + docUser.DocID + " and $elem/event_id=" + docEvent.DocID + " return $elem"));
+        if (catResult != undefined) {
+            teResult = OpenDoc(UrlFromDocID(catResult.PrimaryKey)).TopElem;
+            if (teResult.is_banned)
+                return statusBanned;
+        }
+        user = docUser.TopElem;
+        if (user.access.access_role == "admin") {
+            userIsManager = true;
+            return statusAccepted;
+        }
+		else if (webinar.tutors.ChildByKeyExists(iUserId)) {
+            userIsManager = true;
+            return statusAccepted;
+        }
+        else if (webinar.lectors.ChildByKeyExists(iUserId)) {
+            userIsManager = true;
+
+            return statusAccepted;
+        }
+		else if (ArrayOptFind(webinar.even_preparations, "person_id == " + iUserId) != undefined) {
+            userIsManager = true;
+            return statusAccepted;
+        }
+        else if (webinar.collaborators.ChildByKeyExists(iUserId)) {
+            return statusAccepted;
+        }
+         
+    }
+    else {
+        if (webinar.allow_guest_login)
+            return statusAccepted;
+    }
+    return statusNotFound;
+}
+
+function GetWebinarStatus(sStatusId)
+{
+	switch (sStatusId) {
+                    case "active":
+			return statusAccepted;
+                        break;
+                    case "close":
+			return statusFinished;
+                        break;
+                    case "plan":
+		case "project":
+			return statusNotStarted;
+                        break;
+                    case "cancel":
+			return statusCancelled;
+                        break;
+                }
+}
+/*--------------------- Методы, не требующие авторизации ------------------------*/
+try {
+    switch (method) {
+        case "GetServerData":
+            access = CheckAccess();
+            if (access == statusAccepted) {
+				_out += "<status>" + GetWebinarStatus(webinar.status_id) + "</status>";
+                _out += "<http_host>" + global_settings.settings.portal_base_url + "</http_host>";
+                _out += "<rtmp_host>" + webinar.vclass_host + "</rtmp_host>";
+                var sLng = (global_settings.settings.default_lng == 'russian') ? 'ru_RU' : 'en_US';
+                if (docUser != null && docUser.TopElem.lng_id != "")
+                    sLng = (docUser.TopElem.lng_id == "russian" ? "ru_RU" : "en_US");
+                _out += "<locale>" + sLng + "</locale>";
+                if (docUser != null)
+                _out += "<id>" + docUser.DocID + "</id>";
+				else
+					_out += "<id></id>";					
+                _out += "<is_manager>" + userIsManager + "</is_manager>";
+                _out += "<allow_guest_login>" + webinar.allow_guest_login + "</allow_guest_login>";
+                _out += "<allow_reserve_server>" + webinar.use_reserve_server + "</allow_reserve_server>";
+				_out += "<cache_time_start>" + IMAGES_CACHE_TIME_START + "</cache_time_start>";
+				_out += "<cache_time_end>" + IMAGES_CACHE_TIME_END + "</cache_time_end>";
+				_out += "<cache_depth>" + IMAGES_CACHE_TIME_END + "</cache_depth>";
+            }
+            else {
+                _out += "<status>" + access + "</status>";
+                var sLng = (global_settings.settings.default_lng == 'russian') ? 'ru_RU' : 'en_US';
+                _out += "<locale>" + sLng + "</locale>";
+            }
+            break;
+
+        case "StartWebinar":
+            access = CheckAccess();
+            if ((access == statusAccepted || access == statusNotStarted) && userIsManager) {
+                webinar.status_id = "active";
+                docEvent.Save();
+            }
+            break;
+        case "SwitchServer":
+            access = CheckAccess();
+            if (access == statusAccepted && userIsManager) {
+                if (webinar.use_reserve_server) {
+                    var changed = false;
+                    for (_host in global_settings.settings.vclass_hosts) {
+                        if (_host.host != webinar.vclass_host) {
+                            webinar.vclass_host = _host.host;
+                            webinar.use_reserve_server = false;
+                            docEvent.Save();
+                            changed = true;
+                            alert("Сервер ВК для конференции " + webinar.name + " изменен на " + webinar.vclass_host)
+                            break;
+                        }
+                    }
+                    if (!changed) {
+                        _err = "Не удалось сменить адрес сервера. Возможно не задан резервный сервер";
+                    }
+                }
+                else {
+                    _err = "Для данного вебинара не предусмотрено резервных серверов";
+                }
+            }
+            else {
+                _err = "unauthorized";
+            }
+            break;
+        case "GetServerInfo":
+            try {
+                catEvent = ArrayOptFirstElem(XQuery("for $elem in events where $elem/id = " + Request.Query.room_id + " return $elem"))
+                _out += "<rtmp_host>" + catEvent.vclass_host + "</rtmp_host>";
+				_out += "<status>" + GetWebinarStatus(catEvent.status_id) + "</status>";
+            }
+            catch (x) {
+                _err = x;
+            }
+            break;
+        case "UploadFile":
+            iUserId = Int(Request.Query.user_id)
+            var iRoomId = Int(Request.Query.room_id);
+            try {
+                if (Request.Form.HasProperty("file")) {
+                    _ref = Request.Form.GetProperty("file");
+                    var sFileName = _ref.FileName;
+                    var docRoom = OpenDoc(UrlFromDocID(iRoomId));
+                    docResource = OpenNewDoc('x-local://wtv/wtv_resource.xmd');
+                    docResource.BindToDb(DefaultDb);
+                    docResource.TopElem.guess_type(sFileName);
+                    teUser = OpenDoc(UrlFromDocID(iUserId)).TopElem;
+                    if (teUser.Name == "collaborator") {
+                        docResource.TopElem.person_id = iUserId;
+                        docResource.TopElem.person_fullname = docResource.TopElem.person_id.ForeignElem.fullname;
+                    }
+                    else if (teUser.Name == "lector" && teUser.type != "invitee") {
+                        
+                        docResource.TopElem.person_id = teUser.person_id;
+                        docResource.TopElem.person_fullname = teUser.person_fullname;
+                    }
+                    docResource.TopElem.name = Decode(sFileName);
+                    //docResource.TopElem.use_count = docResource.TopElem.use_count + 1;
+                    docResource.TopElem.allow_unauthorized_download = true;
+                    docResource.Save();
+                    docRoom.TopElem.files.ObtainChildByKey(docResource.DocID)
+                    docRoom.Save();
+                    teFile = OpenNewDoc('x-local://wtv/vclass/wtv_file.xmd').TopElem;
+                    teFile.id = docResource.DocID;
+                    teFile.name = docResource.TopElem.name;
+                    teFile.type = docResource.TopElem.type;
+                    teFile.allow_download = docResource.TopElem.allow_download;
+
+
+                    if (Trim(_ref) != '' || _ref.FileName.HasValue) {
+                        _ref.FileName = DecodeCharset(_ref.FileName, 'utf-8');
+                        docResource.TopElem.put_str(_ref, _ref.FileName, docRoom.TopElem);
+                        docResource.Save();
+
+                        _out += "<id>" + docResource.DocID + "</id>";
+                        _out += "<name>" + _ref.FileName + "</name>";
+                        _out += "<type>" + docResource.TopElem.type + "</type>";
+                    }
+                    else {
+
+                        _err = "Presentation data is empty";
+                    }
+                }
+                else {
+                    _err = "Presentation not found";
+                }
+            }
+            catch (x) {
+                _err = x;
+            }
+            break;
+
+        case "SaveImage":
+            var webinar_id = Int(Request.QueryString.room_id);
+            try {
+                var event_doc = OpenDoc(UrlFromDocID(webinar_id));
+                event = event_doc.TopElem;
+                if (Request.Form.HasProperty("file")) {
+                    _ref = Request.Form.GetProperty("file");
+                    if (Trim(_ref) != '') {
+                        _filename = DecodeCharset(Request.Form.GetProperty("filename"), 'utf-8');
+                        _cur_url = "x-local://wt/web/vclass/records/" + webinar_id + "/" + _filename;
+                        PutUrlData(_cur_url, Base64Decode(_ref));
+                    }
+                    else {
+                        _err = "Image data empty";
+                    }
+                }
+                else {
+                    _err = "Image data not found";
+                }
+            }
+            catch (x) {
+                _err = x;
+            }
+            break;
+        case "register":
+            try {
+                docEvent = GetObjectDocByID(Request.Query.room_id, "events");
+                if (docEvent != null) {
+                    webinar = docEvent.TopElem;
+                    var docId;
+                    var uDoc;
+                    var iOrgId;
+                    if (docEvent.TopElem.org_id.HasValue) {
+                        iOrgId = docEvent.TopElem.org_id;
+                    }
+                    else {
+                        var docOrg = OpenNewDoc('x-local://wtv/wtv_org.xmd');
+                        docOrg.BindToDb(DefaultDb);
+                        docOrg.TopElem.name = Request.Query.company;
+                        docOrg.TopElem.disp_name = Request.Query.company;
+                        docOrg.Save();
+                        iOrgId = docOrg.DocID;
+                    }
+                    catUser = ArrayOptFirstElem(XQuery("for $elem in collaborators where $elem/email = '" + Request.Query.email + "' and $elem/org_id=" + iOrgId + " return $elem"));
+                    if (catUser == undefined) {
+                        var docSubdivision = OpenNewDoc('x-local://wtv/wtv_subdivision.xmd');
+                        docSubdivision.BindToDb(DefaultDb);
+                        docSubdivision.TopElem.name = Decode(Request.Query.company);
+                        docSubdivision.TopElem.org_id = iOrgId;
+                        docSubdivision.Save();
+                        var positionDoc = OpenNewDoc('x-local://wtv/wtv_position.xmd');
+                        positionDoc.BindToDb(DefaultDb);
+                        positionDoc.TopElem.name = Decode(Request.Query.position);
+                        positionDoc.TopElem.parent_object_id = docSubdivision.DocID;
+                        positionDoc.TopElem.org_id = docSubdivision.TopElem.org_id;
+                        positionDoc.Save();
+                        uDoc = OpenNewDoc('x-local://wtv/wtv_collaborator.xmd');
+                        uDoc.BindToDb(DefaultDb);
+                        uDoc.TopElem.lastname = Decode(Request.Query.last_name);
+                        uDoc.TopElem.firstname = Decode(Request.Query.first_name);
+                        uDoc.TopElem.middlename = Decode(Request.Query.middle_name);
+                        uDoc.TopElem.email = Request.Query.email;
+                        //uDoc.TopElem.comment = Request.Query.comment;
+                        uDoc.TopElem.position_name = positionDoc.TopElem.name;
+                        uDoc.TopElem.position_id = positionDoc.DocID;
+                        uDoc.TopElem.position_parent_id = positionDoc.TopElem.parent_object_id;
+                        uDoc.TopElem.org_id = positionDoc.TopElem.org_id;
+                        /*if(Request.Query.HasProperty("comment"))
+                        uDoc.TopElem.comment = Request.Query.comment;	*/
+                        uDoc.Save();
+                        positionDoc.TopElem.basic_collaborator_id = uDoc.DocID;
+                        positionDoc.Save();
+                    }
+                    else {
+                        uDoc = OpenDoc(UrlFromDocID(catUser.PrimaryKey));
+                    }
+
+                    _doc = tools.add_person_to_event(uDoc.DocID, docEvent.DocID, null, docEvent);
+                    if (_doc != null) {
+                        docEvent = _doc;
+                    }
+                    docEvent.Save();
+                    tools.create_notification('vclass_register', uDoc.DocID, "", docEvent.DocID);
+                    _out = "<user_id>" + uDoc.DocID + "</user_id>";
+                    alert('User ' + uDoc.TopElem.fullname + ' registered to webinar "' + webinar.name + '"');
+
+                }
+            }
+            catch (x) {
+                _err = x;
+            }
+            break;
+        default:
+            _err = "unauthorized";
+
+    }
+}
+catch (x) {
+    _err = x;
+}
+if (_err != "none")
+    alert(_err)
+if (_show_error) {
+    _out += "<error>" + _err + "</error>"
+}
+_out = "<result>" + _out + "</result>";
+//        var result = OpenDocFromStr( '<result>' +  _out + '</result>' ).TopElem;
+//    Response.Write(EncodeCharset(_out,"utf-8"));
+var result = OpenDocFromStr(_out).TopElem;
+//alert(result.Xml);
+Response.Write(EncodeCharset(result.Xml, "utf-8"));
+//Response.Write(result.Xml);
+//Response.Write(HtmlEncode(_out));
+
+%>

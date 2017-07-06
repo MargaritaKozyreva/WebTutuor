@@ -1,0 +1,907 @@
+<%
+	/***************
+		PARAMETER cl_course_body_create_objs_with_access (["0"],"1"): При создании новых объектов внутри модуля, копирует в них свой блок <access>
+		PARAMETER cl_course_body_create_objs_with_content_panel_ref (["0"],"1"): При создании новых объектов внутри модуля, заводит на них запись в панели контента
+	***************/
+	
+	try
+	{
+		bMASTER_MODE = (bMASTER_MODE == true);
+	}
+	catch(_X_)
+	{
+		bMASTER_MODE = false;
+	}
+	
+	if (!bMASTER_MODE)
+	{
+		try
+		{
+			curCLCourseID = Int(Request.QueryString.cl_course_id);
+			curCLCourse = OpenDoc(UrlFromDocID(curCLCourseID)).TopElem;
+		}
+		catch(_Y_)
+		{
+			curCLCourse = null;
+			curCLCourseID = null;
+		}
+%>
+<table width="100%" cellspacing="5" cellpadding="4" class="tableBorder" height="50px">
+<tr valign="middle">
+	<td style="font-weight:bold; font-size:larger" width="100px"><%=tools_web.get_web_str('c_courses')%></td>
+	<td style="font-size:larger; font-weight:lighter;">
+		<select id="cl_course_selector" onchange="window.location.href = '<%=tools_web.get_query_string(true, "cl_course_id")%>cl_course_id=' + this.value">
+			<option value=""> - </option>
+<%
+		for (_catCLCourseElem in XQuery("for $elem in cl_courses where MatchSome($elem/author_id, ("+curUserID+")) return $elem"))
+		{
+			if (global_settings.settings.check_access_on_lists && tools_web.check_access( OpenDoc( UrlFromDocID ( _catCLCourseElem.PrimaryKey ), "form=x-local://wtv/wtv_form_doc_access.xmd;ignore-top-elem-name=1" ).TopElem, curUserID, curUser, Session ) == false) continue;
+			Response.Write("<option value='" + _catCLCourseElem.id + "' " + (curCLCourseID != "" && curCLCourseID == _catCLCourseElem.id ? "selected" : "") + ">" + HtmlEncode(_catCLCourseElem.name) + "</option>");
+		}
+%>
+		</select>
+	</td>
+</tr>
+</table>
+<%
+	}
+	if (curCLCourseID != null)
+	{
+%>
+<script src="/scripts/calendar/calendar.js"></script>
+<script language="javascript">
+<!--
+	var sErrorMessage = <%=CodeLiteral(tools_web.get_web_str("veb_err_post"))%>;
+-->
+</script>
+<br/>
+<%
+	if (!bMASTER_MODE)
+	{
+%>
+<table width="100%" cellspacing="0" cellpadding="4" class="tableBorder" border="0">
+	<tr>
+		<td style="font-weight:bolder; font-size:larger;" width="130px"><%=tools_web.get_web_str('c_name')%>:</td>
+		<td style="font-weight:normal; font-size:larger"><%=HtmlEncode(curCLCourse.name)%></td>
+	</tr>
+	<tr>
+		<td style="font-weight:bolder; font-size:larger;"><%=tools_web.get_web_str('c_start_date')%>:</td>
+		<td style="font-weight:normal; font-size:larger"><%=DateNewTime(curCLCourse.start_date)%></td>
+	</tr>
+	<tr>
+		<td style="font-weight:bolder; font-size:larger;"><%=tools_web.get_web_str('c_finish_date')%>:</td>
+		<td style="font-weight:normal; font-size:larger"><%=DateNewTime(curCLCourse.end_date)%></td>
+	</tr>
+	<tr>
+		<td style="font-weight:bolder; font-size:larger;"><%=tools_web.get_web_str('c_status')%>:</td>
+		<td style="font-weight:normal; font-size:larger"><%=curCLCourse.state_id.ForeignElem.name%></td>
+	</tr>
+</table>
+<br/>
+<%
+		bCanEdit = tools_cl.is_author_of_type(curCLCourse, curUserID, 1+2);
+		bCanRepositoring = tools_cl.is_author_of_type(curCLCourse, curUserID, 1+8);
+	}
+	else
+	{
+		bCanEdit = true;
+		bCanRepositoring = true;
+	}
+	
+	
+	if (bCanEdit)
+	{
+%>
+<input type="button" value="<%=tools.get_web_str('cl_open_course')%>" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="if (parseInt($('div#div_repositorium input#repositoriums_count').val()) == 0) window.alert(<%=CodeLiteral( tools.get_web_str('vccb_mess_no_rep') )%>); else window.open('/courselab/wcl/default.html?cl_course_id=<%=curCLCourseID%>', 'newCLwindow', 'width='+screen.availWidth+',height='+screen.availHeight+',resizable=1,top=0,left=0');" name="btn_open_wcl_course" style="display:inline"/>
+<%
+	}
+%>
+<h3><%=tools.get_web_str('c_repositories')%></h3>
+<%
+	if (bCanRepositoring)
+	{
+%>
+<script language="javascript">
+function add_repository(_id, _name)
+{
+	var item_count = parseInt($("div#div_repositorium input#repositoriums_count").val());
+	var _class = item_count % 2 ? "tableRowEven" : "tableRowOdd";
+	_name = '<a href="view_doc.html?mode=repositorium&repositorium_id='+_id+'&doc_id=<%=curDocID%>">'+_name+'</a>';
+	
+	$("div#div_repositorium tbody#repositizer").append('<tr key_id="'+_id+'"><td class="' +_class+ '"><input type="hidden" id="repositorium_id_'+item_count+'" name="repositorium_id_'+item_count+'" value="'+_id+'"/>' +_name+ '</td></tr>');
+	$("div#div_repositorium input#repositoriums_count").val(item_count+1);
+	$("input[name='btn_open_wcl_course']").show();
+	//$("#span_zero_repo_warning").hide();
+}
+
+function select_repositoriums()
+{
+	var oPars=new Object(); oPars.check_access = true;
+	var strAttr='status:no;dialogWidth:780px;dialogHeight:550px;help:no;resizable:1';
+	oPars.display_object_ids = $("#repo_display").val();
+	oPars.selected_object_ids = "";
+	$("div#div_repositorium tbody#repositizer > tr").each(function(){oPars.selected_object_ids+=this.getAttribute("key_id") +";";});
+	oPars.can_be_empty = true;
+	xShowModalDialog('dlg_select.html?doc_id=<%=curDocID%>&catalog_name=repositorium&multi_select=1&rand='+Math.random(), oPars, strAttr);
+	if (!oPars.handle ) return false;
+	
+	$('div#div_repositorium tbody#repositizer').empty();
+	
+	var sXmlRepos = "<repositoriums>";
+	var _x;
+	for (_x = 0; _x < oPars.elemArray.length; _x++)
+	{
+		sXmlRepos += "<repositorium><repositorium_id>"+oPars.elemArray[_x]+"</repositorium_id></repositorium>";
+	}
+	if (oPars.elemArray.length == 0)
+	{
+		$("input[name='btn_open_wcl_course']").show();
+		//$("#span_zero_repo_warning").show();
+	}
+	
+	sXmlRepos += "</repositoriums>";
+	$("#repos_chosen_btn").attr("disabled","disabled").hide().after("<img border='0' src='pics/progress.gif'/>");
+	
+	$.ajax({
+		type: "POST",
+		url: "document_save.html",
+		data: "ajax=1&data_0_id=<%=curCLCourseID%>&data_0_xml_0="+escape(sXmlRepos)+"&data_0_xml_assign_node_0=TopElem.repositoriums",
+		success: function(data) 
+		{
+			if (parseInt(data) != 1)
+			{
+				window.alert(sErrorMessage);
+			}
+			else
+			{
+				window.alert("<%=HtmlEncode(tools_web.get_web_str("c_form_save"))%>");
+				for (_x = 0; _x < oPars.elemArray.length; _x++)
+				{
+					add_repository(oPars.elemArray[_x], oPars.elemNamesArray[_x]);
+				}
+			}
+			$("#repos_chosen_btn").removeAttr("disabled").show().next("img").remove();
+		},
+		error: function(xht,msg) {window.alert(sErrorMessage+"\n" + msg); $("#repos_chosen_btn").removeAttr("disabled").show().next("img").remove();}
+		});
+}
+
+function create_repository()
+{
+	var code = $("#repo_code").val();
+	var name = $("#repo_name").val();
+	if (name == "")
+	{
+		window.alert(<%=CodeLiteral( tools.get_web_str('uc_error2') )%>);
+		return false;
+	}
+	$("#repo_save_btn").attr("disabled","disabled").hide().after("<img border='0' src='pics/progress.gif'/>");
+	var sCode = "var fldPersonChild = docResponse.TopElem.authors.ObtainChildByKey(<%=curUserID%>); tools.common_filling('collaborator', fldPersonChild, fldPersonChild.PrimaryKey);";
+	var sAccessAssign = "";
+	var sAData = "";
+<%
+	if (curCLCourse != null && Request.QueryString.GetOptProperty("cl_course_body_create_objs_with_access", "0") == "1")
+	{
+%>
+	sAccessAssign = '<%=UrlEncode(UnifySpaces(curCLCourse.access.Xml))%>';
+<%
+	}
+	
+	if (Request.QueryString.GetOptProperty("cl_course_body_create_objs_with_content_panel_ref", "0") == "1")
+	{
+		iPOL_ID = ArrayOptFirstElem(XQuery("for $elem in person_object_links where $elem/person_id = "+curUserID+" and $elem/object_catalog = 'repositorium' return $elem"));
+		if (iPOL_ID != undefined)
+			iPOL_ID = iPOL_ID.PrimaryKey;
+		else
+			iPOL_ID = 0;
+%>
+	sAData = "&data_1_id=<%=iPOL_ID%>&data_1_new=1&data_1_doc_form=person_object_link&data_1_elements=[encoded]<%=UrlEncode("fldPL=objects.ObtainChildByKey(Int(Request.Form.data_0_id))")%>&data_1_source_fields=person_id;person_fullname;object_catalog;@fldPL.object_name;@fldPL.can_edit;@fldPL.can_delete&data_1_destination_fields=<%=curUserID%>;[encoded]<%=UrlEncode(curUser.fullname)%>;repositorium;[encoded]" + escape($("#repo_name").val()) + ";1;1";
+<%
+	}
+%>
+	$.ajax({
+		type: "POST",
+		url: "document_save.html",
+		dataType: "json",
+		data: "json=1&data_0_new=2&data_0_doc_form=repositorium&data_0_source_fields=code;name&data_0_destination_fields=[encoded]"+escape($("#repo_code").val())+";[encoded]"+escape($("#repo_name").val())+"&code_access=<%=Md5Hex(String((Session.sid|curUserID)))%>&code_0_eval=" + escape(sCode) + (sAccessAssign != "" ? "&data_0_xml_0=" + sAccessAssign + "&data_0_xml_assign_node_0=TopElem.access" : "") + sAData,
+		success: function(data) 
+		{
+			if (data.operation_status_result == 1)
+			{
+				window.alert(<%=CodeLiteral( tools.get_web_str('vccb_mess_rep_created') )%>);
+				$('#tr_create_repository_block').toggle();
+				//add_repository(data.success_ids[0], $("#repo_name").val());
+				var jRepoDisp = $("#repo_display");
+				var _str = jRepoDisp.val();
+				_str = _str + (_str != "" ? ";" : "") + data.success_ids[0];
+				jRepoDisp.val(_str);
+				$("#repo_code").val("");
+				$("#repo_name").val("");
+			}
+			else
+			{
+				window.alert(sErrorMessage+"\n" + data.error_messages);
+			}
+			$("#repo_save_btn").removeAttr("disabled").show().next("img").remove();
+		},
+		error: function(xht,msg) {window.alert(sErrorMessage+"\n" + msg); $("#repo_save_btn").removeAttr("disabled").show().next("img").remove();}
+		});
+}
+	$(document).ready(function(){<%
+		iCount = 0;
+		for (_fldRepoElem in QueryCatalogByKeys("repositoriums", "id", ArrayExtract(curCLCourse.repositoriums,"PrimaryKey")))
+		{
+			iCount++;
+			Response.Write('add_repository("'+_fldRepoElem.PrimaryKey+'", "'+HtmlEncode(_fldRepoElem.name)+'");');
+		}
+		//if (iCount == 0) Response.Write('$("#span_zero_repo_warning").show();');
+		
+								%>});
+</script>
+<div width="100%" id="div_repositorium">
+	<input type="hidden" id="repo_display" value="<%=ArrayMerge(XQuery("for $elem in repositorium_authors where $elem/person_id = "+ curUserID + " return $elem"), "This.repositorium_id", ";")%>"/>
+	<table width="100%"  border="0" cellspacing="0" cellpadding="3">
+		<tr>
+			<td class="tableHeaderWithText"><%=tools.get_web_str('c_repositories')%></td>
+		</tr>
+		<tr>
+			<td class="tableHeaderNoText" colspan="1"><img src="pics/1blank.gif" width="1" height="1"/></td>
+		</tr>	
+		<tbody id="repositizer"></tbody>
+		<tr>
+			<td class="tableFooter" colspan="1"><img src="pics/1blank.gif" width="1" height="1"/></td>
+		</tr>
+	</table>
+	<table width="100%" border="0" cellspacing="0" cellpadding="0" class="activator">
+	<tr>
+		<td align="center" class="activator">
+			<input type="hidden" name="repositoriums_count" id="repositoriums_count" value="0"/>
+			<input type="button" id="repos_chosen_btn" value=<%=tools.get_web_str('c_choose')%>..." onClick="select_repositoriums();" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+			<input type="button" value="<%=tools.get_web_str('c_create')%>" onClick="$('#tr_create_repository_block').toggle()" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+		</td>
+	</tr>
+	<tr id="tr_create_repository_block" style="display: none">
+		<td align="center">
+			<table width="100%">
+				<tr style="display: none">
+					<td width="100px" style="font-weight:bolder;"><%=tools.get_web_str('c_code')%></td>
+					<td>
+						<input type="text" id="repo_code" value="" class="inputEdit" style="width:200px"/>
+					</td>
+				</tr>
+				<tr>
+					<td width="100px" style="font-weight:bolder;"><%=tools_web.get_web_str('c_name')%></td>
+					<td>
+						<input type="text" id="repo_name" value="" class="inputEdit" style="width:100%"/>
+					</td>
+				</tr>
+			</table>
+			<input type="button" id="repo_save_btn" value=<%=tools.get_web_str('c_create')%> onClick="create_repository();" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"/>
+		</td>
+	</tr>
+	</table>
+	<span id="span_zero_repo_warning" style="color:red; display:none"><br/></span>
+</div>
+<%
+	}
+	else
+	{
+%>
+<ul>
+<%
+		iCount = 0;
+		for (_fldRepoElem in curCLCourse.repositoriums)
+		{
+			_catResource = _fldRepoElem.PrimaryKey.OptForeignElem;
+			if (_catResource != undefined)
+			{
+				iCount++;
+%>
+			<li><a href="view_doc.html?mode=repositorium&repositorium_id=<%=_catResource.PrimaryKey%>&doc_id=<%=curDocID%>"><%=_catResource.name%></a></li>
+<%
+			}
+		}
+		if (iCount == 0)
+		{
+%>
+			<span id="span_zero_repo_warning" style="color:red; display:none"><br/></span>
+<%
+		}
+%>
+</ul>
+<%
+	}
+%>
+
+<div id="blog_authors_div" style="display: inline">
+	<table width="100%" border="0" cellspacing="0" cellpadding="0">
+		<tr>
+			<td width="100%"><p class="tableHeaderTextInner"><%=tools.get_web_str('vccb_project_team')%></p></td>
+		</tr>
+	</table>
+	<table width="100%" border="0" cellspacing="0" cellpadding="3">
+		<tr>
+			<td class="tableHeaderWithTextLeft"><img src="pics/1blank.gif" width="0" height="0"/></td>
+			<td class="tableHeaderWithText" width="70%"><%=tools_web.get_web_str("c_fio")%></td>
+			<!--
+			<td class="tableHeaderWithText" width="25%"><%=tools_web.get_web_str("c_position")%></td>
+			<td class="tableHeaderWithText" width="25%"><%=tools_web.get_web_str("c_subd")%></td>
+			-->
+			<td class="tableHeaderWithText" width="30%"><%=tools_web.get_web_str("c_role")%></td>
+			<td class="tableHeaderWithTextRight"><img src="pics/1blank.gif" width="0" height="0"/></td>
+		</tr>
+		<tr>
+			<td class="tableHeaderNoTextLeft"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<!--
+			<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			-->
+			<td class="tableHeaderNoTextRight"><img src="pics/1blank.gif" width="1" height="1" /></td>
+		</tr>
+		<tbody id="auth_people_recycler">
+		</tbody>
+		<tr>
+			<td class="tableFooterLeft"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<!--
+			<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			-->
+			<td class="tableFooterLeft"><img src="pics/1blank.gif" width="1" height="1" /></td>
+		</tr>
+	</table>
+	<input type="hidden" id="auth_people_count" value="0"/>
+<%
+	if(bCanEdit)
+	{
+%>
+	<p>
+	<input type="button" value="<%=tools.get_web_str('vccb_sel_team')%>..." class="inputButton" onmouseover="$(this).addClass('inputButtonOver');" onmouseout="$(this).removeClass('inputButtonOver');" onclick="select_auth_people();"/>
+	<input type="button" id="auth_save_btn" value="<%=tools_web.get_web_str("c_save")%>..." class="inputButton" onmouseover="$(this).addClass('inputButtonOver');" onmouseout="$(this).removeClass('inputButtonOver');" onclick="save_auth_people();" style="display:none"/>
+	</p>
+<%
+	}
+%>
+</div>
+
+<script language="javascript">
+<!--
+	function checkkey(srcobj, e, flag_flat)
+	{
+		if (!e) var e = window.event;
+		var keycode = parseInt(e.keyCode ? e.keyCode : e.which);
+		if ((keycode<48 || keycode>57) && keycode!=46) return false;
+		if (keycode==46) 
+		{
+			if( (!flag_flat) || srcobj.value.indexOf('.') >= 0) return false;
+		}
+		return true;
+	}
+
+	function place_role_id(_user_id, _roleid)
+	{
+		var chkbox,editor_div = $("<div/>").attr("id", "div_role_" + _user_id)
+<%
+		if (bCanEdit)
+		{
+%>		.hover(function(){$(this).css("background-color","lightgray");},function(){$(this).css("background-color","");} ).dblclick(function(){toggle_role(_user_id,true);})
+<%
+		}
+%>;
+<%
+		for (commonCLAuthorTypeElem in common.cl_author_types)
+		{
+%>
+			chkbox = $("<input/>").attr({"type":"checkbox","id":"chk_" + _user_id + "_<%=commonCLAuthorTypeElem.id%>","value":"<%=commonCLAuthorTypeElem.id%>"}).click(function() {$("#auth_save_btn").show();});
+			editor_div.append(chkbox);
+			editor_div.append($("<span/>").attr("id","spn_rol_"+_user_id + "_<%=commonCLAuthorTypeElem.id%>").append("<nobr><%=HtmlEncode(commonCLAuthorTypeElem.name)%></nobr>").append("<br/>"));
+			chkbox.attr("checked",((_roleid & <%=commonCLAuthorTypeElem.id%>) > 0 ? "checked":""));
+<%
+		}
+%>
+		return editor_div.append("&nbsp;");
+	}
+
+	function toggle_role(_user_id,bShow)
+	{
+		var editor_div = $("#div_role_" + _user_id);
+		if (bShow)
+		{
+			editor_div.children("input:checkbox").show();
+			editor_div.children("span").show();
+		}
+		else
+			editor_div.children("input:checkbox").hide().not(":checked").each(function(){ $("#spn_rol_" + _user_id + "_"+this.value).hide();});
+	}
+<%
+	if (bCanEdit)
+	{
+%>
+	
+	function save_auth_people()
+	{
+		$("#auth_save_btn").attr("disabled","disabled").hide().after("<img border='0' src='pics/progress.gif'/>");
+		var sXmlPeople = "<authors>";
+		$("#auth_people_recycler > tr").each(function(idx,__tr){
+			toggle_role(__tr.getAttribute("key_id"),false);
+			sXmlPeople += "<author><person_id>"+__tr.getAttribute("key_id") + "</person_id><person_instance_id>1</person_instance_id>";
+			sXmlPeople += "<types>";
+			$("#div_role_" +__tr.getAttribute("key_id") + " input:checkbox:checked").each(function(idx2,__chkbx){
+				sXmlPeople += "<type><type_id>" +__chkbx.value + "</type_id></type>";
+			});
+			sXmlPeople += "</types>";
+			sXmlPeople += "</author>";
+		});
+		sXmlPeople += "</authors>";
+		var sCode = "for (fldPersonChild in docResponse.TopElem.authors) tools.common_filling('collaborator', fldPersonChild, fldPersonChild.PrimaryKey);";
+		$.ajax({
+		type: "POST",
+		url: "document_save.html",
+		data: "ajax=1&data_0_id=<%=curCLCourseID%>&data_0_xml_0="+escape(sXmlPeople)+"&data_0_xml_assign_node_0=TopElem.authors&code_access=<%=Md5Hex(String((Session.sid|curUserID)))%>&code_0_eval=" + escape(sCode),
+		success: function(data) 
+		{
+			if (parseInt(data) != 1)
+			{
+				window.alert(sErrorMessage);
+			}
+			else
+			{
+				window.alert("<%=HtmlEncode(tools_web.get_web_str("c_form_save"))%>");
+			}
+			$("#auth_save_btn").removeAttr("disabled").show().next("img").remove();
+		},
+		error: function(xht,msg) {window.alert(sErrorMessage+"\n" + msg); $("#auth_save_btn").removeAttr("disabled").show().next("img").remove();}
+		});
+	}
+	
+	function select_auth_people()
+	{
+		var oPars=new Object(); oPars.check_access = true;
+		var strAttr='status:no;dialogWidth:780px;dialogHeight:550px;help:no;resizable:1';
+		
+		//if (oPars.display_object_ids == '') pars.display_object_ids = '0';
+		
+		oPars.selected_object_ids = "";
+		$("#auth_people_recycler > tr").each(function(){oPars.selected_object_ids+= (oPars.selected_object_ids != "" ? ";" : "") + this.getAttribute("key_id");});
+		oPars.can_be_empty = true;
+		xShowModalDialog('dlg_select.html?doc_id=<%=curDocID%>&catalog_name=collaborator&typein=1&multi_select=1&rand='+Math.random(), oPars, strAttr);
+		if (!oPars.handle ) return false;
+		var item_count = parseInt($("#auth_people_count").val());
+		var sCatalog = "";
+		$("#auth_people_recycler > tr").each(function()
+		{
+			if (String(oPars.selected_object_ids).indexOf(this.getAttribute("key_id")) < 0)
+			{
+				$(this).remove();
+				item_count--;
+			}
+			else
+				sCatalog+= this.getAttribute("key_id")+";";
+		});
+		$("#auth_people_count").val(item_count);
+		$("#auth_save_btn").show();
+		for (var _x = 0; _x < oPars.elemArray.length; _x++)
+		if (String(sCatalog).indexOf(oPars.elemArray[_x]) < 0)
+		{
+			sCatalog+= oPars.elemArray[_x]+";";
+			add_auth_people(oPars.elemArray[_x], oPars.elemNamesArray[_x], 0);
+		}
+	}
+<%
+	}
+%>
+	function add_auth_people(_id, _name, sType)
+	{
+		var item_count = parseInt($("#auth_people_count").val());
+		var _class = item_count % 2 ? 'tableRowEven' : 'tableRowOdd';
+		$(document.createElement("tr")).attr("key_id", _id).append(
+		$(document.createElement("td")).addClass(_class + "Left").append($(document.createElement("img")).attr({"src": "pics/1blank.gif", "width": 0, "height": 0}))
+		).append(
+			$(document.createElement("td")).addClass(_class).html(_name)
+		).append(
+			$(document.createElement("td")).addClass(_class).append(place_role_id(_id, sType))
+		).append(
+			$(document.createElement("td")).addClass(_class + "Right").append($(document.createElement("img")).attr({"src": "pics/1blank.gif", "width": 0, "height": 0}))
+		).appendTo($('#auth_people_recycler'));
+		$("#auth_people_count").val(item_count+1);
+		toggle_role(_id,false);
+	}
+	$(document).ready(function(){<%
+		for (fldAuthorElem in curCLCourse.authors)
+		{
+			Response.Write("add_auth_people('"+fldAuthorElem.PrimaryKey+"', '"+HtmlEncode(fldAuthorElem.person_fullname)+"', "+fldAuthorElem.typecode+");");
+		}	
+								%>});
+<%
+	if(bCanEdit)
+	{
+%>
+
+	function delete_plan_row_handler()
+	{
+		var _parent_tr = $(this).parents("tr[pt_row_id]");
+		var _row_id = _parent_tr.attr("pt_row_id");
+		if (confirm(String(<%=CodeLiteral(tools.get_web_str("vccb_mess_del_plan"))%>).replace(/(.*){PARAM1}(.*){PARAM2}(.*)/g, "$1" +$("#pt_counter_" + _row_id).html()+ "$2" +$("#pt_name_" + _row_id).val()+ "$3")))
+		{
+			var _id = $("#pt_id_" + _row_id).val();
+			var domSrcControl = this;
+			$(domSrcControl).hide().after("<img border='0' src='pics/ajax-loader-tiny.gif'/>");
+			$.ajax({type: 'POST', url: 'document_save.html', data: "ajax=1&data_0_id=<%=curCLCourseID%>&data_0_destination_fields=&data_0_source_fields=&data_0_elements=[encoded]" + escape("aaa666=plan_table.DeleteChilds('id==\\\'"+_id+"\\\'')"),
+			async: true,
+			success: function(data)
+			{
+				if (parseInt(data) != 1)
+				{
+					window.alert(sErrorMessage);
+					$(domSrcControl).show().next("img").remove();
+				}
+				else
+				{
+					$("#plan_table_recycler").find("input[bind_elem][value='"+_id+"']").each(function(i,elem){$(elem).val(""); $("#" + $(elem).attr("bind_elem")).html("")});
+					_parent_tr.remove();
+					$("#plan_table_recycler td[pt_counter]").each(function(idx){$(this).html(idx+1)});
+					window.alert("<%=HtmlEncode(tools_web.get_web_str("c_deleted"))%>");
+				}
+			},
+			error: function(xht, msg){window.alert(sErrorMessage+"\n" + msg); $(domSrcControl).show().next("img").remove();}			
+			});
+		}
+		return false;
+	}
+<%
+	}
+%>	
+	function add_plan_table_data(__id,__startdate,__plandate,__percent,__factdate, __name, __responsible_id, __responsible_fullname, __description, __req_plan_row_id, __req_plan_row_name)
+	{
+		var _inpCounter = $("#plan_table_tr_count"), _iItem_count = parseInt(_inpCounter.val());
+		__percent = parseInt(__percent);
+		if (isNaN(__percent) || __percent < 0) __percent = 0; else if (__percent > 100) __percent = 100;
+		if (!__id) __id = Math.random()*100000000;
+		var _s_percent_scale_url = "pics/color4.gif";
+		var _planTableRecycler = $("#plan_table_recycler");
+		var _idx = _planTableRecycler.find("tr[pt_row_id]").length;
+		var _sClass = _idx % 2 ? "tableRowEven" : "tableRowOdd";
+		
+		$(document.createElement("tr")).attr("pt_row_id", _iItem_count).append(
+			$(document.createElement("td")).addClass(_sClass + "Left").append($(document.createElement("img")).attr({"src": "pics/1blank.gif", "width": 0, "height": 0}))
+		).append(
+		$(document.createElement("td")).addClass(_sClass).attr({"id":"pt_counter_" + _iItem_count,"pt_counter":_iItem_count}).html(_idx+1)
+		).append(
+		$(document.createElement("td")).addClass(_sClass).attr("id", "pt_start_date_disp_" + _iItem_count).html((__startdate ? __startdate : ""))
+		).append(
+		$(document.createElement("td")).addClass(_sClass).attr("id", "pt_plan_date_disp_" + _iItem_count).html((__plandate ? __plandate : ""))
+		).append(
+		$(document.createElement("td")).addClass(_sClass).attr({"align": "left", "valign": "middle"}).append($(document.createElement("input")).attr({"type":"hidden", "id":"pt_percent_" + _iItem_count}).val(__percent)).append($(document.createElement("div")).css({"border": "1px gray solid", "width": "50px", "height":"15px"}).append($(document.createElement("div")).attr("id", "pt_gauge_div_" + _iItem_count).css({"width": (__percent / 2) + "px", "height": "15px", "background-image":"url(" +_s_percent_scale_url+ ")", "position": "absolute", "z-index": "1"})).append($(document.createElement("div")).attr("align", "center").css({"z-index":"2","position":"relative","font-weight":"bold"}).attr("id","pt_percent_div_" + _iItem_count).html(__percent + "%")))
+		).append(
+		$(document.createElement("td")).addClass(_sClass).attr("id", "pt_fact_date_disp_" + _iItem_count).html((__factdate ? __factdate : ""))
+		).append(
+		$(document.createElement("td")).addClass(_sClass).attr("id", "pt_name_disp_" + _iItem_count).html((__name ? __name : ""))
+		).append(
+		$(document.createElement("td")).attr("id", "pt_responsible_fullname_"+_iItem_count).addClass(_sClass).html((__responsible_fullname ? __responsible_fullname : ""))
+		).append(
+		$(document.createElement("td")).addClass(_sClass).attr("id", "pt_description_disp_" + _iItem_count).html((__description ? __description : ""))
+		).append(
+		$(document.createElement("td")).addClass(_sClass).attr("id", "pt_req_plan_row_name_" + _iItem_count).html((__req_plan_row_name ? __req_plan_row_name : ""))
+		).append(
+		$(document.createElement("td")).addClass(_sClass)
+<%
+		if (bCanEdit)
+		{
+%>
+			.append($(document.createElement("a")).attr({"href": "#", "title": "<%=tools.get_web_str('cl_del_line')%>"}).append($(document.createElement("img")).attr({"src": "pics/Delete_3.gif", "border": 0}) ).click(delete_plan_row_handler)).append($(document.createElement("img")).attr({"src": "pics/1blank.gif", "width": 0, "height": 0})).append($(document.createElement("input")).attr({"type":"hidden", "id":"pt_id_" + _iItem_count}).val(__id)).append($(document.createElement("input")).attr({"type":"hidden", "id":"pt_start_date_" + _iItem_count}).val((__startdate ? __startdate : ""))).append($(document.createElement("input")).attr({"type":"hidden", "id":"pt_plan_date_" + _iItem_count}).val((__plandate ? __plandate : ""))).append($(document.createElement("input")).attr({"type":"hidden", "id":"pt_fact_date_" + _iItem_count}).val((__factdate ? __factdate : ""))).append($(document.createElement("input")).attr({"type":"hidden", "id":"pt_name_" + _iItem_count}).val((__name ? __name : ""))).append($(document.createElement("input")).attr({"type":"hidden", "id":"pt_responsible_id_" + _iItem_count}).val((__responsible_id ? __responsible_id : ""))).append($(document.createElement("input")).attr({"type":"hidden", "id":"pt_description_" + _iItem_count}).val((__description ? __description : ""))).append($(document.createElement("input")).attr({"type":"hidden", "id":"pt_req_plan_row_id_" + _iItem_count,  "bind_elem":"pt_req_plan_row_name_" + _iItem_count}).val((__req_plan_row_id ? __req_plan_row_id : "")))
+	<%
+		}
+	%>			
+		).append(
+		$(document.createElement("td")).addClass(_sClass + "Right").append($(document.createElement("img")).attr({"src": "pics/1blank.gif", "width": 0, "height": 0}))
+		)
+	<%
+			if (bCanEdit)
+			{
+	%>
+		.hover(function(){$(this).children("td").css("background-color","lightgray");},function(){$(this).children("td").css("background-color","");} ).dblclick(edit_plan_row_handler)
+	<%
+			}
+	%>
+		.appendTo(_planTableRecycler);
+		
+		_inpCounter.val(++_iItem_count);
+	}
+	
+	$(document).ready(function(){<%
+		for (fldPlanRowElem in curCLCourse.plan_table)
+		{
+			fldCatReqPlanDependant = fldPlanRowElem.req_plan_row_id.OptForeignElem;
+			Response.Write("add_plan_table_data(" +fldPlanRowElem.id.XQueryLiteral+ "," +(fldPlanRowElem.start_date.HasValue ? XQueryLiteral(DateNewTime(fldPlanRowElem.start_date) + ""):"null")+ "," +(fldPlanRowElem.plan_date.HasValue ? XQueryLiteral(DateNewTime(fldPlanRowElem.plan_date) + ""):"null")+ "," +fldPlanRowElem.completion+ "," +(fldPlanRowElem.fact_date.HasValue ? XQueryLiteral(DateNewTime(fldPlanRowElem.fact_date) + ""):"null")+ "," +XQueryLiteral(fldPlanRowElem.name)+ "," +(fldPlanRowElem.responsible_id.HasValue ? XQueryLiteral(fldPlanRowElem.responsible_id + ""):"null")+ "," + XQueryLiteral(fldPlanRowElem.responsible_fullname)+ "," + XQueryLiteral(fldPlanRowElem.description)+ "," +(fldCatReqPlanDependant != undefined ? XQueryLiteral(fldCatReqPlanDependant.id):"null")+ "," +(fldCatReqPlanDependant != undefined ? XQueryLiteral(fldCatReqPlanDependant.name):"null")+ ");\n");
+		}
+								%>});
+-->
+</script>
+<%
+	if (bCanEdit)
+	{
+%>
+<div id="__plan_row_editor_splash_div" style="position: absolute; border: 2 outset;z-index:101;width:600px;display:none">
+	<div style="height:30px;width:100%;background-color:lightgrey; background-color: lightgrey; border: 1px outset;padding: 5px;">
+		<table border="0" cellpadding="0" cellspacing="0">
+		<tr>
+			<td width="100%" style="font-size: 14pt"><%=tools.get_web_str('cl_edit_plan')%></td>
+			<td>
+				<input type="button" value="X" class="inputButton" onmouseover="$(this).addClass('inputButtonOver');" onmouseout="$(this).removeClass('inputButtonOver');" onclick="_hide_stage();" style="width: 20px; align: right"/>
+			</td>
+		</tr>
+		</table>
+	</div>
+	<div style="height:100%;width:100%; background-color: whitesmoke; overflow: auto; border: 1px groove; padding: 5px" id="__reportDivSplasherInnerText">
+		<script language="javascript">
+		<!--
+			function __ptedit_splash_calendar(_this, _that_name)
+			{
+				showCalendar(_this, document.getElementById(_that_name), 'dd.mm.yyyy','ru',1,$(_this).position().left + $(_this).width() + 5,$(_this).position().top - 30,0);
+				return false;
+			}
+			function edit_plan_row_handler()
+			{
+				if ($(this).is("tr[pt_row_id]"))
+					var _idx = parseInt($(this).attr("pt_row_id"));
+				else
+					var _idx = parseInt($(this).parents("tr[pt_row_id]").attr("pt_row_id"));
+				if (isNaN(_idx)) return false;
+				
+				$("#ptedit_index").val(_idx);
+				$("#ptedit_id").val($("#pt_id_" + _idx).val());
+				$("#ptedit_start_date").val($("#pt_start_date_" + _idx).val());
+				$("#ptedit_plan_date").val($("#pt_plan_date_" + _idx).val());
+				$("#ptedit_fact_date").val($("#pt_fact_date_" + _idx).val());
+				$("#ptedit_percent").val($("#pt_percent_" + _idx).val());
+				$("#ptedit_responsible_id").val($("#pt_responsible_id_" + _idx).val());
+				$("#ptedit_responsible_fullname").val($("#pt_responsible_fullname_" + _idx).html());
+				$("#ptedit_name").val($("#pt_name_" + _idx).val());
+				$("#ptedit_description").val($("#pt_description_" + _idx).val());
+				var _cur_req_row_plan = $("#pt_req_plan_row_id_" + _idx).val();
+				
+				var _ptedit_row_req_plan_select = $("#ptedit_req_plan_row_id").empty().append($(document.createElement("option")).val("").text(""));
+				$("#plan_table_recycler").find("tr[pt_row_id][pt_row_id!='"+_idx+"']").each(function(){
+					var _subidx = parseInt($(this).attr("pt_row_id"));
+					if (!isNaN(_subidx))
+					{
+						var _id = $("#pt_id_" + _subidx).val();
+						_ptedit_row_req_plan_select.append($(document.createElement("option")).val(_id).text($("#pt_name_" + _subidx).val()).attr("selected", (_id == _cur_req_row_plan ? true:false)));
+					}
+				});
+				
+				$("<div/>").attr("id","__message_blanket").css({"background-color": "white", "width":"100%", "height": "100%", "position":"absolute", "z-index":100, "opacity":0.5}).appendTo("body");
+				messageDiv = $("#__plan_row_editor_splash_div");
+				if (!messageDiv.parent().is("body"))
+				{
+					messageDiv.remove();
+					$("body").append(messageDiv);
+					messageDiv.css({"left": ( $(window).width() - messageDiv.width() ) / 2+$(window).scrollLeft() + "px", "top": ($(window).height() - messageDiv.height())/2+$(window).scrollTop() + "px"});
+				}
+				messageDiv.show("fast");
+			}
+			function __save_data_to_db(domSrcControl)
+			{
+				var _id = $("#ptedit_id").val();
+				var _idx = parseInt($("#ptedit_index").val())
+				if (_id == "" || isNaN(_idx)) return false;
+				var __val = parseInt($("#ptedit_percent").val());
+				if (isNaN(__val)) __val = 0;
+				var _opt_selected = $("#ptedit_req_plan_row_id option:selected");
+				$(domSrcControl).hide().after("<img border='0' src='pics/progress.gif'/>");
+				$.ajax({type: 'POST', url: 'document_save.html',  data: "ajax=1&data_0_id=<%=curCLCourseID%>&data_0_elements=[encoded]" + escape("_fldPLAN=plan_table.ObtainChildByKey('"+_id+"')") + "&data_0_source_fields=@_fldPLAN.start_date;@_fldPLAN.plan_date;@_fldPLAN.fact_date;@_fldPLAN.completion;@_fldPLAN.name;@_fldPLAN.responsible_id;@_fldPLAN.responsible_fullname;@_fldPLAN.description;@_fldPLAN.req_plan_row_id&data_0_destination_fields="+$("#ptedit_start_date").val()+";"+$("#ptedit_plan_date").val()+";"+$("#ptedit_fact_date").val()+";"+__val+";[encoded]"+escape($("#ptedit_name").val())+";"+$("#ptedit_responsible_id").val()+";[encoded]"+escape($("#ptedit_responsible_fullname").val())+";[encoded]"+escape($("#ptedit_description").val())+";"+_opt_selected.val(),async: true, success: function(data){if (parseInt(data) != 1) {window.alert(sErrorMessage);}else{___pteedit_save_and_exit();} $(domSrcControl).show().next("img").remove();}, error: function(xht, msg){window.alert(sErrorMessage+"\n" + msg); $(domSrcControl).show().next("img").remove();}});
+			}
+			
+			function ___pteedit_save_and_exit()
+			{
+				var _idx = parseInt($("#ptedit_index").val())
+				if (!isNaN(_idx))
+				{
+					var __val;
+					__val = $("#ptedit_start_date").val();
+					$("#pt_start_date_" + _idx).val(__val);
+					$("#pt_start_date_disp_" + _idx).html(__val);
+					__val = $("#ptedit_plan_date").val();
+					$("#pt_plan_date_" + _idx).val(__val);
+					$("#pt_plan_date_disp_" + _idx).html(__val);
+					__val = $("#ptedit_fact_date").val();
+					$("#pt_fact_date_" + _idx).val(__val);
+					$("#pt_fact_date_disp_" + _idx).html(__val);
+					__val = parseInt($("#ptedit_percent").val());
+					if (isNaN(__val)) __val = 0;
+					$("#pt_percent_" + _idx).val(__val);
+					$("#pt_gauge_div_" + _idx).css("width",__val/2);
+					$("#pt_percent_div_" + _idx).html(__val + "%");
+					
+					$("#pt_responsible_id_" + _idx).val($("#ptedit_responsible_id").val());
+					$("#pt_responsible_fullname_" + _idx).html($("#ptedit_responsible_fullname").val());
+					__val = $("#ptedit_name").val();
+					$("#pt_name_" + _idx).val(__val);
+					$("#pt_name_disp_" + _idx).html(__val);
+					__val = $("#ptedit_description").val();
+					$("#pt_description_" + _idx).val(__val);
+					$("#pt_description_disp_" + _idx).html(__val);
+					var _opt_selected = $("#ptedit_req_plan_row_id option:selected");
+					$("#pt_req_plan_row_id_" + _idx).val(_opt_selected.val());
+					$("#pt_req_plan_row_name_" + _idx).html(_opt_selected.text());
+					window.alert("<%=HtmlEncode(tools_web.get_web_str("c_form_save"))%>");
+				}
+				_hide_stage();
+			}
+			function _hide_stage()
+			{
+				$('#__plan_row_editor_splash_div').hide('fast');$('body > div#__message_blanket').remove();
+			}
+		-->
+		</script>
+		<input type="hidden" id="ptedit_index" value=""/>
+		<input type="hidden" id="ptedit_id" value=""/>
+		<table width="100%">
+		<tr>
+			<td class="tableRowEven" width="200px" style="font-weight: bold"><%=tools_web.get_web_str('c_start_date')%>:</td>
+			<td class="tableRowEven">
+				<table cellspacing="0">
+					<tr>
+						<td><input type="text" id="ptedit_start_date" style="width: 80px" class="inputEdit" value="" readonly/></td>
+						<td><a href="#" id="ptedit_start_date_link" onclick="return __ptedit_splash_calendar(this,'ptedit_start_date')"><img src="/scripts/calendar/calendar.gif" border="0"/></a></td>
+					</tr>
+				</table>
+			</td>
+		</tr>
+		<tr>
+			<td class="tableRowOdd" style="font-weight: bold"><%=tools_web.get_web_str('c_plan_date')%>:</td>
+			<td class="tableRowOdd">
+				<table cellspacing="0">
+					<tr>
+						<td><input type="text" id="ptedit_plan_date" style="width: 80px" class="inputEdit" value="" readonly/></td>
+						<td><a href="#" id="ptedit_plan_date_link" onclick="return __ptedit_splash_calendar(this,'ptedit_plan_date')"><img src="/scripts/calendar/calendar.gif" border="0"/></a></td>
+					</tr>
+				</table>
+			</td>
+		</tr>
+		<tr>
+			<td class="tableRowEven" style="font-weight: bold"><%=tools_web.get_web_str('c_fact_date')%>:</td>
+			<td class="tableRowEven">
+				<table cellspacing="0">
+					<tr>
+						<td><input type="text" id="ptedit_fact_date" style="width: 80px" class="inputEdit" value="" readonly/></td>
+						<td><a href="#" id="ptedit_fact_date_link" onclick="return __ptedit_splash_calendar(this,'ptedit_fact_date')"><img src="/scripts/calendar/calendar.gif" border="0"/></a></td>
+					</tr>
+				</table>
+			</td>
+		</tr>
+		<tr>
+			<td class="tableRowOdd" style="font-weight: bold"><%=tools_web.get_web_str('c_percent')%>:</td>
+			<td class="tableRowOdd"><input type="text" id="ptedit_percent" value="" class="inputEdit" style="width:50px" onkeypress="return checkkey(this,event, true);" onblur="var _value = parseInt(this.value); if(this.value != '' && isNaN(_value)) {alert('Invalid number'); this.value=0;}; if (_value > 100) this.value = 100; else if(_value < 0) this.value = 0"/>&nbsp;%</td>
+		</tr>
+		<tr>
+			<td class="tableRowEven" style="font-weight: bold"><%=tools_web.get_web_str('c_name')%>:</td>
+			<td class="tableRowEven"><input type="text" id="ptedit_name" value="" class="inputEdit" style="width:90%"/></td>
+		</tr>
+		<tr>
+			<td class="tableRowOdd" style="font-weight: bold"><%=tools_web.get_web_str('c_tutor_main')%>:</td>
+			<td class="tableRowOdd">
+				<table width="90%" cellspacing="0" cellpadding="2" border="0">
+				<tr>
+					<td><input type="text" id="ptedit_responsible_fullname" value="" class="inputEdit" style="width:100%" readonly/>
+					<input type="hidden" id="ptedit_responsible_id" value=""/>
+					</td>
+					<td width="25px">
+					<input type="button" value="..." class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="
+						var pars=new Object(); pars.check_access = true;
+						var strAttr='status:no;dialogWidth:780px;dialogHeight:550px;help:no;resizable:1';
+						xShowModalDialog('dlg_select.html?doc_id=<%=curDocID%>&catalog_name=collaborator&typein=1&multi_select=0&rand='+Math.random(), pars, strAttr);
+						if (!pars.handle ) return false;
+						$('#ptedit_responsible_id').val(pars.element_id);
+						$('#ptedit_responsible_fullname').val(pars.element_name);
+					" style="width: 25px"/>
+					</td>
+					<td width="25px">
+					<input type="button" value="x" class="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" onclick="
+						$('#ptedit_responsible_id').val('');
+						$('#ptedit_responsible_fullname').val('');
+					" style="width: 25px"/>
+					</td>
+				</tr>
+				</table>
+			</td>
+		</tr>
+		<tr>
+			<td class="tableRowEven" style="font-weight: bold"><%=tools_web.get_web_str('c_desc')%>:</td>
+			<td class="tableRowEven"><input type="text" id="ptedit_description" value="" class="inputEdit" style="width:90%"/></td>
+		</tr>
+		<tr>
+			<td class="tableRowOdd" style="font-weight: bold"><%=tools_web.get_web_str('c_dependency')%>:</td>
+			<td class="tableRowOdd">
+				<select id="ptedit_req_plan_row_id" style="width: 90%"/>
+			</td>
+		</tr>
+		</table>
+		<p align="center"><input type="button" value="<%=tools.get_web_str('c_save')%>..." class="inputButton" onmouseover="$(this).addClass('inputButtonOver');" onmouseout="$(this).removeClass('inputButtonOver');" onclick="__save_data_to_db(this)"/></p>
+	</div>
+</div>
+<%
+	}
+%>
+<div id="plan_table_div" style="display: inline">
+	<table width="100%" border="0" cellspacing="0" cellpadding="0">
+		<tr>
+			<td width="100%"><p class="tableHeaderTextInner"><%=tools_web.get_web_str('cl_plan')%></p></td>
+		</tr>
+	</table>
+	<table width="100%" border="0" cellspacing="0" cellpadding="3">
+		<tr>
+			<td class="tableHeaderWithTextLeft"><img src="pics/1blank.gif" width="0" height="0"/></td>
+			<td class="tableHeaderWithText" width="10px">#</td>
+			<td class="tableHeaderWithText" width="100px"><%=tools_web.get_web_str('c_start_date')%></td>
+			<td class="tableHeaderWithText" width="100px"><%=tools_web.get_web_str('c_plan_date')%></td>
+			<td class="tableHeaderWithText" width="50px"><%=tools_web.get_web_str('c_percent')%></td>
+			<td class="tableHeaderWithText" width="100px"><%=tools_web.get_web_str('c_fact_date')%></td>
+			<td class="tableHeaderWithText" width="50%"><%=tools_web.get_web_str('c_name')%></td>
+			<td class="tableHeaderWithText" width="300px"><%=tools_web.get_web_str('c_tutor_main')%></td>
+			<td class="tableHeaderWithText" width="50%"><%=tools_web.get_web_str('c_desc')%></td>
+			<td class="tableHeaderWithText" width="200px"><%=tools_web.get_web_str('c_dependency')%></td>
+			<td class="tableHeaderWithText" width="10px"><img src="pics/1blank.gif" width="0" height="0"/></td>
+			<td class="tableHeaderWithTextRight"><img src="pics/1blank.gif" width="0" height="0"/></td>
+		</tr>
+		<tr>
+			<td class="tableHeaderNoTextLeft"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableHeaderNoTextRight"><img src="pics/1blank.gif" width="1" height="1" /></td>
+		</tr>
+		<tbody id="plan_table_recycler"></tbody>
+		<tr>
+			<td class="tableFooterLeft"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			<td class="tableFooterRight"><img src="pics/1blank.gif" width="1" height="1" /></td>
+		</tr>
+	</table>
+	<input type="hidden" id="plan_table_tr_count" value="0"/>
+<%
+	if(bCanEdit)
+	{
+%>
+	<p>
+	<input type="button" value="<%=tools_web.get_web_str("veb_add")%>..." class="inputButton" onmouseover="$(this).addClass('inputButtonOver');" onmouseout="$(this).removeClass('inputButtonOver');" onclick="add_plan_table_data();"/>
+	</p>
+<%
+	}
+%>
+</div>
+<%
+	if (!bMASTER_MODE)
+	if (curCLCourse.forum_id.HasValue)
+	{
+		catCLForum = curCLCourse.forum_id.OptForeignElem;
+		if (catCLForum != undefined)
+		{
+%>
+		<p>
+		<b><%=tools.get_web_str('vfb_forum')%>:</b>&nbsp;<a href="view_doc.html?mode=forum&doc_id=<%=curDocID%>&object_id=<%=curCLCourse.forum_id%>"><%=catCLForum.name%></a>
+		</p>
+<%
+		}
+	}
+	}
+%>

@@ -1,0 +1,56 @@
+<%
+// Текст ошибки при наличии таковой
+var sError = "";
+// Возвращаемые данные
+var sOut = "";
+// Тип возвращаемого результата: "xml", "html"
+var sResultType = "xml";
+// вызываемая функция
+var sFunction = "";
+
+try
+{
+	sResultType = Request.Query.result_type;
+	
+	if(Request.Query.HasProperty("func"))
+	{
+		Server.Execute( Request.Query.page  );
+		sOut += eval(Request.Query.func + "()");
+	}
+	else
+	{	
+		sOut += EvalCodePageUrl( Request.Query.page );
+	}
+}
+catch(err)
+{
+        sError = err;
+}
+if(sError != "")
+{
+        alert(sError );
+}
+switch(sResultType)
+{
+	case "xml":
+        sOut = "<data>" + sOut + "</data>";
+		break;
+	case "html":	
+		sOut = "<data><![CDATA[" + sOut + "]]></data>";
+		break;
+}
+sOut += "<error><![CDATA[" + sError + "]]></error>";
+sOut = "<result>" + sOut + "</result>";
+//alert(sOut);
+Response.Write(EncodeCharset(sOut,"utf-8"));
+
+
+
+/*
+Response.AddHeader( "Content-Type", "text/html");
+Response.Write(sOut);
+Response.Write(sOut);
+alert(oResult.Xml);
+*/
+
+%>

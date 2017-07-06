@@ -1,0 +1,163 @@
+<%
+	Server.Execute("include/access_init.html");
+	sError = "";
+%><?xml version="1.0" encoding="UTF-8"?>
+<response>
+<%
+try
+{
+	curObjectID = Int(Request.Query.object_id);
+	curObject = OpenDoc(UrlFromDocID(curObjectID)).TopElem;
+}
+catch(_X_)
+{
+	curObjectID = null;
+	curObject = null;
+}
+
+function GetBookInfo()
+{
+	if (curObject != null && curObject.ChildExists("unfolded_document"))
+	{
+		var bEncrypted = false;
+		var iLicenseId;
+		for(catLicense in licenses)
+		{
+			teLicense = OpenDoc( UrlFromDocID( catLicense.PrimaryKey ) ).TopElem;	
+			if(teLicense.library_materials.ChildByKeyExists(curObjectID))
+			{
+				bEncrypted = true;
+				iLicenseId = catLicense.PrimaryKey;
+				sEnryptedFilePath=FilePath( AppDirectoryPath(), 'wt\\web\\encrypted\\' + curObjectID + '.wft');				
+				tools.encrypt_lib_obj.Encrypt_Init();
+				ok=tools.encrypt_lib_obj.Encrypt_CheckContent(sEnryptedFilePath,teLicense.decryption_key, 0);
+				if (ok==0)
+				{
+					sError = tools.encrypt_lib_obj.Encrypt_GetLastErrorMessage();
+					alert('library license error: ' + sError);
+				}
+				break;
+			}
+		}
+		if(sError == '')
+		{
+			var docViewing;
+			catUserViewing = ArrayOptFirstElem(XQuery( "for $elem in library_material_viewings where $elem/person_id = " + curUserID + " and $elem/material_id=" + curObjectID + " return $elem" ));
+			if(catUserViewing == undefined)
+			{
+		        docViewing = OpenNewDoc('x-local://wtv/wtv_library_material_viewing.xmd');
+				docViewing.TopElem.person_id = curUserID;
+				docViewing.TopElem.state_id = "active";
+				if (ArrayOptFirstElem(curObject.unfolded_document.pages) != undefined)
+				{
+					docViewing.TopElem.current_page_id=ArrayOptFirstElem(curObject.unfolded_document.pages).page_id;
+				}
+				tools.common_filling( 'collaborator', docViewing.TopElem, curUserID, curUser );
+				docViewing.TopElem.start_viewing_date = new Date();
+				docViewing.TopElem.last_viewing_date = new Date();
+				docViewing.TopElem.material_id = curObjectID;
+				docViewing.TopElem.pages.AssignElem(curObject.unfolded_document.pages);
+				docViewing.TopElem.material_name = curObject.name;
+				docViewing.BindToDb(DefaultDb);
+				docViewing.Save();
+			}
+			else
+			{
+				docViewing = OpenDoc(UrlFromDocID(catUserViewing.id));
+				docViewing.TopElem.last_viewing_date = new Date();
+				docViewing.Save();
+			}
+			
+			if (curObject.unfolded_document.title.HasValue)
+				Response.Write("<title>" + EncodeCharset(curObject.unfolded_document.title.Value, "utf-8") + "</title>");
+			
+			Response.Write("<current_page_id>" + EncodeCharset(docViewing.TopElem.current_page_id, "utf-8") + "</current_page_id>");
+			
+			if (ArrayOptFirstElem(curObject.unfolded_document.contents) != undefined)
+			{
+				Response.Write("<contents>");
+				for (fldPageElem in curObject.unfolded_document.contents)
+					Response.Write('<page number="'+fldPageElem.number+'" title="'+EncodeCharset(XmlAttrEncode(fldPageElem.title),"utf-8")+'"/>');
+				Response.Write("</contents>");
+			}
+			
+			if (curObject.unfolded_document.orientation.HasValue)
+				Response.Write("<orientation>" + curObject.unfolded_document.orientation.Value + "</orientation>");
+			
+			Response.Write("<show_contents>" + curObject.unfolded_document.show_contents + "</show_contents>");
+			if (curObject.unfolded_document.width.HasValue)
+				Response.Write("<width>" + curObject.unfolded_document.width.Value + "</width>");
+			if (curObject.unfolded_document.height.HasValue)
+				Response.Write("<height>" + curObject.unfolded_document.height.Value + "</height>");
+			
+			if (ArrayOptFirstElem(curObject.unfolded_document.pages) != undefined)
+			{
+				Response.Write("<pages>");
+				for (fldPageElem in curObject.unfolded_document.pages)
+				{
+					if(!bEncrypted)
+						Response.Write('<page url="library/'+ curObject.unfolded_document.base_url + '/' + XmlAttrEncode(fldPageElem.url)+'" name="'+EncodeCharset(XmlAttrEncode(fldPageElem.name), "utf-8")+'" page_id="'+EncodeCharset(XmlAttrEncode(fldPageElem.page_id), "utf-8")+'"/>');
+					else
+						Response.Write('<page url="library_page.html?book_id=' + curObjectID + '&image_url='+ curObject.unfolded_document.base_url + XmlAttrEncode(fldPageElem.url)+'&lid=' + iLicenseId + '" name="'+EncodeCharset(XmlAttrEncode(fldPageElem.name), "utf-8")+'" page_id="'+EncodeCharset(XmlAttrEncode(fldPageElem.page_id), "utf-8")+'"/>');					
+				}
+				//	Response.Write('<page url="'+ XmlAttrEncode(fldPageElem.url)+'" name="'+EncodeCharset(XmlAttrEncode(fldPageElem.name), "utf-8")+'"/>');
+				Response.Write("</pages>");
+			}
+			
+		}
+		else
+		{
+%>
+			<error><%=sError%></error>
+<%
+		
+		}
+
+	}
+	else
+	{
+		sError = "Error opening document. ID = " + curObjectID;
+	}
+}
+
+function MarkPageVisited()
+{
+	arrPagesIds = String(Request.Query.page_ids).split(";");
+	catUserViewing = ArrayOptFirstElem(XQuery( "for $elem in library_material_viewings where $elem/person_id = " + curUserID + " and $elem/material_id=" + curObjectID + " return $elem" ));
+	if(catUserViewing != undefined)
+	{
+		docViewing = OpenDoc(UrlFromDocID(catUserViewing.id));
+		for(i=0; i<arrPagesIds.length; i++)
+		{
+			if(!docViewing.TopElem.pages.ChildByKeyExists(arrPagesIds[i]))
+				docViewing.TopElem.pages.AssignElem(curObject.unfolded_document.pages);
+			docViewing.TopElem.pages.GetChildByKey(arrPagesIds[i]).viewed = true;
+		}
+		docViewing.TopElem.current_page_id = arrPagesIds[0];
+		docViewing.TopElem.duration = (DateToRawSeconds(new Date()) - DateToRawSeconds(docViewing.TopElem.last_viewing_date)) + docViewing.TopElem.duration;
+		docViewing.TopElem.last_viewing_date = new Date();		
+		if(ArrayOptFind(docViewing.TopElem.pages, "viewed == false") == undefined)
+		{
+			docViewing.TopElem.state_id = "finished";
+			docViewing.TopElem.finish_viewing_date = new Date();
+		}
+		docViewing.Save();
+	}
+	else
+	{
+		sError="Документ не найден";
+	}
+}
+
+switch(Request.Query.method)
+{
+	case "GetBookInfo":
+		GetBookInfo();
+		break;
+	case "MarkPageVisited":
+		MarkPageVisited();
+		break;
+}
+%>
+	<error><%=sError%></error>
+</response>

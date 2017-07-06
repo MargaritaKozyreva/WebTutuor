@@ -1,0 +1,560 @@
+<%
+	_filter = Request.Query.HasProperty( 'filter_id' ) ? Request.Query.filter_id : 'active';
+%>
+
+<script language="JavaScript">
+function check_pay( _element, f )		
+{
+	if ( f )
+		return true;
+	
+	var _elements = document.getElementsByName( _element.value );
+	var _flag = false;
+	for ( var i = 0; i < _elements.length; i++ )
+		if ( _elements[i].id == _element.id )
+		{
+			_flag = _elements[i].checked;
+			break;
+		}
+				
+	if ( ! _flag )
+		alert( <%=CodeLiteral( tools.get_web_str('vhrb_mess_pay') )%> );
+		
+	return _flag;
+}		
+
+function update( _element )		
+{
+	var _elements = document.getElementsByName( _element.name );
+	var _sum = 0.;
+	for ( var i = 0; i < _elements.length; i++ )
+		if ( _elements[i].checked )
+			_sum += _elements[i].value == "" ? 0. : parseFloat( _elements[i].value );		
+
+	_elements = document.getElementsByName( 'start' );
+	for ( var i = 0; i < _elements.length; i++ )
+		if ( _elements[i].id == _element.id )
+			_elements[i].checked = false;
+			
+	if ( _element.checked )
+	{
+		_elements = document.getElementsByName( 'ignor' );
+		for ( var i = 0; i < _elements.length; i++ )
+			if ( _elements[i].id == _element.id )
+				_elements[i].checked = false;
+	}
+			
+	document.getElementById( _element.name ).value = _sum;
+
+	return true;
+}
+
+function doSubmit()
+{
+	var _orgs = document.getElementsByName( 'org' );
+	var _starts = document.getElementsByName( 'start' );
+	var _ignors = document.getElementsByName( 'ignor' );
+	
+	var _pay_text = "";
+	var _start_text = "";
+	var _ignor_text = "";
+	for ( var i = 0; i < _orgs.length; i++ )
+	{
+		_pays = document.getElementsByName( _orgs[i].value );
+		var counter = 0;
+		var temp_str = "";			
+		for ( var j = 0; j < _pays.length; j++ )
+			if ( _pays[j].checked )
+			{
+				temp_str += ( counter == 0 ? "" : "&" ) + _pays[j].id;
+				counter++;
+			}
+		if ( counter > 0 )
+			_pay_text += ( _pay_text == "" ? "" : "|" ) + _orgs[i].value + ":" + temp_str;
+			
+		var counter = 0;
+		var temp_str = "";	
+		for ( var j = 0; j < _starts.length; j++ )
+			if ( _starts[j].checked && _starts[j].value == _orgs[i].value )
+			{
+				temp_str += ( counter == 0 ? "" : "&" ) + _starts[j].id;
+				counter++;
+			}
+		if ( counter > 0 )
+			_start_text += ( _start_text == "" ? "" : "|" ) + _orgs[i].value + ":" + temp_str;		
+			
+		var counter = 0;
+		var temp_str = "";	
+		for ( var j = 0; j < _ignors.length; j++ )
+			if ( _ignors[j].checked && _ignors[j].value == _orgs[i].value )
+			{
+				temp_str += ( counter == 0 ? "" : "&" ) + _ignors[j].id;
+				counter++;
+			}
+		if ( counter > 0 )
+			_ignor_text += ( _ignor_text == "" ? "" : "|" ) + _orgs[i].value + ":" + temp_str;
+	}
+	
+	document.getElementById( 'pay_text' ).value = _pay_text;
+	document.getElementById( 'start_text' ).value = _start_text;
+	document.getElementById( 'ignor_text' ).value = _ignor_text;
+	
+	if ( _pay_text == "" && _start_text == "" && _ignor_text == "" )
+		alert( <%=CodeLiteral( tools.get_web_str('vhrb_mess_changed') )%> );
+	else
+	{
+		var _org_sum = document.getElementById( _orgs[0].value ).value;
+		var _org_balance = document.getElementsByName( 'org_' + _orgs[0].value )[0].value;
+		
+		if ( parseFloat( _org_balance ) < parseFloat( _org_sum ) )
+		{
+			document.set_account_form.org_id.value = _orgs[0].value;
+			document.set_account_form.amount.value = _org_sum;
+			document.set_account_form.submit();
+		}
+		else
+		{	
+			document.set_person_form.submit();
+		}
+	}
+}
+
+
+
+function clear_pay( _element )
+{
+	var _element = document.getElementById( _element.id );
+	_element.checked = false;
+	
+	update( _element );
+
+	return true;
+}
+
+
+
+
+function doSubmit2()
+{
+	var _starts = document.getElementsByName( 'start' );
+	var _ignors = document.getElementsByName( 'ignor' );
+	
+	var _start_text = "";
+	var _ignor_text = "";
+	var counter;
+
+		counter = 0; 
+		for ( var j = 0; j < _starts.length; j++ )
+			if ( _starts[j].checked )
+				_start_text += ( counter == 0 ? "" : "&" ) + _starts[j].id;
+				
+		counter = 0; 
+		for ( var j = 0; j < _ignors.length; j++ )
+			if ( _ignors[j].checked )
+				_ignor_text += ( counter == 0 ? "" : "&" ) + _ignors[j].id;
+	
+	document.getElementById( 'start_text' ).value = _start_text;
+	document.getElementById( 'ignor_text' ).value = _ignor_text;
+	
+	if ( _start_text == "" && _ignor_text == "" )
+		alert( <%=CodeLiteral( tools.get_web_str('vhrb_mess_changed') )%> );
+	else
+		document.set_event_form.submit();
+}
+
+function update2( _element )		
+{
+	if ( _element.checked )
+	{
+		_elements = document.getElementsByName( 'ignor' );
+		for ( var i = 0; i < _elements.length; i++ )
+			if ( _elements[i].id == _element.id )
+				_elements[i].checked = false;
+	}
+
+	return true;
+}
+
+function clear_pay2( _element )
+{
+	var _elements = document.getElementsByName( 'start' );
+	for ( var i = 0; i < _elements.length; i++ )
+		if ( _elements[i].id == _element.id )
+			_elements[i].checked = false;
+
+	return true;
+}
+
+
+
+
+function doSubmit3()
+{
+	var _persons = document.getElementsByName( 'person' );
+	
+	var _person_add_text = "";
+	var _person_delete_text = "";
+	var counter1 = 0;
+	var counter2 = 0;
+
+	for ( var j = 0; j < _persons.length; j++ )
+		if ( _persons[j].checked )
+			_person_add_text += ( counter1++ == 0 ? "" : "&" ) + _persons[j].id;
+		else
+			_person_delete_text += ( counter2++ == 0 ? "" : "&" ) + _persons[j].id;
+				
+	
+	document.getElementById( 'person_add_text' ).value = _person_add_text;
+	document.getElementById( 'person_delete_text' ).value = _person_delete_text;
+	
+	if ( _person_add_text == "" && _person_delete_text == "" )
+		alert( <%=CodeLiteral( tools.get_web_str('vhrb_mess_changed') )%> );
+	else
+		document.set_event_form.submit();
+}
+</script>
+
+
+<BR>
+<FORM ACTION="view_doc.html?mode=hrm_requests" NAME="refresh_form" METHOD="POST">
+<INPUT TYPE="HIDDEN" NAME="doc_id" VALUE="<%=curDocID%>">		
+
+<TABLE width="100%" cellspacing="0" cellpadding="4" CLASS="tableBorder">
+	<TR>		
+		<TD WIDTH="170" ALIGN="RIGHT"><b><%=tools.get_web_str('c_status')%>:</b></TD>
+		<TD ALIGN="LEFT">
+		<select name="filter_id" onChange="document.refresh_form.submit()">
+			<option value="all"><%=tools.get_web_str('c_all')%></option>
+<%
+		for ( _ff in curLngCommon.request_status_types )
+		{
+%>			
+			<option value="<%=_ff.id%>"><%=_ff.name%></option>
+<%
+		}
+%>		
+         </select>
+		 
+<SCRIPT language="JavaScript">
+<!--
+selcur=document.forms['refresh_form'].filter_id;
+for (i=0;i<selcur.options.length;i++) {
+    if (selcur.options[i].value=="<%=_filter%>") {
+        selcur.selectedIndex=i;
+    }
+	
+if (selcur.selectedIndex==-1) {selcur.selectedIndex=0;}
+}
+//-->
+</SCRIPT>
+		</TD>
+	</TR>
+</TABLE>
+</form>			
+ 
+ 
+<FORM ACTION="request_processing.html" NAME="set_person_form" METHOD="POST">	
+<INPUT TYPE="HIDDEN" NAME="doc_id" VALUE="<%=curDocID%>">
+<input type="hidden" name="sid" value="<%=tools.get_sum_sid( curDocID )%>">
+<INPUT TYPE="HIDDEN" id="pay_text" NAME="pay_text" VALUE="">
+<INPUT TYPE="HIDDEN" id="start_text" NAME="start_text" VALUE="">
+<INPUT TYPE="HIDDEN" id="ignor_text" NAME="ignor_text" VALUE="">
+ 
+<%
+	_org_list = XQuery( "for $elem in func_managers where $elem/person_id = " + curUserID + " and $elem/catalog = 'org' return $elem" );
+	_org_list = ArrayExtract( _org_list, 'object_id' );
+	_org_list = QueryCatalogByKeys( 'orgs', 'id', _org_list );
+	
+	for ( _org in _org_list )
+	{
+%>
+
+<INPUT TYPE="HIDDEN" NAME="org" VALUE="<%=_org.id%>">
+<TABLE width="100%" CLASS="tableBasic" cellspacing="0" cellpadding="0">
+				<TR>
+					<TD CLASS="tableHeaderWithLeftText"><%=tools.get_web_str('c_org')%>:</TD>
+					<TD CLASS="tableHeaderWithLeftText" WIDTH="150"><%=tools.get_web_str('vherb_account')%>:</TD>
+					<TD CLASS="tableHeaderWithLeftText" WIDTH="100"><%=tools.get_web_str('c_balance')%>:</TD>
+					<TD CLASS="tableHeaderWithLeftText" WIDTH="130">&nbsp;</TD>
+				</TR>
+				<tr>
+						<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableHeaderNoText" WIDTH="150"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableHeaderNoText" WIDTH="100"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableHeaderNoText" WIDTH="130"><img src="pics/1blank.gif" width="1" height="1" /></td>
+				</tr>
+				<TR>
+					<TD class="tableRowEven"><%=tools_web.get_cur_lng_name( _org.name )%></TD>
+					<TD class="tableRowEven" WIDTH="150">
+					<%
+						try
+						{
+							Response.Write( _org.account_id.ForeignElem.code );
+						}
+						catch ( t )
+						{
+					%>
+						<font color="#FF0033"><%=tools.get_web_str('c_deleted')%></font>
+					<%
+						}
+					%>
+					</TD>
+					<TD class="tableRowEven" WIDTH="100">
+					<%
+						try
+						{
+							_balance = _org.account_id.ForeignElem.balance;
+					%>
+						<font color="<%=( _balance < 0. ? '#FF0033' : '' )%>"><%=StrReal( _balance, 2, true )%></font>
+						<INPUT TYPE="HIDDEN" NAME="org_<%=_org.id%>" VALUE="<%=_balance%>">
+					<%
+						}
+						catch ( t )
+						{
+						}
+					%>
+					</TD>
+					<TD class="tableRowEven" WIDTH="130">
+						<INPUT TYPE="button" onClick="document.set_account_form.org_id.value = '<%=_org.id%>';document.set_account_form.submit();" VALUE="<%=tools.get_web_str('vherb_invoise')%>" CLASS="inputButton" STYLE="width: 130px" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';">
+					</TD>
+				</TR>
+				<tr>
+						<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableFooter" WIDTH="150"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableFooter" WIDTH="100"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableFooter" WIDTH="130"><img src="pics/1blank.gif" width="1" height="1" /></td>
+				</tr>
+				<TR>
+					<TD>&nbsp;
+						
+					</TD>
+					<TD WIDTH="150" ALIGN="RIGHT">
+						<B><%=tools.get_web_str('c_sum')%>:</B>
+					</TD>
+					<TD WIDTH="100">
+						<INPUT TYPE="TEXT" id="<%=_org.id%>" VALUE="0" readonly STYLE="width: 100px" CLASS="inputEdit">
+					</TD>
+					<TD WIDTH="130">&nbsp;
+						
+					</TD>
+				</TR>
+</TABLE>
+<br>
+
+
+<TABLE WIDTH="100%" BORDER="0" CELLSPACING="2" CELLPADDING="3">
+  <TR>
+    <TD CLASS="tableHeaderWithLeftText"><B><%=tools.get_web_str('vherb_persons')%>:</B> </TD>
+    <TD WIDTH="100" CLASS="tableHeaderWithLeftText"> <B><%=tools.get_web_str('vib_pay')%>:</B> </TD>
+    <TD WIDTH="100" CLASS="tableHeaderWithLeftText"> <B><%=tools.get_web_str('vherb_close')%>:</B> </TD>
+	<TD WIDTH="100" CLASS="tableHeaderWithLeftText"> <B><%=tools.get_web_str('vherb_cancel')%>:</B> </TD>
+  </TR>
+  				<tr>
+						<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableHeaderNoText"><img src="pics/1blank.gif" width="1" height="1" /></td>
+				</tr>
+<%	
+	switch ( _filter )
+	{
+		case 'active_pay':
+			_request_list = XQuery( "for $request in requests where $request/type = 'course' and ( $request/status_id = 'active' or $request/status_id = 'pay' ) and ForeignElem( $request/person_id )/org_id = " + _org.id + " order by $request/object_id return $request" );
+			break;
+		case 'all':
+			_request_list = XQuery( "for $request in requests where $request/type = 'course' and ForeignElem( $request/person_id )/org_id = " + _org.id + " order by $request/object_id return $request" );
+			break;
+		default:
+			_request_list = XQuery( "for $request in requests where $request/type = 'course' and $request/status_id = '" + _filter + "' and ForeignElem( $request/person_id )/org_id = " + _org.id + " order by $request/object_id return $request" );
+			break;
+	}
+	
+	_temp_request_id = null;
+	for ( _request in _request_list )
+	{
+%>
+  <%
+		if ( _temp_request_id != _request.object_id )
+		{		
+			_temp_request_id = _request.object_id;
+%>
+  <TR>
+    <TD class="tableRowEven"> <IMG SRC="pics/vwicn026.gif" WIDTH="13" HEIGHT="11" HSPACE="5">
+        <%
+
+			try
+			{
+				_object = _request.object_id.ForeignElem;
+				_price = _object.price;
+%>
+        <A HREF="view_doc.html?mode=course_info&doc_id=<%=curDocID%>&object_id=<%=_request.object_id%>" TITLE="<%=tools.get_web_str('c_tip_course')%>"><%=_object.code%>&nbsp;<%=tools_web.get_cur_lng_name( _object.name )%></A> </TD>
+    <TD class="tableRowEven"> <%=StrRealFixed( _price, 2, true )%></TD>
+    <TD class="tableRowEven">&nbsp;</TD>
+	<TD class="tableRowEven">&nbsp;</TD>
+  </TR>
+  <%
+			}
+			catch ( t )
+			{
+%>
+  <FONT COLOR="#FF0033"><%=tools.get_web_str('c_deleted')%></FONT>
+  <TD class="tableRowEven">&nbsp;</TD>
+      <TD class="tableRowEven">&nbsp;</TD>
+      <TD class="tableRowEven">&nbsp;</TD>
+	  <TD class="tableRowEven">&nbsp;</TD>
+  </TR>
+  <%
+			}
+		}
+%>
+  <TR>
+    <TD class="tableRowOdd"> &nbsp;&nbsp;&nbsp;&nbsp;<IMG SRC="pics/person.gif" WIDTH="12" HEIGHT="14" HSPACE="5">
+        <%
+			try
+			{
+%>
+		<A HREF="view_doc.html?mode=hrm_request&doc_id=<%=curDocID%>&object_id=<%=_request.id%>" TITLE="<%=tools.get_web_str('c_tip_request')%>">(<%=_request.code%>)</A>&nbsp;<A HREF="view_doc.html?mode=person&doc_id=<%=curDocID%>&object_id=<%=_request.person_id%>" TITLE="<%=tools.get_web_str('c_tip_coll')%>"><%=_request.person_id.ForeignElem.fullname%></A> 
+	</TD>
+    <%				
+			}
+			catch ( t )
+			{
+%>
+    <FONT COLOR="#FF0033"><%=tools.get_web_str('c_deleted')%></FONT>
+    <%
+			}
+			
+			
+			if ( _request.status_id == 'ignore' )
+			{
+%>
+	<TD class="tableRowOdd">&nbsp; </TD>
+<%		
+			}
+			else if ( _request.status_id == 'pay' || _request.status_id == 'close' )
+			{
+%>
+    <TD class="tableRowOdd"> <IMG SRC="pics/vwicn082.gif" WIDTH="13" HEIGHT="11" HSPACE="5"> </TD>
+    <%
+			}
+			else if ( ArrayOptFirstElem( XQuery( "for $invoice in invoices where $invoice/is_paid = false() and $invoice/request_id = " + _request.id + " return $invoice" ) ) != undefined )
+			{
+%>	
+	<TD class="tableRowOdd"> <IMG SRC="pics/event.gif" WIDTH="16" HEIGHT="16" HSPACE="3"></TD>
+<%			
+			}
+			else
+			{
+%>
+    <TD class="tableRowOdd">
+      <INPUT TYPE="CHECKBOX" ID="<%=_request.id%>" NAME="<%=_org.id%>" VALUE="<%=_price%>" onClick="update( this )">
+    </TD>
+    <%
+			}
+			
+			if ( _request.status_id == 'ignore' )
+			{
+%>
+	<TD class="tableRowOdd">&nbsp; </TD>
+<%					
+			}
+			else if ( _request.status_id == 'close' )
+			{
+%>
+    <TD class="tableRowOdd"> <IMG SRC="pics/vwicn082.gif" WIDTH="13" HEIGHT="11" HSPACE="5"> </TD>
+    <%
+			}
+			else
+			{
+%>
+    <TD class="tableRowOdd">
+      <INPUT TYPE="CHECKBOX" ID="<%=_request.id%>" NAME="start" VALUE="<%=_org.id%>" onClick="return check_pay( this, <%=( _request.status_id == 'pay' || _request.status_id == 'close' )%> )">
+    </TD>
+    <%	
+			}
+%>
+
+
+<%
+			if ( _request.status_id == 'ignore' )
+			{
+%>
+    <TD class="tableRowOdd"> <IMG SRC="pics/vwicn082.gif" WIDTH="13" HEIGHT="11" HSPACE="5"> </TD>
+<%
+			}
+			else if ( _request.status_id == 'active' )
+			{
+%>
+    <TD class="tableRowOdd">
+      <INPUT TYPE="CHECKBOX" ID="<%=_request.id%>" NAME="ignor" VALUE="<%=_org.id%>" onClick="clear_pay( this )">
+    </TD>
+    <%	
+			}
+			else
+			{
+%>
+	<TD class="tableRowOdd">&nbsp;</TD>
+<%			}		
+%>
+
+
+<%			
+
+	}
+%>
+  </TR>
+  <tr>
+						<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableFooter"><img src="pics/1blank.gif" width="1" height="1" /></td>
+				</tr>
+</TABLE>
+<BR/>
+<BR/>
+<%
+	}
+%>
+
+<TABLE WIDTH="100%" CLASS="tableBorder">	
+	<TR>
+		<TD WIDTH="170" ALIGN="RIGHT"><%=tools.get_web_str('vherb_pay_type')%>:</TD>
+		<TD><INPUT TYPE="RADIO" name="pay_type" CHECKED VALUE="account"><%=tools.get_web_str('vherb_pay_account')%></TD>
+	</TR>
+	<TR>
+		<TD WIDTH="170" ALIGN="RIGHT">&nbsp;</TD>
+		<TD><INPUT TYPE="RADIO" name="pay_type" VALUE="personal"><%=tools.get_web_str('vherb_pay_personal')%></TD>
+	</TR>
+	<TR>
+		<TD WIDTH="170" ALIGN="RIGHT"><%=tools.get_web_str('c_group')%>:</TD>
+		<TD>
+			<SELECT name="group_id">
+				<option value="non" SELECTED></option>
+<%
+	for ( _group in groups )
+	{
+%>
+				<option value="<%=_group.id%>"><%=tools_web.get_cur_lng_name( _group.name )%></option>
+<%
+	}
+%>				
+			</SELECT>				
+		</TD>
+	</TR>
+</TABLE>	
+
+
+<TABLE WIDTH="100%" CLASS="activator">	
+	<TR>
+		<TD ALIGN="CENTER">
+			<INPUT TYPE="BUTTON" VALUE="<%=tools.get_web_str('vherb_submit')%>" onClick="doSubmit()" CLASS="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';">
+		</TD>
+	</TR>
+</TABLE>
+</FORM>
+
+<FORM ACTION="view_doc.html?mode=set_account" name="set_account_form" METHOD="POST">
+<INPUT TYPE="HIDDEN" NAME="org_id" VALUE="">
+<INPUT TYPE="HIDDEN" NAME="doc_id" VALUE="<%=curDocID%>">
+<INPUT TYPE="HIDDEN" NAME="amount" VALUE="">
+</FORM>

@@ -1,0 +1,67 @@
+<%
+Server.Execute( "include/sid_access_init.html" );
+
+if ( ArrayOptFirstElem( XQuery( "for $elem in assessment_collaborators where $elem/person_id = " + curUserID + " and $elem/assessment_id = " + curObject.assessment_id + " and $elem/type = 'expert' return $elem" ) ) == undefined )
+{
+	Server.Execute( "view_access_panel.html" );
+	Cancel();
+}
+
+teAnnals = OpenNewDoc( 'x-local://wtv/wtv_form_annals_text.xmd' ).TopElem;
+sLessonReport = tools.report_decrypt( curObject, '', curObject.qti_text, null, teAnnals );
+bSetChanged = false;
+
+if ( sLessonReport != '' )
+{
+	rAddScore = 0.0;
+	sectionArray = ArrayOptFirstElem( teAnnals.au.history.objects );
+	if ( sectionArray != undefined )
+	{
+		for ( fldSectionElem in sectionArray.section )
+			for ( fldQuestionElem in fldSectionElem.question )
+				if ( fldQuestionElem.ws_eval == 'expert' )
+				{
+					sQuestionScore = Request.Query.GetOptProperty( fldQuestionElem.PrimaryKey, '' );
+					if ( sQuestionScore != '' )
+					{
+						try
+						{
+							fCurPoints = Real( sQuestionScore );
+							rAddScore += fCurPoints;
+							fldQuestionElem.points = sQuestionScore;
+							fldQuestionElem.state = fCurPoints > 0 ? 'passed' : 'failed';
+							bSetChanged = true;
+						}
+						catch ( err )
+						{
+							alert( err );
+						}
+					}
+					fldQuestionElem.comment = Request.Query.GetOptProperty( 'comment_' + fldQuestionElem.PrimaryKey, '' );
+				}
+	}
+}
+
+if ( bSetChanged )
+{
+	curObject.core_lesson = StrSimpleEncrypt( StrReplace( StrReplace( teAnnals.Xml, '\t', '' ), '\r\n', '' ) );
+	curObject.cur_state_id = 2;
+	curObject.cur_score += rAddScore;
+	curObject.score = curObject.cur_score;
+	curObject.state_id = curObject.cur_state_id;
+	curObject.score_str.Clear();
+	curObject.cur_score_str.Clear();
+	curObjectDoc.Save();
+}
+
+tools.active_test_learning_finish( curObjectID, curObject );
+tools.create_notification( '13', curObjectID, '', null, curObject );
+DeleteDoc( UrlFromDocID( curObjectID ), ! global_settings.settings.save_deleted_in_trash );
+
+catTestLearning = ArrayOptFirstElem( XQuery( "for $elem in test_learnings where $elem/active_test_learning_id = " + curObjectID + " return $elem" ) );
+if ( catTestLearning == undefined )
+	Response.Redirect( 'view_doc.html?mode=home' );
+else
+	Response.Redirect( 'view_doc.html?mode=test_learning_stat&object_id=' + catTestLearning.id + '&assessment_id=' + catTestLearning.assessment_id + '&doc_id=' + curDocID + "&sid=" + tools.get_sum_sid( catTestLearning.id ) );
+Cancel();
+%>

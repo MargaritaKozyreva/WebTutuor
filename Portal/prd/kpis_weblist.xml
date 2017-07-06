@@ -1,0 +1,111 @@
+<%Server.Execute( "include/user_init.html" )%><?xml version="1.0" encoding="windows-1251"?>
+
+<kpis name="<%=tools.get_web_str("vkb_kpi")%>">
+<%
+
+	if (Request.QueryString.HasProperty("proc_id"))
+		curAssessmentAppraiseID = Request.QueryString.proc_id;
+	else
+		curAssessmentAppraiseID = '';
+		
+	try
+	{
+		curAssessmentAppraise = OpenDoc( UrlFromDocID( Int(curAssessmentAppraiseID) ) ).TopElem;
+	}
+	catch(ex)
+	{
+		
+	}
+	/* ---=== IMPERSONATE BLOCK ===--- */
+	try
+	{
+		Session.ImpersonatePersonID = Int(Session.ImpersonatePersonID);
+	}
+	catch(_no_trace_)
+	{
+		Session.ImpersonatePersonID = null;
+	}
+	arrImpersonates = ArraySelect(curAssessmentAppraise.impersonate_persons, "impersonator_id == " + curUserID + " && face_person_id.HasValue && (from_date.HasValue == false || from_date <= DateNewTime(Date())) && (to_date.HasValue == false || to_date >= DateNewTime(Date()))");
+	
+	if (Session.ImpersonatePersonID != null && ArrayOptFind(arrImpersonates, "face_person_id == " + Session.ImpersonatePersonID) != undefined)
+		_bIsFakePerson = true;
+	else
+		_bIsFakePerson = false;
+	
+	if (_bIsFakePerson)
+	{
+		curPersonID = Session.ImpersonatePersonID;
+		curPerson = OpenDoc(UrlFromDocID(curPersonID)).TopElem;
+		Session.ImpersonatePersonID = curPersonID;
+	}
+	else
+	{
+		curPersonID = curUserID;
+		curPerson = curUser;
+		Session.ImpersonatePersonID = null;
+	}
+	
+	/* ---=== ================= ===--- */
+/*	_str='<kpis name="'+tools.get_web_str("vkb_kpi")+'">\n'*/
+	for (_kpi in kpis)
+	if (!_kpi.owners_ids.HasValue || StrContains(_kpi.owners_ids.Value, curPersonID))
+	{
+		if (!_kpi.is_kpi)
+		{
+			//continue;
+			_node_name='project'
+		}
+		else
+		{
+			_node_name='kpi';
+		}
+		
+		_kpiDoc = OpenDoc(UrlFromDocID( _kpi.PrimaryKey)).TopElem;
+		isOwner=0;
+		if (_kpiDoc.owners.GetOptChildByKey(curPersonID) != undefined||ArrayOptFirstElem(_kpiDoc.owners)==undefined)
+		{
+			isOwner=1;
+		}
+		isResponsible=0;
+		if (_kpiDoc.responsible_persons.GetOptChildByKey(curPersonID) != undefined)
+		{
+			isResponsible=1;
+		}
+		
+		//isOwner=1;
+/*	_str=_str+'\t<kpi name="'+HtmlEncode(_kpi.name)+'" type="'+_kpi.type+'" id="'+_kpi.id+'" from="'+_kpi.range_min+'" to="'+_kpi.range_max+'" user_is_owner="'+isOwner+'" user_is_responsible_person="'+isResponsible+'" is_kpi="'+_kpi.is_kpi+'" unit_of_measurement="'+HtmlEncode(_kpiDoc.unit_of_measurement)+'" is_global="'+_kpiDoc.is_global+'">
+		<formula><![CDATA['+_kpiDoc.auto_formula+']]></formula>\n';*/
+%>
+	<<%=_node_name%> name="<%=HtmlEncode(tools_web.get_cur_lng_name(_kpi.name, curLng.short_id))%>" type="<%=_kpi.type%>" id="<%=_kpi.id%>" from="<%=_kpi.range_min%>" to="<%=_kpi.range_max%>" user_is_owner="<%=isOwner%>" user_is_responsible_person="<%=isResponsible%>" is_kpi="<%=_kpi.is_kpi%>" unit_of_measurement="<%=HtmlEncode(_kpiDoc.unit_of_measurement)%>" is_global="<%=_kpiDoc.is_global%>">
+		<formula><![CDATA[<%=_kpiDoc.auto_formula%>]]></formula>
+		<comment><![CDATA[<%=HtmlEncode(_kpiDoc.comment)%>]]></comment>
+<%
+		for (_scale in _kpiDoc.scales)
+		{
+		/*_str=_str+'\t\t<mark id="'+_scale.id+'" name="'+HtmlEncode(_scale.name)+'" percent="'+_scale.percent+'"/>\n'*/
+%>		
+		<mark id="<%=_scale.id%>" name="<%=HtmlEncode(tools_web.get_cur_lng_name(_scale.name, curLng.short_id))%>" percent="<%=_scale.percent%>">
+			<desc><![CDATA[<%=HtmlEncode(_scale.desc)%>]]></desc>
+		</mark>
+<%
+		}
+/*	_str=_str+'\t</kpi>\n'*/		
+
+		for (_resp in _kpiDoc.responsible_persons)
+		{
+		/*_str=_str+'\t\t<responsible_person id="'+_resp.person_id+'" name="'+HtmlEncode(_resp.person_fullname)+'"/>\n'*/
+%>		
+		<responsible_person id="<%=_resp.person_id%>" name="<%=HtmlEncode(_resp.person_fullname)%>"/>
+<%
+		}
+/*	_str=_str+'\t</kpi>\n'*/		
+%>
+	</<%=_node_name%>>
+<%
+	}
+/*	_str=_str+'</kpis>'
+	_PATH = "C:\\XPATH.xml";
+	PutUrlData(FilePathToUrl(_PATH), _str);*/
+	/*alert(_str)*/
+%>
+</kpis>

@@ -1,0 +1,15 @@
+<%
+
+alert('QueryString --------------------------');
+for ( _elem in Request.QueryString )
+	alert( _elem + ": " + Request.QueryString.GetProperty( _elem ) );
+
+alert('Form ---------------------------------');
+for ( _elem in Request.Form )
+	alert( _elem + ": " + Request.Form.GetProperty( _elem ) );
+	
+alert('Header -------------------------------');
+for ( _elem in Request.Header )
+	alert( _elem + ": " + Request.Header.GetProperty( _elem ) );
+	
+%>

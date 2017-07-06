@@ -1,0 +1,55 @@
+<%
+try
+{
+
+if ( ! curDoc.attributes.is_main_item && curDoc.parent_document_id != null )	
+{
+	out_str = '';
+	_parent_doc = curDoc;
+
+	do
+	{	
+		_parent_doc = ArrayFirstElem( XQuery( 'for $document in documents where $document/id = ' + _parent_doc.parent_document_id + ' return $document' ) );
+		
+		out_str = '<A class="pathLink" HREF=' + tools_web.put_query_string( _parent_doc.id , _parent_doc.template ) + '>' + _parent_doc.name + '</A> <img src="pics/1blank.gif" width="1" height="1" class="pathImg"/> ' + out_str;	
+	}
+	while ( _parent_doc.parent_document_id != null && _parent_doc.is_main_item != true )
+
+%>
+<div id="pathDiv" style="position:relative; ">
+	<table width="100%"  border="0" cellspacing="0" cellpadding="0">
+		<tr>
+				<td>
+				<div class="pathOrder">
+				<%=out_str%>
+<%
+	if ( _page_name == '' || curDoc.name == _page_name )
+	{
+%>				
+				<span class="currentPath"><%=curDoc.name%></span>
+<%
+	}
+	else
+	{
+%>
+				<a class="pathLink" href="<%=tools_web.put_query_string( curDocID, curDoc.attributes.template )%>"><%=curDoc.name%></a> <img src="pics/1blank.gif" width="1" height="1" class="pathImg"/> <span class="currentPath"><%=_page_name%></span>
+<%
+	}
+%>					
+				</div>
+				</td>
+		</tr>
+		<tr>
+				<td class="divider"><img src="pics/1blank.gif" width="1" height="1" /></td>
+		</tr>
+	</table>
+</div>
+
+<%
+}
+
+}
+catch( h )
+{
+}
+%>

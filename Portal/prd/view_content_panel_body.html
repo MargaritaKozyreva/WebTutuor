@@ -1,0 +1,149 @@
+<script language="javascript">
+	<!--
+		function toggle_content_section(_id, srcElem)
+		{
+			var _href = "view_doc.html?mode=<%=curMode%>&doc_id=<%=curDocID%>&tab=" + _id;
+			window.location.href = _href;
+		}
+	-->
+</script>
+<style>
+	.tab_td {
+		border-right: #aaaaaa 1px solid; border-top: #aaaaaa 1px solid; border-left: #aaaaaa 1px solid; border-bottom: #aaaaaa 1px solid; text-align: center; background-color: #EEEEEE;
+		background-color: gainsboro; height:24px;
+	}
+	.tab_td_sel {
+		border-right: #aaaaaa 1px solid; border-top: #aaaaaa 1px solid; border-left: #aaaaaa 1px solid; border-bottom: #aaaaaa 0px solid; text-align: center; font-weight:bold; height:28px; background-color: white;
+	}
+	.tab_td_empty {
+		border-bottom: #aaaaaa 1px solid;
+	}
+</style>
+<%
+	commonMyContentItems = Array();
+	xarrRealObjectLinks = XQuery("for $elem in person_object_links where $elem/person_id = " + curUserID + " return $elem");
+	iX = 0;
+	catDocType = null;
+	for (catRealObjectLink in xarrRealObjectLinks)
+	{
+		commonContentItemElem = curLngCommon.content_items.GetOptChildByKey(catRealObjectLink.object_catalog);
+		
+		if (commonContentItemElem != undefined && commonContentItemElem.html_page.HasValue)
+		{
+			commonMyContentItems[iX] = commonContentItemElem;
+			iX++;
+		}
+		else if (StrBegins(catRealObjectLink.object_catalog, "cc_"))
+		{
+			catDocType = ArrayOptFirstElem(XQuery("for $elem in doc_types where $elem/object_name = " + catRealObjectLink.object_catalog.XQueryLiteral + " and $elem/is_crave_for_reboot = false() return $elem"));
+			if (catDocType != undefined)
+			{
+				oFakeContentItem = new Object;
+				oFakeContentItem.id = catRealObjectLink.object_catalog;
+				oFakeContentItem.name = catDocType.name;
+				oFakeContentItem.html_page = "view_my_doc_type_documents.html";
+				commonMyContentItems[iX] = oFakeContentItem;
+				iX++;
+			}
+		}
+	}
+
+if (Request.Query.HasProperty("tab"))
+	_selectedTab = ArrayOptFind(commonMyContentItems, "id == " + CodeLiteral(Request.Query.GetProperty("tab")));
+else
+	_selectedTab = undefined;
+	
+iContentItemsLength = ArrayCount(commonMyContentItems);
+iTabMaximum = 6;
+if (iContentItemsLength > 0)
+{
+	iIteration = 1;
+	iX = 0; iCount=0;
+	iBreakCount = 1 + Int(Real(iContentItemsLength) / Real(iTabMaximum));
+
+	iLength = Int(Real(iContentItemsLength) / Real(iBreakCount) + 0.5);
+%>
+<div id="__tabrowholder">
+<table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: -3px" name="content_panel_header_row_set">
+	<tr>
+		<td class="tab_td_empty"><img src="pics/1blank.gif" width="<%=(5 + 2*iIteration)%>px" height="0"/></td>
+<%
+	if (iContentItemsLength > iTabMaximum)
+		iWidth = Int(100.0 / Real(iLength));
+	else
+		iWidth = Int(100.0 / Real(iContentItemsLength));
+	if (iWidth > 50) iWidth = 50;
+	
+	for (_ci in commonMyContentItems)
+	{
+%>
+		<td class="<%=(_selectedTab != undefined && _selectedTab.id == _ci.id ? "tab_td_sel" : "tab_td")%>" id="td_<%=_ci.id%>" onclick="toggle_content_section('<%=_ci.id%>', this)" style="cursor:hand; width: <%=iWidth%>%"><img src="pics/1blank.gif" height="0"/><br/><a style="text-decoration:none" href="#" onclick_="toggle_content_section('<%=_ci.id%>', this)"><%=_ci.name%></a></td>
+		<td class="tab_td_empty"><img src="pics/1blank.gif" width="5px" height="0"/></td>
+<%
+		iX++; iCount++;
+		if (iContentItemsLength > iTabMaximum && iX % iLength == 0 && iBreakCount - iIteration > 0)
+		{
+			iLength = Int(Real(iContentItemsLength - iCount) / Real(iBreakCount - iIteration) + 0.5);
+			iX = 0;
+			iIteration++;
+			if (iContentItemsLength - iCount > 0)
+				iWidth = Int(100.0 / Real(iLength));
+			else
+			{
+				iWidth = Real(iContentItemsLength - iCount);
+				if (iWidth > 0)
+					iWidth = Int(100.0 / Real(iContentItemsLength - iCount));
+				else
+					iWidth = 100;
+			}
+			if (iWidth > 50) iWidth = 50;
+%>
+			<td class="tab_td_empty">&nbsp;</td>
+			</tr>
+			</table>
+		<table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: -3px" name="content_panel_header_row_set">
+		<tr>
+			<td class="tab_td_empty"><img src="pics/1blank.gif" width="<%=(5 + 2*iIteration)%>px" height="0"/></td>
+<%
+		}
+	}
+%>
+		<td class="tab_td_empty" width="100%">&nbsp;</td>
+	</tr>
+</table>
+</div>
+<%
+}
+
+	try
+	{
+		Session.RETURN_MSG;
+	}
+	catch(_x_)
+	{
+		Session.RETURN_MSG = "";
+	}
+
+	if (Session.RETURN_MSG != "")
+	{
+		Response.Write("<br/><center><font size='+1' align='center'><i><b>" + HtmlEncode(Session.RETURN_MSG) + "</b></i></font></center>");
+		Session.RETURN_MSG = "";
+	}
+	if (_selectedTab != undefined)
+	{
+		_sTabHtmlUrl = String(_selectedTab.html_page);
+%>
+	<script language="javascript">
+	<!--
+	var jqCurTable = $("div#__tabrowholder td#td_<%=_selectedTab.id%>").parents("table[name='content_panel_header_row_set']");
+	if ($("div#__tabrowholder > table").length > 1 && $("div#__tabrowholder > table:last").get(0) !== jqCurTable.get(0))
+		$("div#__tabrowholder").append(jqCurTable);
+	-->
+	</script>
+<%
+		contentItem = ArrayFind(commonMyContentItems, "id == '" +_selectedTab.id+"'");
+		
+		curUrlQuery = UrlQuery(_sTabHtmlUrl);
+		Server.Execute(_sTabHtmlUrl.slice(0, _sTabHtmlUrl.indexOf("?")));
+	}
+%>

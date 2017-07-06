@@ -1,0 +1,26 @@
+<%
+	Server.Execute( "include/user_init.html" );
+	if (Request.Query.HasProperty("oldschool") && Request.Query.GetProperty("oldschool") == "1")
+		sFlashFileName = "knowledge_map.swf";
+	else
+		sFlashFileName = "knowledge_map_kapit.swf";
+%>
+	<object classid="clsid:D27CDB6E-AE6D-11cf-96B8-444553540000"
+			id="knowledge_map" width="100%" height="500"
+			codebase="http://fpdownload.macromedia.com/get/flashplayer/current/swflash.cab">
+			<param name="movie" value="<%=sFlashFileName%>"/>
+			<param name="wmode" value="transparent" />
+			<param name="quality" value="high"/>
+			<param name="flashvars" value="settings=<%=UrlEncode("knowledge_map_settings.xml")%>"/>
+			<param name="bgcolor" value="#ffffff" />
+			<param name="allowScriptAccess" value="sameDomain" />
+			<embed src="<%=sFlashFileName%>" quality="high" bgcolor="#869ca7"
+				width="100%" height="100%" name="knowledge_map" align="middle"
+				play="true"
+				loop="false"
+				quality="high"
+				allowScriptAccess="sameDomain"
+				type="application/x-shockwave-flash"
+				pluginspage="http://www.adobe.com/go/getflashplayer">
+			</embed>
+	</object>

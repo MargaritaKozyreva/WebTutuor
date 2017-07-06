@@ -1,0 +1,107 @@
+<%
+try
+{
+	curDocID = Int(Request.Query.doc_id);
+}
+catch(_X_)
+{
+	curDocID = null;
+}
+function GetChildArticles(bid, aid)
+{
+	Articles = XQuery("for $obj in articles where $obj/book_id = " + bid + 
+    					" and $obj/parent_object_id = " + ( aid != 0 ? aid : "null()" ) + " return $obj");
+	for (_article in Articles)
+    {
+        articleDoc = OpenDoc(UrlFromDocID(_article.id)).TopElem;
+        for (_tag in  articleDoc.tags)
+        {
+            try
+            {
+                tagDoc = OpenDoc(UrlFromDocID(_tag.tag_id)).TopElem;
+            }
+            catch(err)
+            {
+                continue;
+            }
+            _kword = Trim(tagDoc.name);
+            if (_kword == '')
+                continue;
+                
+            obj = new Object();
+            obj.keyword = _kword;
+	        obj.target_name = articleDoc.name;
+            obj.target = _article.id;
+            Keywords[ArrayCount(Keywords)] = obj;
+        }
+    	GetChildArticles(bid, _article.id);
+    }
+}
+
+RootBookID = 0;
+if ( Request.QueryString.HasProperty("book_id") )
+{
+	try
+    {
+		RootBookID = Int(Request.QueryString.GetProperty("book_id"));
+	}
+    catch(err)
+    {
+		alert(tools.get_web_str('rp_err_not_resourse'));
+    }
+}
+
+Keywords = Array();
+RootBooks = XQuery("for $obj in books" + ( RootBookID != 0 ? " where $obj/id = " + RootBookID : "") + " order by $obj/name return $obj");
+for (_book in RootBooks)
+{
+	bookDoc = OpenDoc(UrlFromDocID(_book.id)).TopElem;
+    for (_tag in  bookDoc.tags)
+    {
+    	try
+        {
+    		tagDoc = OpenDoc(UrlFromDocID(_tag.tag_id)).TopElem;
+		}
+        catch(err)
+        {
+        	continue;
+		}
+        _kword = Trim(tagDoc.name);
+        if (_kword == '')
+            continue;
+            
+        obj = new Object();
+        obj.keyword = _kword;
+        obj.target_name = bookDoc.name;
+        obj.target = _book.id;
+        Keywords[ArrayCount(Keywords)] = obj;
+    }
+	GetChildArticles(_book.id, 0);
+}
+Keywords = ArraySort(Keywords, "keyword", "+");
+%>
+
+<html>
+<head>
+<title>Keywords</title>
+<link href="../style.css" rel="stylesheet" type="text/css"/>
+</head>
+<body class="libraryLeftPanel">
+<div><br></div>
+<%
+js_str = "";
+for (_keyword in Keywords)
+{
+	js_str += "obj = new Object();\n obj.keyword = '" + _keyword.keyword + "';\n obj.target = " + _keyword.target + 
+    			";\n Keywords[Keywords.length] = obj;\n";
+%>
+<div><a href="JavaScript:parent.do_display('<%=_keyword.target%>', null, '<%=curDocID%>')" target="content"><%=(_keyword.keyword + " (" + _keyword.target_name + ")")%></a></div>
+<%
+}
+%>
+<script language="javascript">
+var Keywords = Array();
+<%=js_str%>
+</script>
+</body>
+</html>

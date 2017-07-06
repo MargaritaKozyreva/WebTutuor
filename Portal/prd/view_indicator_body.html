@@ -1,0 +1,159 @@
+
+<%
+	if ( ArrayOptFirstElem( ArraySelect(curObject.scales, "percent.HasValue") ) != undefined  )
+		show_percent = true;
+	else
+		show_percent = false;
+
+	switch (curObject.type)
+	{    
+		//'competence':
+	    case 0:
+%>
+		<center><font size="+1"><%=tools.get_web_str('ass_competence')%>: &nbsp;<b><%=curObject.name%></b></font></center>
+		
+			<hr/>
+		
+		<b><%=tools.get_web_str('vci_scale')%></b>
+		<table width=100% cellpadding=0 cellspacing=0 border=0 bgcolor="gray"><tr><td>
+		<table width=100% cellpadding=1 cellspacing=1>
+		<tr bgcolor="silver">
+			<td width="30px" align="center">
+				#
+			</td>
+			<td width="100px" align="center">
+			<%=tools.get_web_str('c_value')%>
+			</td>
+<% 
+	if (show_percent)
+	{
+%>
+			<td width="40px" align="center"><%=tools_web.get_web_str('vcp_percent_correspond')%></td>
+<% 
+	}
+%>
+			<td><%=tools.get_web_str('c_desc')%></td>
+		</tr>
+		<%
+		for (_scale in curObject.scales)
+		{		
+		%>
+				
+		<tr bgcolor="white">
+			<td width="30px" align="center">
+			<%=(_scale.ChildIndex + 1)%>
+			</td>
+			<td width="200px">
+			<%=_scale.name%>
+			</td>
+<% 
+	if (show_percent)
+	{
+%>
+			<td width="40px">
+			<%=_scale.percent%>
+			</td>
+<% 
+	}
+%>
+			<td>
+			<%=_scale.desc%>
+			</td>
+		</tr>
+		
+		<%
+		}
+		%>
+		
+		</table>
+		</td></tr></table>
+		
+		<br/>
+		<hr/>
+		<br/>
+		
+		<b><%=tools_web.get_web_str('vcp_child_indicators')%></b>
+		<table width=100% cellpadding=0 cellspacing=0 border=0 bgcolor="gray"><tr><td>
+		<table width=100% cellpadding=2 cellspacing=1>
+<%
+		_temp_indicators = XQuery( 'for $indicator in indicators where $indicator/competence_id = ' + Request.QueryString.doc_id +' return $indicator' );
+		
+		for (_indicator in _temp_indicators)
+		{
+%>
+		<tr bgcolor="white">			
+			<td>
+			<%=_indicator.name%>
+			</td>			
+		</tr>
+<%
+		}
+%>
+		</table>
+		</td></tr></table>
+		
+<%		
+		break;
+		
+		
+		
+		
+		
+		
+		
+		//'indicator'
+		case 1:
+		
+		%>
+		<center><font size="+1"><%=tools_web.get_web_str('ass_indicator')%>: &nbsp;<b><%=curObject.name%></b></font></center>
+		
+			<hr/>
+		
+		<b><%=tools.get_web_str('vci_scale')%></b>
+		<table width=100% cellpadding=0 cellspacing=0 border=0 bgcolor="gray"><tr><td>
+		<table width=100% cellpadding=1 cellspacing=1>
+		<tr bgcolor="silver">	
+			<td width="30px" align="center">#</td>
+			<td width="100px" align="center"><%=tools.get_web_str('c_value')%></td>
+			<td width="40px" align="center"><%=tools_web.get_web_str('vcp_percent_correspond')%></td>
+			<td><%=tools.get_web_str('c_desc')%></td>
+		</tr>
+		<%
+		for (_scale in curObject.scales)
+		{		
+		%>
+				
+		<tr bgcolor="white">
+			<td width="30px" align="center">
+			<%=(_scale.ChildIndex + 1)%>
+			</td>
+			<td width="200px">
+			<%=_scale.name%>
+			</td>
+			<td width="40px">
+			<%=_scale.percent%>
+			</td>
+			<td>
+			<%=_scale.desc%>
+			</td>
+		</tr>
+		
+		<%
+		}
+		%>
+		
+		</table>
+		</td></tr></table>
+		
+<%
+		
+		
+		
+		break;
+
+	}
+	
+	if (curObject.comment.HasValue)
+		Response.Write("<p>"+curObject.comment+"</p>")
+%>
+			

@@ -1,0 +1,103 @@
+<br>
+<%
+	curView = new Object;
+	curView.SetProperty( 'id', '1' );
+	curView.SetProperty( 'catalog_name', 'object_resource' );
+	curView.SetProperty( 'disp_link', 'true' );
+	curView.SetProperty( 'link_mode', 'reserve_object_resources' );
+	curView.SetProperty( 'link_field_index', 1 );
+	curView.SetProperty( 'title', '' );
+	
+	_request_string = '';
+	try
+	{
+		if ( curObjectResourceType != '' )
+		{
+			curView.SetProperty( "xquery_qual", "$elem/type = '" + curObjectResourceType + "'" );
+			_request_string = _request_string + '&object_resource_type=' + curObjectResourceType;
+		}
+	}
+	catch ( ee )
+	{
+	}
+	try
+	{
+		if ( curRequestTypeID != null )
+			_request_string = _request_string + '&request_type_id=' + curRequestTypeID;
+	}
+	catch ( ee )
+	{
+	}
+	curView.SetProperty( 'link_prop', _request_string );
+	
+	Server.Execute( 'view_catalog_list.html' );
+%>
+<br/>
+
+<%
+	if ( curObjectID != null )
+	{
+	
+		curDate = Date();
+		if ( Request.QueryString.HasProperty( 'date' ) && Request.QueryString.date != '' )
+			curDate = Date( Request.QueryString.date );
+			
+		curDay = null;
+		if ( Request.QueryString.HasProperty( 'day' ) && Request.QueryString.day != '' )
+			curDay = Int( Request.QueryString.day );
+		
+		_year = Year( curDate );
+		_month = Month( curDate );
+		_date_start = Date( '1.' + _month + '.' + _year );
+		_date_end = Date( '1.' + ( _month == 12 ? '1.' + ( _year + 1 ) : ( _month + 1 ) + '.' + _year ) );	
+		curObjectResourceArray = XQuery( "for $elem in event_phases where $elem/object_resource_id = " + curObjectID + " and $elem/finish_date > date( '" + _date_start + "' ) and $elem/start_date < date( '" + _date_end + "' ) order by $elem/start_date return $elem" );
+%>
+<br/>
+<div style="margin:12px;" class="headerText"><%=tools_web.get_cur_lng_name( curObject.name )%></div>
+<table width="100%"  border="0" cellspacing="0" cellpadding="3">
+<tr>
+	<td width="220" valign="top"><%Server.Execute( "view_object_resource_calendar_body.html" )%></td>
+	<td width="100%" valign="top" align="left">
+<%
+		if ( curDay == null )
+		{
+			Server.Execute( "view_desc.html" );
+		}
+		else
+		{
+			curEndDay = DateOffset( curDate, 86400 )
+		
+			curView = new Object;
+			curView.SetProperty( 'id', '2' );
+			curView.SetProperty( 'catalog_name', 'event_phase' );
+			curView.SetProperty( 'disp_link', 'true' );
+			curView.SetProperty( 'link_mode', 'event' );
+			curView.SetProperty( 'link_object_field', 'event_id' );
+			curView.SetProperty( 'link_field_index', 3 );
+			curView.SetProperty( "array", ArraySelect( curObjectResourceArray, 'finish_date > curDate && start_date <= curEndDay' ) );
+			curView.SetProperty( 'title', StrDate( curDate, false ) );
+			
+			Server.Execute( 'view_catalog_list.html' );
+		}
+%>
+	</td>
+</tr>
+<%
+		if ( curDay != null )
+		{
+%>
+<tr>
+	<td colspan="2"><%Server.Execute( "view_desc.html" )%></td>
+</tr>
+<%
+		}
+%>
+</table>
+<br/>
+<%
+		curObject = curRequest;
+		curObjectID = null;
+		isGroup = false;
+		Server.Execute( "view_request_body.html" );
+	}
+%>

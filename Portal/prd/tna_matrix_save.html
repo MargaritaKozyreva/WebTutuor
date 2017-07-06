@@ -1,0 +1,546 @@
+<%
+	Server.Execute( "include/user_init.html" );
+/*alert('<====>');
+for (a in Request.Form)
+{
+ alert(a+"="+Request.Form.GetProperty(a));
+}
+alert('<====>');*/
+
+    
+	RETURN_MSG = undefined;
+	
+	//HREF = Request.Form.href+'&new_req=1'
+	
+	HREF =StrReplace(Request.Form.href, '&new_req=1', '')+'&new_req=1'
+	//alert('HREF='+HREF)
+	if (Request.Form.HasProperty("tab"))
+	{
+		HREF =StrReplace(StrReplace(HREF, '&tab=1', ''), '&tab=0', '')+'&tab='+Request.Form.tab
+	}
+	//alert('HREF='+HREF)
+	
+	try
+	{
+		PersonNum=0
+		curPropName='elem_counter'
+		if (Request.Form.HasProperty(curPropName))
+		{
+			PersonNum=Int(Request.Form.GetProperty(curPropName))
+		}
+		//alert(PersonNum)
+		if (PersonNum!=0)
+		{
+			arrEduMethods=Array()
+			counter=0;
+			for( iEduProg in education_programs)
+			{
+				curPropName='education_program_'+iEduProg.id+'_methods_ids'
+				//alert(curPropName)
+				if (Request.Form.HasProperty(curPropName))
+				{
+					tempArr=String(Request.Form.GetProperty(curPropName)).split(";")
+					for (Elem in tempArr)
+					{
+						try
+						{
+							edu_method_id=Int(Elem)
+							if (ArrayOptFind(arrEduMethods,'id=='+edu_method_id)==undefined)
+							{
+								edu_method=ArrayOptFirstElem(XQuery('for $elem in education_methods where $elem/id='+edu_method_id+' return $elem'))
+								if (edu_method!=undefined)
+								{
+									NewMethod= new Object;
+									NewMethod.id=edu_method.id
+									NewMethod.name=edu_method.name
+									NewMethod.real_method=true;
+									NewMethod.arrPersonsAdd=Array()
+									NewMethod.arrPersonsDelete=Array()
+									arrEduMethods[counter]=NewMethod;
+									counter++;
+								}
+							}
+						}
+						catch(ex)
+						{
+						}
+					}
+				}
+			}
+			
+			template_req_type_id=0
+			curPropName='template_req_type_id'
+			if (Request.Form.HasProperty(curPropName))
+			{
+				template_req_type_id=Int(Request.Form.GetProperty(curPropName))
+			}
+			else
+			{
+				template_req_type='request_education_method';
+				try
+				{
+					template_req_type_id=ArrayFirstElem(XQuery("for $elem in request_types where $elem/code='"+template_req_type+"' return $elem")).id
+				}
+				catch(ex)
+				{
+					RETURN_MSG += StrReplace( tools_web.get_web_str('tms_err_request'), '{PARAM1}', template_req_type );
+					Session.r_msg = String(RETURN_MSG);
+					Response.Redirect( HREF );
+					Cancel();
+				}
+			}
+			
+			
+			
+			OtherNum=0
+			curPropName='other_counter'
+			if (Request.Form.HasProperty(curPropName))
+			{
+				OtherNum=Int(Request.Form.GetProperty(curPropName))
+			}
+			for (i=0;i<OtherNum;i++)
+			{
+				curPropName='other'+i
+				//alert(curPropName)
+				if (Request.Form.HasProperty(curPropName))
+				{
+					_name=Request.Form.GetProperty(curPropName)
+					try
+					{
+						NewMethod= new Object;
+						NewMethod.id=curPropName;
+						NewMethod.name=_name;
+						NewMethod.real_method=false;
+						NewMethod.arrPersonsAdd=Array()
+						NewMethod.arrPersonsDelete=Array()
+						arrEduMethods[counter]=NewMethod;
+						counter++;
+					}
+					catch(ex)
+					{
+						//alert(ex)
+					}
+				}
+			}
+			//alert('ArrayCount(arrEduMethods)='+ArrayCount(arrEduMethods))
+			budget_period_id=0
+			curPropName='budget_period_id'
+			if (Request.Form.HasProperty(curPropName))
+			{
+				budget_period_id=Int(Request.Form.GetProperty(curPropName))
+			}
+			
+			//arrRequests=XQuery('for $elem in requests where $elem/status_id='active' and $elem/budget_period_id='+budget_period_id+' and $elem/person_id='+curUserID+' return $elem')
+			
+			use_def_workflow=false;
+			curPropName='use_def_workflow'
+			if (Request.Form.HasProperty(curPropName))
+			{
+				use_def_workflow=eval(Request.Form.GetProperty(curPropName))
+			}
+			
+			
+			arrPersonMethodRequest=Array();
+			repeat_search=false;
+			curPropName='repeat_search'
+			if (Request.Form.HasProperty(curPropName))
+			{
+				repeat_search=eval(Request.Form.GetProperty(curPropName))
+			}
+			
+			try
+			{
+				arrPersonMethodRequest=Session.person_method_request;
+			}
+			catch(_netu_)
+			{
+				repeat_search=true;
+			}
+	
+			
+			if (repeat_search)
+			{
+				arrPersonMethodRequest=Array();
+				//alert(repeat_search)
+				if (budget_period_id!=0)
+				{
+					counter=0;
+					arrEduMethods=ArraySelectDistinct(arrEduMethods,'id')
+					for (iMethodElem in arrEduMethods)
+					{
+						try
+						{
+							_id=Int(iMethodElem.id)
+							arrRequests=XQuery("for $elem in requests where $elem/type='education_method' and $elem/request_type_id="+template_req_type_id+" and $elem/status_id='active' and $elem/budget_period_id="+Int(budget_period_id)+" and $elem/object_id="+_id+" return $elem")
+						}
+						catch(ex)
+						{
+							arrRequests=XQuery('for $elem in requests where $elem/type=\'education_method\' and $elem/request_type_id='+template_req_type_id+' and $elem/status_id=\'active\' and $elem/object_id=null() and $elem/object_name='+XQueryLiteral(iMethodElem.name)+' return $elem')
+						}
+						for (iRequestElem in arrRequests)
+						{
+							if (iRequestElem.is_group)
+							{
+								try
+								{
+									requestData= XQuery( 'for $elem in request_collaborators where $elem/request_id='+iRequestElem.id+' return $elem')
+									for (iPersonElem in requestData)
+									{
+										NewUserReq=new Object;
+										NewUserReq.person_id=iPersonElem.person_id;
+										NewUserReq.person_fullname=iPersonElem.person_fullname;
+										NewUserReq.method_id=iMethodElem.id
+										NewUserReq.method_name=iMethodElem.name
+										NewUserReq.req_id=iRequestElem.id;
+										
+										arrPersonMethodRequest[counter]=NewUserReq
+										counter++;
+									}
+									
+/*									teRequest=OpenDoc(UrlFromDocID(iRequestElem.id)).TopElem;
+									for (iPersonElem in teRequest.persons)
+									{
+										NewUserReq=new Object;
+										NewUserReq.person_id=iPersonElem.person_id;
+										NewUserReq.person_fullname=iPersonElem.person_fullname;
+										NewUserReq.method_id=iMethodElem.id
+										NewUserReq.method_name=iMethodElem.name
+										NewUserReq.req_id=iRequestElem.id;
+										
+										arrPersonMethodRequest[counter]=NewUserReq
+										counter++;
+									}*/
+								}
+								catch(ex)
+								{
+								}
+							}
+							else
+							{
+								NewUserReq=new Object;
+								NewUserReq.person_id=iRequestElem.person_id;
+								NewUserReq.person_fullname=iRequestElem.person_fullname;
+								NewUserReq.method_id=iMethodElem.id
+								NewUserReq.method_name=iMethodElem.name;
+								NewUserReq.req_id=iRequestElem.id;
+								
+								arrPersonMethodRequest[counter]=NewUserReq
+								counter++;
+							}
+						}
+					}
+					
+				}
+			}
+			
+			
+/*			for (elem in arrPersonMethodRequest)
+			{
+				alert(elem.method_id+' '+elem.method_name+' ' +elem.person_id+' ' +elem.person_fullname+ '<br/>')
+			}*/
+			for (i=1;i<=PersonNum;i++)
+			{
+				curPropName='elem_'+i+'_person_id'
+				if (Request.Form.HasProperty(curPropName))
+				{
+					person_id=Int(Request.Form.GetProperty(curPropName))
+				}
+				else
+				{
+					continue;
+				}
+				person=ArrayOptFirstElem(XQuery('for $elem in collaborators where $elem/id='+person_id+' return $elem'))
+				if (person!=undefined)
+				{
+					for (iEduMethodElem in arrEduMethods)
+					{
+						curPropName='elem_counter'+i+'_'+iEduMethodElem.id
+						//alert(curPropName)
+						if (Request.Form.HasProperty(curPropName))
+						{
+							//alert(iEduMethodElem.id+' '+iEduMethodElem.name+' '+person.id+' '+person.fullname)
+							if (iEduMethodElem.real_method)
+							{
+								if (ArrayOptFind(arrPersonMethodRequest,"This.method_id=="+Int(iEduMethodElem.id)+"&&This.person_id=="+Int(person.id))==undefined)
+								{
+									//alert('add')
+									iEduMethodElem.arrPersonsAdd[ArrayCount(iEduMethodElem.arrPersonsAdd)]=person
+								}
+							}
+							else
+							{
+								if (ArrayOptFind(arrPersonMethodRequest,"This.method_id=='"+iEduMethodElem.id+"'&&This.person_id=="+Int(person.id))==undefined)
+								{
+									//alert('add')
+									iEduMethodElem.arrPersonsAdd[ArrayCount(iEduMethodElem.arrPersonsAdd)]=person
+								}
+							}
+						}
+						else
+						{
+							iEduMethodElem.arrPersonsDelete[ArrayCount(iEduMethodElem.arrPersonsDelete)]=person
+						}
+					}
+				}
+			}
+			
+			for (iEduMethodElem in arrEduMethods)
+			{	
+				
+				if (ArrayOptFirstElem(iEduMethodElem.arrPersonsAdd)!=undefined)
+				{
+	
+/*					request_type=ArrayOptFirstElem(XQuery('for $elem in request_types where $elem/object_type=\'education_method\' return $elem'))
+					if (request_type==undefined)
+					{
+						continue;
+					}*/
+
+					request_type_id=template_req_type_id
+					
+					requestTypeID = Int( request_type_id );
+					requestTypeDoc = OpenDoc( UrlFromDocID( requestTypeID ) ).TopElem;
+					
+								
+					requestDoc = OpenNewDoc( 'x-local://wtv/wtv_request.xmd' );
+					
+					try
+					{
+						switch(curHostSettings.default_portal_type)
+						{
+							case 'sharepoint':
+								requestDoc.TopElem.comment = DecodeCharset( Request.Form.comment, 'utf-8' );
+								break;
+							default:
+								requestDoc.TopElem.comment = Request.Form.comment;
+						}
+					}
+					catch(ex)
+					{
+					}
+					tools.common_filling( 'request_type', requestDoc.TopElem, Int( request_type_id ), requestTypeDoc );
+					
+					
+					requestDoc.TopElem.person_id = curUserID;
+					requestDoc.TopElem.budget_period_id = budget_period_id;
+					tools.common_filling( 'collaborator', requestDoc.TopElem, curUserID, curUser );
+					
+					if ( requestDoc.TopElem.type.HasValue )
+					{
+						if (iEduMethodElem.real_method)
+						{
+							requestDoc.TopElem.object_id = Int( iEduMethodElem.id);
+							tools.object_filling( requestDoc.TopElem.type, requestDoc.TopElem, Int( iEduMethodElem.id) );
+						
+							tools.admin_access_copying("", requestDoc.TopElem, iEduMethodElem.id);
+						}
+						else
+						{
+							requestDoc.TopElem.object_name = iEduMethodElem.name;
+							requestDoc.TopElem.object_type='name';
+						}
+					}
+					
+					if ( ! requestDoc.TopElem.workflow_id.HasValue )
+						requestDoc.TopElem.workflow_id = requestTypeDoc.workflow_id;
+						
+					if (use_def_workflow!=true)
+					{
+							requestDoc.TopElem.workflow_id=null;
+					}
+					
+/*					_counter_flag = true;
+					try
+					{
+						//tools_web.web_custom_elems_filling( 'request', null, requestDoc.TopElem, Request.Form );
+						_cur_template = tools.get_custom_template( 'request', null, requestDoc.TopElem );
+						
+						if ( _cur_template != null )
+						{
+							
+							try
+							{
+								if ( _value_flag != true )
+									_value_flag = false;
+							}
+							catch ( r )
+							{
+								_value_flag = false;
+							}
+							
+							
+							for ( _field in _cur_template.fields )
+								try
+								{
+									_field_name=_field.name+'_'+iEduMethodElem.id;
+									if ( ! _field.disp_web || _field.type == 'title' )
+										continue;
+							
+									if ( _field.type == 'bool' )
+									{
+										_value = ( Request.Form.HasProperty( _field_name ) ? 'true' : 'false' );
+									}
+									else if ( _field.type == 'file' )	
+									{
+										_ref = Request.Form.GetProperty( _field_name );
+				
+										if ( Trim( _ref ) == '' || ! _ref.FileName.HasValue )
+											continue;
+											
+										doc = OpenNewDoc( 'x-local://wtv/wtv_resource.xmd' );
+										doc.BindToDb( DefaultDb );
+										doc.TopElem.put_str( _ref, _ref.FileName, requestDoc.TopElem );
+										_value = doc.DocID;
+									}
+									else			
+									{
+										switch( global_settings.settings.default_portal_type )
+										{
+											case 'sharepoint':
+												_value = DecodeCharset( Request.Form.GetProperty( _field_name ), 'utf-8' );
+												break;
+												
+											default:
+												_value = Request.Form.GetProperty( _field_name );
+												break;
+										}
+										
+										if ( _value_flag && _field.is_required && _value == '' )
+											continue;
+									}
+									
+									requestDoc.TopElem.custom_elems.ObtainChildByKey( _field.name ).value = _value;
+								}
+								catch ( ee )
+								{
+									alert( ee )	;			
+									_counter_flag = false;
+								}
+								
+						}
+						
+					}
+					catch ( e )
+					{
+						alert( e );
+					}*/
+					
+					requestDoc.TopElem.is_group = true;
+					
+					for ( _pers in iEduMethodElem.arrPersonsAdd )
+					{
+						try
+						{
+							_child = requestDoc.TopElem.persons.ObtainChildByKey( _pers.id );
+							tools.common_filling( 'collaborator', _child, _pers.id, _pers);
+						}
+						catch ( err )
+						{
+							alert( err );
+						}
+					}
+					
+					requestDoc.BindToDb( DefaultDb );
+					requestDoc.Save();
+									
+					ms_tools.raise_system_event( 'portal_create_request', null, null, requestDoc );
+					tools.create_notification( '1', requestDoc.DocID );
+					
+/*					if (_counter_flag)
+					{
+						requestDoc.BindToDb( DefaultDb );
+						requestDoc.Save();
+										
+						ms_tools.raise_system_event( 'portal_create_request', null, null, requestDoc );
+						tools.create_notification( '1', requestDoc.DocID );
+					}
+					else
+					{
+						if (RETURN_MSG == undefined)
+						{
+							RETURN_MSG='';
+						}
+						RETURN_MSG += StrReplace( tools_web.get_web_str('tms_error1'), '{PARAM1}', iEduMethodElem.name );
+						continue;
+					}*/
+				}
+				
+				if (ArrayOptFirstElem(iEduMethodElem.arrPersonsDelete)!=undefined)
+				{
+					for (person in iEduMethodElem.arrPersonsDelete)
+					{
+					
+					
+							if (iEduMethodElem.real_method)
+							{
+								ReqArr=ArraySelect(arrPersonMethodRequest,"This.method_id=="+iEduMethodElem.id+"&&This.person_id=="+person.id)
+							}
+							else
+							{
+								ReqArr=ArraySelect(arrPersonMethodRequest,"This.method_id=='"+iEduMethodElem.id+"'&&This.person_id=="+person.id)
+							}
+							
+							for (iReqElem in ReqArr)
+							{
+								try
+								{
+									docRequest=OpenDoc(UrlFromDocID(Int(iReqElem.req_id)))	
+								}
+								catch(ex)
+								{
+									continue;
+								}
+								if (docRequest.TopElem.is_group)
+								{
+									try
+									{
+										docRequest.TopElem.persons.DeleteChildByKey( person.id )
+									}
+									catch(ex)
+									{
+										continue;
+									}
+									docRequest.Save();
+									if (ArrayOptFirstElem(docRequest.TopElem.persons)==undefined)
+									{
+										DeleteDoc( UrlFromDocID( iReqElem.req_id ) );
+									}
+									
+								}
+								else
+								{
+									DeleteDoc( UrlFromDocID( iReqElem.req_id ) );
+								}
+							}
+					}
+				}
+	
+	
+/*				alert('---------add---')
+				for (person in iEduMethodElem.arrPersonsAdd)
+				{
+					alert(person.fullname)
+				}*/
+				
+/*				alert('---------delete---')
+				for (person in iEduMethodElem.arrPersonsDelete)
+				{
+					alert(person.fullname)
+				}*/
+				
+			}
+			
+		}
+	}
+	catch(ex)
+	{
+		RETURN_MSG = tools_web.get_web_str('tms_error2') + ex;
+	}
+	
+		
+	if (RETURN_MSG != undefined)
+		Session.r_msg = String(RETURN_MSG);
+		
+	Response.Redirect( HREF );
+	Cancel();
+%>

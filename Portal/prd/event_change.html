@@ -1,0 +1,465 @@
+<%
+Server.Execute( "include/sid_access_init.html" );
+
+curAction = Request.Query.HasProperty( 'action' ) ? Request.Query.action : 'save';
+//alert(curAction);
+
+_write = ( curUser.access.access_role == 'admin' || curObject.tutors.ChildByKeyExists( curUserID ) );
+_is_col = curObject.collaborators.ChildByKeyExists( curUserID );
+
+if ( curAction == 'add_collaborator' )
+{
+	if ( Request.Form.HasProperty('selected_object_id') )
+	{
+		_doc = tools.add_person_to_event( Int( Request.Form.selected_object_id ), curObjectID, null, curObjectDoc );
+		if ( _doc != null )
+		{
+			curObjectDoc = _doc;
+			curObject = curObjectDoc.TopElem;
+			curObjectDoc.Save();
+		}
+	}
+}
+
+if ( _write )
+{
+	if ( curAction == 'delete' )
+	{
+		DeleteDoc( UrlFromDocID( curObjectID ) );
+		eventResultArray = XQuery( 'for $elem in event_results where $elem/event_id = ' + curObjectID + ' return $elem' );
+		for ( _event_result in eventResultArray )
+			try
+			{
+				DeleteDoc( UrlFromDocID( _event_result.PrimaryKey ) );
+			}
+			catch ( err )
+			{
+				alert( err );
+			}
+	}
+	else
+	{
+		lastEducationMethodID = curObject.education_method_id.Value;
+		lastDefaultEventResiltID = curObject.default_event_result_type_id.Value;
+			
+		if ( Request.Form.type_id == "case" )
+		{
+			fieldArray = Array( 'name','code','type_id',
+								'is_public','is_open','disp_persons_for_all','is_open_case',
+								'start_date','finish_date','duration_fact','duration_days_fact',									
+								'max_person_num','unnamed_person_num',
+								'date_request_begin','date_request_over','date_request_rejection_over' );
+		}
+		else
+		{
+			fieldArray = Array( 'name','code','type_id',
+								'is_public','is_open','allow_guest_login','disp_persons_for_all',
+								'start_date','finish_date','duration_fact','duration_days_fact',
+								'max_person_num','unnamed_person_num',
+								'date_request_begin','date_request_over','date_request_rejection_over',
+								
+								'course_id','chat_id','education_method_id',									
+								'place','place_id','default_request_type_id','use_object_workflow','default_response_type_id','mandatory_fill_response',
+								'use_video','use_audio','video_url','video_login','video_password','audio_url','audio_channel_login','audio_channel_password','audio_login','audio_password','main_material_url','main_material_width','main_material_height',
+								'group_formed','organizational_form','event_form','default_event_result_type_id','vclass_host','show_record','allow_record_download','bandwidth');		}
+		
+		for ( _field in fieldArray )
+		try
+		{					
+			_obj_field = curObject.Child( _field );
+			switch ( _obj_field.Type )
+			{
+				case 'bool':
+					_obj_field.Value = ( Request.Form.HasProperty( _field ) );
+					break;
+					
+				case 'integer':
+					if ( Request.Form.HasProperty( _field ) )
+					{
+						if ( Request.Form.GetProperty( _field ) != '' )
+							_obj_field.Value = Int( Request.Form.GetProperty( _field ) );
+						else
+							_obj_field.Clear();
+					}
+					break;
+					
+				case 'date':
+					if ( Request.Form.HasProperty( _field ) )
+					{
+						if ( Request.Form.GetProperty( _field ) != '' )
+							_obj_field.Value = Date( Request.Form.GetProperty( _field ) );
+						else
+							_obj_field.Clear();
+					}
+					break;
+					
+				default:
+					if ( Request.Form.HasProperty( _field ) )
+					{
+						_obj_field.Value = Request.Form.GetProperty( _field );
+					}
+					break;
+			}
+		}
+		catch ( e )
+		{
+			alert( 'event_change: filling field "' + _field + '" error. ' + e );
+		}
+		
+		try
+		{
+			if (curObject.type_id != 'education_method'&&curObject.type_id != 'education_method_from_program'&&curObject.type_id != 'compound_program_elem' )
+			{
+				curObject.event_forms.Clear();
+			}
+		}
+		catch(ex)
+		{
+		}
+		
+		if ( Request.Form.HasProperty( 'desc' ) )
+			curObject.desc = tools_web.convert_xhttp_res( Request.Form.desc, curObject.desc );
+	
+		curObject.clear_elems();
+		
+		try
+		{
+			curObject.start_date = Date( StrDate( Date( Request.Form.start_date ), false ) + ' ' + Request.Form.start_time );
+		}
+		catch ( d )
+		{
+		}
+		try
+		{
+			curObject.finish_date = Date( StrDate( Date( Request.Form.finish_date ), false ) + ' ' + Request.Form.finish_time );
+		}
+		catch ( d )
+		{
+		}
+		
+		try
+		{
+			tools_web.web_custom_elems_filling( 'event', curObjectID, curObject, Request.Form );
+		}
+		catch ( e )
+		{
+			alert( e );
+		}
+		
+		if ( ! curObject.doc_info.creation.date.HasValue && ! curObject.doc_info.modification.date.HasValue )
+		{
+			curObject.doc_info.creation.user_login = curUser.login;
+			curObject.doc_info.creation.date = CurDate;
+			
+			_access = admin_access_catalogs.GetOptChildByKey( 'event' );
+			if ( _access != undefined )
+			{	
+				if ( _access.auto_group_filling && ! curObject.user_group_id.HasValue )
+					curObject.user_group_id = curUser.access.user_group_id;
+					
+				if ( _access.auto_role_filling && ! curObject.user_access_role.HasValue )
+					curObject.user_access_role = curUser.access.access_role;
+			}
+		}
+		
+		if ( lastDefaultEventResiltID != curObject.default_event_result_type_id )
+			curObject.update_event_results();
+
+		try
+		{
+			switch ( curAction )
+			{
+				case 'change_collaborators':
+					collaboratorArray = String( Request.Form.selected_object_ids ).split( ';' );
+					for ( _person in ArraySelectAll( curObject.collaborators ) )
+						if ( ArrayOptFind( collaboratorArray, "This=='" + _person.PrimaryKey + "'" ) == undefined )
+						{
+							_doc = tools.del_person_from_event( _person.PrimaryKey, curObjectID, curObjectDoc, false );
+							if ( _doc != null )
+							{
+								curObjectDoc = _doc;
+								curObject = curObjectDoc.TopElem;
+							}
+						}
+						
+					bInBlackListFlag = ! Request.Query.HasProperty( 'add_persons_in_black_list' ) || Request.Query.add_persons_in_black_list == '1';
+					
+					for ( _elem in collaboratorArray )
+						if ( _elem != '' )
+						{
+							if ( bInBlackListFlag == false )
+							{
+								catPerson = ArrayOptFirstElem( XQuery( 'for $elem in collaborators where $elem/id = ' + _elem + ' return $elem' ) )
+								if ( catPerson != undefined && catPerson.in_request_black_list )
+									continue;
+							}
+						
+							if ( ArrayOptFind( curObject.collaborators, 'String(PrimaryKey)==_elem' ) == undefined )
+							{
+								_doc = tools.add_person_to_event( Int( _elem ), curObjectID, null, curObjectDoc );
+								if ( _doc != null )
+								{
+									curObjectDoc = _doc;
+									curObject = curObjectDoc.TopElem;
+								}
+							}
+							else
+							{
+								_child = curObject.collaborators.ObtainChildByKey( Int( _elem ) );
+								tools.common_filling( 'collaborator', _child, Int( _elem ) );
+							}
+						}
+					break;
+				
+				case 'change_tutors':
+					tutorArray = String( Request.Form.selected_object_ids ).split( ';' );
+
+					if ( curObject.status_id != 'close' && curObject.status_id != 'cancel' && curObject.status_id != 'project' )
+					{
+						if (curObject.event_settings.send_type=='adding'&&curObject.event_settings.send_tutors)
+						{
+							for ( _elem in tutorArray )
+								if ( _elem != '' && curObject.tutors.GetOptChildByKey( Int( _elem ) ) == undefined )
+									tools.create_notification( '51', Int( _elem ), '', curObjectID, null, curObject );
+						}
+					}
+
+					for ( _tutor in ArraySelectAll( curObject.tutors ) )
+						if ( ArrayOptFind( tutorArray, "This=='" + _tutor.PrimaryKey + "'" ) == undefined )
+						{
+							_tutor.Delete();
+							if ( curObject.status_id != 'close' && curObject.status_id != 'cancel' && curObject.status_id != 'project' )
+							{						
+								if (curObject.event_settings.send_type=='adding'&&curObject.event_settings.send_tutors)
+								{
+							    	tools.create_notification( '52', _tutor.PrimaryKey, '', curObjectID, null, curObject );
+								}
+							}
+						}
+
+					for ( _elem in tutorArray )
+						if ( _elem != '' )
+						{
+							_child = curObject.tutors.ObtainChildByKey( Int( _elem ) );
+							tools.common_filling( 'collaborator', _child, Int( _elem ) );
+						}
+					break;
+					
+				case 'change_lectors':
+					tutorArray = String( Request.Form.selected_object_ids ).split( ';' );
+					
+					if ( curObject.status_id != 'close' && curObject.status_id != 'cancel' && curObject.status_id != 'project' )
+					{
+						if (curObject.event_settings.send_type=='adding'&&curObject.event_settings.send_lectors)
+						{
+							for ( _elem in tutorArray )
+								if ( _elem != '' && curObject.lectors.GetOptChildByKey( Int( _elem ) ) == undefined )
+									tools.create_notification( '55', Int( _elem ), '', curObjectID, null, curObject );
+						}
+					}
+
+					for ( _lector in ArraySelectAll( curObject.lectors ) )
+						if ( ArrayOptFind( tutorArray, "This=='" + _lector.PrimaryKey + "'" ) == undefined )
+						{
+							_lector.Delete();
+							if ( curObject.status_id != 'close' && curObject.status_id != 'cancel' && curObject.status_id != 'project' )
+							{
+								if (curObject.event_settings.send_type=='adding'&&curObject.event_settings.send_lectors)
+								{
+							    	tools.create_notification( '56', _lector.PrimaryKey, '', curObjectID, null, curObject );
+								}
+							}
+						}
+					
+					for ( _elem in tutorArray )
+						if ( _elem != '' )
+						{
+							_child = curObject.lectors.ObtainChildByKey( Int( _elem ) );
+						}
+					break;
+					
+				case 'add_preparation':
+					_child = curObject.even_preparations.AddChild();
+					_child.person_id = Int( Request.Form.selected_object_id );
+					tools.common_filling( 'collaborator', _child, _child.person_id );
+				
+					_preparation_id = _child.PrimaryKey;
+					if ( curObject.status_id != 'close' && curObject.status_id != 'cancel' && curObject.status_id != 'project' )
+					{
+						if (curObject.event_settings.send_type=='adding'&&curObject.event_settings.send_event_preparations)
+						{	
+					    	tools.create_notification( '53', _child.person_id, '', curObjectID );
+						}
+					}
+					break;
+					
+				case 'change_assist':
+					docEventResult = OpenDoc( UrlFromDocID( Int( Request.Form.selected_object_id ) ) );
+					docEventResult.TopElem.is_assist = ! docEventResult.TopElem.is_assist;
+					docEventResult.Save();
+					break;
+
+                case 'change_place':
+					curObject.place_id = Int( Request.Form.selected_object_id );
+					break;
+					
+                case 'change_education_method':
+					curObject.education_method_id = Int( Request.Form.selected_object_id );
+					curObject.event_form.Clear();
+					curObject.event_forms.Clear();
+					try
+					{
+						education_methodDoc = OpenDoc( UrlFromDocID( curObject.education_method_id ) ).TopElem;
+						curObject.event_forms.AssignElem(education_methodDoc.event_forms)
+							if ( education_methodDoc.event_form.HasValue )
+								curObject.event_form = education_methodDoc.event_form;
+						}
+					catch(err)
+					{
+					}
+
+					if ( lastEducationMethodID != curObject.education_method_id )
+					{
+						if ( curObject.name == tools.get_web_str('c_not_name') )
+							curObject.name.Clear();
+				
+						tools.common_filling( 'education_method', curObject, curObject.education_method_id, null, false );
+					}
+					break;
+				
+				case 'public':
+					curObject.public_answers = true;
+					break;
+					
+				case 'cancel_public':
+					curObject.public_answers = false;
+					break;
+					
+				case 'set_status':
+					switch ( Request.Form.selected_object_id )
+					{
+						case 'active':
+							curObjectDoc = tools.event_start( curObjectID, curObjectDoc );
+							break;
+							
+						case 'close':
+							curObjectDoc = tools.event_finish( curObjectID, curObjectDoc );
+							break;
+							
+						default:
+							if (curObject.status_id =='project')
+							{
+								tools.send_event_notifications(curObjectID,curObjectDoc)
+							}
+							curObject.status_id = Request.Form.selected_object_id;
+							break;
+					}
+					break;
+				case 'add_file':
+						try
+						{
+							_file_id=tools_web.web_files_process( curObject);
+							if (_file_id!=null)
+							{
+								try
+								{
+									if ( Request.Form.HasProperty( "add_file_visibility" ) )
+									{
+										curObject.files.GetChildByKey( _file_id ).visibility=Request.Form.GetProperty( "add_file_visibility" );
+									}
+								}
+								catch(ex)
+								{
+									alert(ex)
+								}
+							}
+						}
+						catch ( e )
+						{
+							alert( e );
+						}
+					break;
+			}	
+		}
+		catch ( e )
+		{
+			alert( e );
+		}
+
+        //Saving lectors hours
+        for( _lector in curObject.lectors )
+        {
+			_field_name = "hours_" + _lector.lector_id;
+			if( Request.Form.HasProperty( _field_name ) )
+				_lector.hours = Request.Form.GetProperty( _field_name );
+        }
+
+		if(curObject.type_id =='webinar' && curObject.vclass_host=='' && ArrayCount(global_settings.settings.vclass_hosts) != 0)
+		{
+			_host = ArrayOptFirstElem(global_settings.settings.vclass_hosts);
+			curObject.vclass_host = _host.host;
+		}
+
+		curObjectDoc.Save();
+		ms_tools.raise_system_event('portal_save_event', null, null, curObjectDoc );
+
+		if ( curAction == 'activate_test' )
+			curObject.activate_test( Int( Request.Form.selected_object_id ) );
+			
+	}
+}
+
+if ( _is_col || _write )
+{
+	try
+	{
+		switch ( curAction )
+		{
+			case 'change_confirm':
+				docEventResult = OpenDoc( UrlFromDocID( Int( Request.Form.selected_object_id ) ) );
+				docEventResult.TopElem.is_confirm = ! docEventResult.TopElem.is_confirm;
+				docEventResult.Save();
+				break;
+		}
+	}
+	catch ( e )
+	{
+		alert( e );
+	}
+}
+
+if ( curAction == 'replace_collaborator' && ArrayOptFindByKey( curObject.collaborators, curUserID, 'request_person_id' ) != undefined )
+{
+	curObjectDoc = tools.del_person_from_event( Int( Request.Form.selected_object_id ), curObjectID, curObjectDoc );
+	curObjectDoc = tools.add_person_to_event( Int( Request.Form.new_object_id ), curObjectID, null, curObjectDoc, null, curUserID );
+}
+
+if ( curAction == 'delete_collaborator' && ArrayOptFindByKey( curObject.collaborators, curUserID, 'request_person_id' ) != undefined )
+{
+	curObjectDoc = tools.del_person_from_event( Int( Request.Form.selected_object_id ), curObjectID, curObjectDoc );
+}
+
+switch ( curAction )
+{
+	case 'delete':
+		Response.Redirect( tools_web.put_query_string( curDocID, ( curDoc == null ? '' : curDoc.attributes.template ) ) );
+		break;
+
+	case 'add_preparation':
+		Response.Redirect( 'view_doc.html?mode=event_preparation&object_id=' + curObjectID + '&doc_id=' + curDocID + '&event_preparation_id=' + _preparation_id );
+		break;
+		
+	case 'event_preparation':
+		Response.Redirect( 'view_doc.html?mode=event_preparation&object_id=' + curObjectID + '&doc_id=' + curDocID + '&event_preparation_id=' + Request.Form.selected_object_id );
+		break;
+		
+	case 'event_result':
+		Response.Redirect( 'view_doc.html?mode=event_result&doc_id=' + curDocID + '&event_id=' + curObjectID + '&person_id=' + Request.Form.selected_object_id );
+		break;
+	
+	default:
+		Response.Redirect( 'view_doc.html?mode=event&object_id=' + curObjectID + '&doc_id=' + curDocID + "&tab=" + Request.Form.tab );
+		break;
+}
+Cancel();
+%>

@@ -1,0 +1,413 @@
+<%
+	if (curAssessmentAppraise.tree_custom_web_template_id.HasValue)
+	{
+		try
+		{
+			Response.Write(tools_web.insert_custom_code(curAssessmentAppraise.tree_custom_web_template_id, null,true,false));
+		}
+		catch(_oi_)
+		{}
+	}
+	else
+	{
+%>
+
+<div id="tree_widow_part" style="height: 500px">
+<style>
+   /* styles for the tree */
+   SPAN.TreeviewSpanArea A {
+      	font-size: 8pt; 
+        font-family: verdana,helvetica; 
+        text-decoration: none;
+        color: black
+   }
+   SPAN.TreeviewSpanArea A:hover {
+        color: '#820082';
+   }
+   /* rest of the document */
+   BODY {background-color: white}
+   TD {
+        font-size: 10pt; 
+        font-family: verdana,helvetica; 
+   }
+</style>
+<script src="scripts/tree/ua000000.js"></script>
+<script src="scripts/tree/ftiens40.js"></script>
+<script>
+USETEXTLINKS = 1;
+STARTALLOPEN = 0;
+USEFRAMES = 0;
+USEICONS = 0;
+WRAPTEXT = 1;
+PRESERVESTATE = 1;
+
+ICONPATH = "<%=(curHostSettings.default_portal_type == "sharepoint" ? curHostSettings.proxy_prefix + "/": "")%>scripts/tree/";
+
+
+foldersTree = gFld("<b><%=HtmlEncode(tools_web.get_cur_lng_name(curAssessmentAppraise.name, curLng.short_id))%></b>");
+
+var stages = new Array();
+
+<%
+
+if (curWorkflow != null)
+{
+	i=0;
+	
+	
+	for (_state in curWorkflow.states)
+	{
+		i++;
+		Response.Write('stages["ST'+_state.code+'"]="'+i+'.'+tools_web.get_cur_lng_name(_state.name, curLng.short_id)+'";\n');
+	}
+
+	Response.Write("\n\n");
+	
+	dead_list = "@";
+	loaded_results = "@";
+	_current_person_id = null;
+	
+	_PRIVATE_PAS = "";
+	_sneaky_arr = Array();
+	
+	if (curAssessmentAppraise.ignore_presence == true || curPersonID == curAssessmentAppraise.person_id)
+	{
+		_pas = ArrayUnion(XQuery( 'for $pa in pas where $pa/assessment_appraise_id = ' + curAssessmentAppraiseID +' order by $pa/person_fullname return $pa' ) , XQuery( 'for $pa in development_plans where $pa/assessment_appraise_id = ' + curAssessmentAppraiseID +' order by $pa/person_fullname return $pa' ) );
+	
+	}
+	else
+	{
+	
+		_pas = ArrayUnion( XQuery( 'for $pa in pas where $pa/person_id = ' + curPersonID + ' and $pa/assessment_appraise_id = ' + curAssessmentAppraiseID +' order by $pa/person_fullname return $pa' ) , XQuery( 'for $pa in development_plans where $pa/assessment_appraise_id = ' + curAssessmentAppraiseID +' and $pa/person_id = ' + curPersonID + ' order by $pa/person_fullname return $pa' ) );
+	
+		_pas =  ArrayUnion( _pas,   ArrayUnion(XQuery( 'for $pa in pas where $pa/expert_person_id = ' + curPersonID + ' and $pa/assessment_appraise_id = ' + curAssessmentAppraiseID +' order by $pa/person_fullname return $pa' ) , XQuery( 'for $pa in development_plans where $pa/assessment_appraise_id = ' + curAssessmentAppraiseID +' and $pa/expert_person_id = ' + curPersonID + ' order by $pa/person_fullname return $pa' ) ));
+	
+	
+		_custom_experts_participants = ArraySelect(curAssessmentAppraise.participants, 'customize.is_custom_experts == true');
+	
+		if (curAssessmentAppraise.always_check_custom_experts || ArrayCount(_custom_experts_participants) > 0)
+		{
+			_pas =  ArrayUnion( _pas,  ArrayUnion(XQuery( 'for $pa in pas where $pa/assessment_appraise_id = ' + curAssessmentAppraiseID +' and contains( $pa/custom_experts, "' + curPersonID + '") order by $pa/person_fullname return $pa' ) , XQuery( 'for $pa in development_plans where $pa/assessment_appraise_id = ' + curAssessmentAppraiseID +' and contains( $pa/custom_experts, "' + curPersonID + '") order by $pa/person_fullname return $pa' ) ));
+		}
+		
+		_sneaky_pas = ArraySelectDistinct(ArraySelect(_pas, "expert_person_id == " + curPersonID + " && status == 'manager' && person_id.HasValue"), "person_id");
+		for (_sn in _sneaky_pas)
+			_sneaky_arr = ArrayUnion(_sneaky_arr, XQuery( "for $pa in pas where $pa/person_id = " + _sn.person_id + " and $pa/assessment_appraise_id = " + curAssessmentAppraiseID + " and $pa/status = 'self' return $pa" ));
+		_pas = ArrayUnion(_pas,_sneaky_arr);
+	}
+	_use_plan = curAssessmentAppraise.flag_use_plan;
+	
+	for ( _pa in ArraySort(_pas, "index", "+")) 
+	{
+		if (curPersonID != curAssessmentAppraise.person_id && StrContains(_PRIVATE_PAS, _pa.id + ''))
+			continue;
+		
+		_flag_show = false;
+
+		IS_HUMAN = !_pa.flag_appraise_department;
+		if (IS_HUMAN)
+			COLLABORATOR_USER_ID  = (_pa.person_id.HasValue ? _pa.person_id : undefined );
+		else
+			COLLABORATOR_USER_ID  = (_pa.department_id.HasValue ? _pa.department_id : undefined);
+		COLLABORATOR_EXPERT_ID  = (_pa.expert_person_id.HasValue ? _pa.expert_person_id : undefined );
+		IS_DONE = _pa.is_done;
+		STATUS = _pa.status;
+		ASSESSMENT_APPRAISE_TYPE = _pa.assessment_appraise_type;
+		PA = _pa;
+		
+		_show_me_show_me = false;
+		_temp_assessment_plan = undefined;
+				
+		//_current_person_id = _pa.person_id;
+		if (COLLABORATOR_USER_ID != undefined && COLLABORATOR_EXPERT_ID != undefined)
+		{
+			if (COLLABORATOR_USER_ID == curPersonID || COLLABORATOR_EXPERT_ID  == curPersonID || curPersonID == curAssessmentAppraise.person_id || StrContains(_pa.custom_experts, curPersonID) || curAssessmentAppraise.ignore_presence == true || ArrayOptFind(_sneaky_arr, "id == " + _pa.id) != undefined)
+			{
+				_show_me_show_me = true;
+			}
+			/**********
+			else if (STATUS == "self")
+			{
+				try
+				{
+					_temp_assessment_plan = ArrayFirstElem(XQuery( 'for $assessment_plan in assessment_plans where $assessment_plan/assessment_appraise_id = ' + curAssessmentAppraiseID + (IS_HUMAN ? ' and $assessment_plan/person_id = ' + _pa.person_id : ' and $assessment_plan/department_id = ' + _pa.department_id) + ' return $assessment_plan' ));
+										
+					if (_temp_assessment_plan.boss_id == curPersonID)
+						_show_me_show_me = true;
+				}
+				catch(_hoho_)
+				{
+				}
+			}
+			************/
+			
+			if (_show_me_show_me)
+			{
+				try
+				{
+					//if (_temp_assessment_plan == undefined)
+					{
+						_real_assessment_plan = ArrayOptFirstElem( XQuery( "for $assessment_plan in assessment_plans where " + (IS_HUMAN ? "$assessment_plan/person_id = " + _pa.person_id : "$assessment_plan/department_id = " + _pa.department_id) + " and $assessment_plan/assessment_appraise_id = " + curAssessmentAppraiseID + " return $assessment_plan" ));
+						
+						if (_real_assessment_plan == undefined)
+						{
+							alert(curAssessmentAppraise.name + ": No assessment plan for " + _pa.person_fullname);
+							continue;
+						}
+					}
+					
+					if (! _use_plan )
+					{
+						 _temp_assessment_plan = _pa;
+					}
+					else
+					{
+						 _temp_assessment_plan = _real_assessment_plan;
+					}	
+					
+						_assessment_plan_doc = OpenDoc( UrlFromDocID( _temp_assessment_plan.id ) );
+						_assessment_plan = _assessment_plan_doc.TopElem;
+						
+						CUSTOM_EXPERTS = _assessment_plan.custom_experts;
+				
+						ASSESSMENT_STAGE = undefined;
+						ASSESSMENT_STAGE_OBJECT = undefined;
+						
+						//********* Objectives!!!!!! *********
+						if ( _assessment_plan.assessment_appraise_matrix_id.HasValue)
+						{
+							_trg = tools_ass.check_access_matrix(_assessment_plan.assessment_appraise_matrix_id , _assessment_plan.person_id)
+						}
+						else
+						{
+							_trg = undefined;
+						}
+												
+						if (_trg != undefined)
+						{
+							ASSESSMENT_STAGE_OBJECT = _trg.stage.OptForeignElem;
+							if (ASSESSMENT_STAGE_OBJECT != undefined)
+								ASSESSMENT_STAGE = ASSESSMENT_STAGE_OBJECT.id;
+						}
+						//************************
+						
+						//_workflow = _assessment_plan.workflow_id.ForeignElem;
+						
+						curObject = _assessment_plan;
+						
+						if ( curObject.is_workflow_init != false )
+							PHASE = curObject.workflow_state;
+						else 
+							PHASE = curWorkflow.default_state;
+						
+						_eval_str = curWorkflow.condition_eval_str;
+						
+						if (_assessment_plan.ChildExists("fire_wf_action") && _assessment_plan.fire_wf_action.HasValue)
+							tools.workflow_action_process( _assessment_plan_doc, _assessment_plan.fire_wf_action, curObject.workflow_id, curWorkflow );
+						
+						if (curWorkflow.default_action.HasValue)
+						{
+							tools.workflow_action_process( _assessment_plan_doc, curWorkflow.default_action, curObject.workflow_id, curWorkflow );
+							_assessment_plan_doc.Save();
+							PHASE = curObject.workflow_state;
+						}
+																		
+						if ( _eval_str == "" || eval(_eval_str) )
+						{
+							_bolvanka_person_id = (IS_HUMAN ? _pa.person_id : _pa.department_id);
+							
+							if (_assessment_plan.ChildExists("flag_expert_select") && _assessment_plan.flag_expert_select)
+							{
+								if (!StrContains(dead_list, ("@ST"+PHASE + COLLABORATOR_USER_ID + "@")))
+								{
+									if (_assessment_plan.is_done)
+									{
+										done_marker = '<img src=\'pics/ok.gif\' border=\'0\'> ';
+									}
+									else
+										done_marker = '';
+									
+									if (!StrContains(dead_list, ('@ST'+PHASE + "@")))
+									{
+									
+										Response.Write('ST'+PHASE+' = insFld(foldersTree, gFld(stages["ST'+PHASE+'"], "javascript:voidfunc()"));\n');
+										dead_list = dead_list + 'ST'+PHASE + "@";
+									}
+									
+									if (!StrContains(dead_list, ('@ST'+PHASE + 'U'+_bolvanka_person_id + "@")))
+									{
+										Response.Write('ST'+PHASE + 'U'+_bolvanka_person_id+' = insFld(ST'+PHASE+', gFld("'+(IS_HUMAN ? COLLABORATOR_USER_ID.ForeignElem.fullname :  OpenDoc( UrlFromDocID(COLLABORATOR_USER_ID)).TopElem.name )+'", "javascript:voidfunc()")); \n');
+										dead_list = dead_list + 'ST'+PHASE + 'U'+_bolvanka_person_id + "@";
+									}
+									
+									if (curHostSettings.default_portal_type == "sharepoint")
+										hlink= curHostSettings.proxy_prefix + UrlPath( Request.Url ) + '?mode=assessment_appraise&doc_id='+curDocID+'&assessment_appraise_id=' + curAssessmentAppraiseID +'&assessment_plan_id=' + _assessment_plan_doc.DocID + '&f_id='+Random(0,999999999);
+									else
+										hlink=tools_web.get_url_protocol( Request.Url ) + Request.UrlHost + UrlPath( Request.Url ) + '?mode=assessment_appraise&doc_id='+curDocID+'&assessment_appraise_id=' + curAssessmentAppraiseID +'&assessment_plan_id=' + _assessment_plan_doc.DocID + '&f_id='+Random(0,999999999);
+									
+									Response.Write(  'insDoc(ST'+ PHASE + 'U'+_bolvanka_person_id+', gLnk("S", "' + done_marker + tools.get_web_str("ass_expert_selection") + '", "'+hlink+'"));  \n');
+									dead_list = dead_list + 'ST'+PHASE + COLLABORATOR_USER_ID + "@";
+									_PRIVATE_PAS = _PRIVATE_PAS + _assessment_plan_doc.DocID + ";";
+								}
+							}
+							else
+							{
+								_flag_show = true;
+								
+								if (_pa.is_done)
+								{
+										_cur_stage = ArrayOptFind(curWorkflow.states, "code == PHASE" );
+										if (_cur_stage != undefined && StrContains( _cur_stage.parameters , "need_ready=1"))
+										{
+											if (_pa.is_ready == false)
+												done_marker = '<img src=\'pics/lesson.gif\' border=\'0\'/> ';
+											else
+												done_marker = '<img src=\'pics/ok.gif\' border=\'0\'/> ';
+												
+										}
+										else
+											done_marker = '<img src=\'pics/ok.gif\' border=\'0\'> ';
+								}
+								else
+									done_marker = '';
+								
+								if (!StrContains(dead_list, ('@ST'+PHASE + "@")))
+								{
+									Response.Write('ST'+PHASE+' = insFld(foldersTree, gFld(stages["ST'+PHASE+'"], "javascript:voidfunc()"));\n');
+									dead_list = dead_list + 'ST'+PHASE + "@";
+								}
+																								
+								if (!StrContains(dead_list, ('@ST'+PHASE + 'U'+_bolvanka_person_id + "@")))
+								{
+									Response.Write('ST'+PHASE + 'U'+_bolvanka_person_id+' = insFld(ST'+PHASE+', gFld("'+(IS_HUMAN ? COLLABORATOR_USER_ID.ForeignElem.fullname :  OpenDoc( UrlFromDocID(COLLABORATOR_USER_ID)).TopElem.name )+'", "javascript:voidfunc()")); \n');
+									dead_list = dead_list + 'ST'+PHASE + 'U'+_bolvanka_person_id + "@";
+								}
+								
+								if (curHostSettings.default_portal_type == "sharepoint")
+									hlink=curHostSettings.proxy_prefix + UrlPath( Request.Url ) + '?mode=assessment_appraise&doc_id='+curDocID+'&assessment_appraise_id=' + curAssessmentAppraiseID +'&pa_id=' + _pa.id + '&assessment_appraise_type=' + _pa.assessment_appraise_type +'&f_id='+Random(0,999999999);
+								else
+									hlink=tools_web.get_url_protocol( Request.Url ) + Request.UrlHost + UrlPath( Request.Url ) + '?mode=assessment_appraise&doc_id='+curDocID+'&assessment_appraise_id=' + curAssessmentAppraiseID +'&pa_id=' + _pa.id + '&assessment_appraise_type=' + _pa.assessment_appraise_type +'&f_id='+Random(0,999999999);
+								
+								_PRIVATE_PAS = _PRIVATE_PAS + _pa.id + ";";
+								
+								if (STATUS != "")
+								{
+									_in_search_for_type = curAssessmentAppraise.participants.GetOptChildByKey(STATUS);
+									if (_in_search_for_type != undefined && ASSESSMENT_APPRAISE_TYPE != "")
+									{
+										_in_search_for_type = _in_search_for_type.assessment_appraise_types.GetOptChildByKey(ASSESSMENT_APPRAISE_TYPE);
+										if (_in_search_for_type != undefined)
+											if (_in_search_for_type.type_title.HasValue)
+												_in_search_for_type = tools_web.get_cur_lng_name(_in_search_for_type.type_title, curLng.short_id);
+											else
+												_in_search_for_type = undefined;
+									}			
+								}
+								else
+									_in_search_for_type = undefined;
+								
+								if (_in_search_for_type == undefined)
+									_in_search_for_type = curLngCommon.assessment_appraise_types.GetChildByKey(_pa.assessment_appraise_type).name;
+										
+								Response.Write(  'insDoc(ST' + PHASE + 'U'+_bolvanka_person_id+', gLnk("S", "'+done_marker+ _in_search_for_type + '", "'+hlink+'"));  \n');
+								
+							}	
+							
+						}
+						
+						if (_real_assessment_plan.expert_person_id.HasValue && _real_assessment_plan.status.HasValue && !StrContains(loaded_results, String(_real_assessment_plan.id)))
+						{
+							ASSESSMENT_APPRAISE_TYPE = "result";
+							COLLABORATOR_EXPERT_ID  = _real_assessment_plan.expert_person_id;
+							IS_DONE = _real_assessment_plan.is_done;
+							STATUS = _real_assessment_plan.status;
+							
+							if ( _eval_str == "" || eval(_eval_str))
+							{
+								_bolvanka_person_id = (IS_HUMAN ? _pa.person_id : _pa.department_id);
+								
+								if (!_use_plan)
+								{
+									if (StrContains(dead_list, ("U"+_bolvanka_person_id + "@#@")))
+										continue;
+									_temp_assessment_plan = ArrayOptFirstElem(XQuery( 'for $assessment_plan in assessment_plans where $assessment_plan/assessment_appraise_id = ' + curAssessmentAppraiseID + (IS_HUMAN ? ' and $assessment_plan/person_id = ' + _pa.person_id : ' and $assessment_plan/department_id = ' + _pa.department_id) + ' return $assessment_plan' ));
+							
+									_assessment_plan = OpenDoc( UrlFromDocID( _temp_assessment_plan.id ) ).TopElem;
+									if ( curObject.is_workflow_init != false )
+										PHASE = _assessment_plan.workflow_state;
+									else 
+										PHASE = curWorkflow.default_state;
+									
+									STATUS = _assessment_plan.status;
+								}
+								
+								if (!StrContains(dead_list, ('@ST'+PHASE + "@")))
+								{
+									Response.Write('ST'+PHASE+' = insFld(foldersTree, gFld(stages["ST'+PHASE+'"], "javascript:voidfunc()"));\n');
+									dead_list = dead_list + 'ST'+PHASE + "@";
+								}
+								
+								if (!StrContains(dead_list, ('@ST'+PHASE + 'U'+_bolvanka_person_id + "@")))
+								{
+									Response.Write('ST'+PHASE + 'U'+_bolvanka_person_id+' = insFld(ST'+PHASE+', gFld("'+(IS_HUMAN ? COLLABORATOR_USER_ID.ForeignElem.fullname :  OpenDoc( UrlFromDocID(COLLABORATOR_USER_ID)).TopElem.name )+'", "javascript:voidfunc()")); \n');
+									dead_list = dead_list + 'ST'+PHASE + 'U'+_bolvanka_person_id + "@#@";
+								}
+								
+								if (curHostSettings.default_portal_type == "sharepoint")
+									hlink=curHostSettings.proxy_prefix + UrlPath( Request.Url ) + '?mode=assessment_appraise&doc_id='+curDocID+'&assessment_appraise_id=' + curAssessmentAppraiseID +'&pa_id=' + _temp_assessment_plan.id + '&assessment_appraise_type=result&f_id='+Random(0,999999999);
+								else
+									hlink=tools_web.get_url_protocol( Request.Url ) + Request.UrlHost + UrlPath( Request.Url ) + '?mode=assessment_appraise&doc_id='+curDocID+'&assessment_appraise_id=' + curAssessmentAppraiseID +'&pa_id=' + _temp_assessment_plan.id + '&assessment_appraise_type=result&f_id='+Random(0,999999999);
+							
+								if (_assessment_plan.is_done)
+									done_marker = '<img src=\'pics/ok.gif\' border=\'0\'> ';
+								else
+									done_marker = '';
+							
+								_PRIVATE_PAS = _PRIVATE_PAS + _temp_assessment_plan.id + ";";
+							
+								if (STATUS != "")
+								{
+									_in_search_for_type = curAssessmentAppraise.participants.GetOptChildByKey(STATUS);
+									if (_in_search_for_type != undefined && ASSESSMENT_APPRAISE_TYPE != "")
+									{
+										_in_search_for_type = _in_search_for_type.assessment_appraise_types.GetOptChildByKey(ASSESSMENT_APPRAISE_TYPE);
+										if (_in_search_for_type != undefined)
+											if (_in_search_for_type.type_title.HasValue)
+												_in_search_for_type = tools_web.get_cur_lng_name(_in_search_for_type.type_title, curLng.short_id);
+											else
+												_in_search_for_type = undefined;
+									}			
+								}
+								else
+									_in_search_for_type = undefined;
+								
+								if (_in_search_for_type == undefined)
+									_in_search_for_type = curLngCommon.assessment_appraise_types.GetChildByKey("result").name;
+								Response.Write(  'insDoc(ST'+ PHASE + 'U'+_bolvanka_person_id+', gLnk("S", "'+done_marker + _in_search_for_type + '", "'+hlink+'"));  \n');
+								loaded_results = loaded_results + _temp_assessment_plan.id + "@";
+							}
+						}
+				}				
+				catch(_catch_me_)
+				{
+						alert(_catch_me_);
+				}
+			}
+		}
+	}
+
+}
+
+
+%>
+
+</script>
+
+<span class="TreeviewSpanArea">
+<script>initializeDocument();</script>
+</span>
+
+</div>
+<%
+	}
+%>

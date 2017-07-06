@@ -1,0 +1,297 @@
+<%
+can_write = curUser.access.access_role == 'admin';
+%>
+<form action="person_change.html" name="person_form" method="POST" enctype="multipart/form-data">
+<input type=hidden name="doc_id" value="<%=curDocID%>">
+<input type=hidden name="sid" value="<%=tools.get_sum_sid( curDocID )%>">
+<input type=hidden name="person_id" value="<%=curObjectID%>">
+		
+<table width="100%" cellspacing="0" cellpadding="4" class="tableBorder">
+<%
+	if ( can_write || curObject.disp_empty_fields || curObject.lastname.HasValue )
+	{
+%>			
+<tr>
+	<td width="140" align="RIGHT"><%=tools.get_web_str('uf_last_name')%>:</td>
+	<td><input type="TEXT" name="lastname" id="lastname_id" value="<%=curObject.lastname%>" class="inputEdit"></td>
+</tr>
+<%
+	}
+	if ( can_write || curObject.disp_empty_fields || curObject.firstname.HasValue )
+	{
+%>
+<tr>
+	<td width="140" align="RIGHT"><%=tools.get_web_str('uf_name')%>:</td>
+	<td><input type="TEXT" name="firstname" id="firstname_id" value="<%=curObject.firstname%>" class="inputEdit"></td>
+</tr>
+<%
+	}
+	if ( curObject.disp_empty_fields || curObject.middlename.HasValue )
+	{
+%>
+<tr>
+	<td width="140" align="RIGHT"><%=tools.get_web_str('uf_s_name')%>:</td>
+	<td><input type="TEXT" name="middlename" id="middlename_id" value="<%=curObject.middlename%>" class="inputEdit"></td>
+</tr>
+<%
+	}
+	if ( curObject.disp_sex && ( curObject.disp_empty_fields || curObject.sex.HasValue ) )
+	{
+%>
+<tr>
+	<td width="140" align="RIGHT"><%=tools.get_web_str('vpb_sex')%>:</td>
+	<td style="font-weight:normal"><input type="RADIO" name="sex" value="m" <%=( curObject.sex == "m" ? 'checked' : '' )%>><%=tools.get_web_str('vpb_m')%>&nbsp;&nbsp;&nbsp;&nbsp;<input type="RADIO" name="sex" value="w"<%=( curObject.sex == 'w' ? 'checked' : '' )%>><%=tools.get_web_str('vpb_w')%></td>
+</tr>
+<%
+	}
+	if ( curObject.disp_empty_fields || curObject.birth_date.HasValue )
+	{
+%>
+<tr>
+	<td width="140" align="RIGHT"><%=tools.get_web_str('vpb_birthday')%>:</td>
+	<td style="font-weight:normal"><input type="TEXT" name="birth_date" id="birth_date_id" value="<%=( can_write || curObject.disp_birthdate_year ? StrDate( curObject.birth_date, false ) : StrReplace( StrLongDate( curObject.birth_date, false ), String( Year( curObject.birth_date ) ), '' ) )%>" class="inputEdit"><%=( curObject.disp_birthdate_year ? '&nbsp;(dd.mm.yyyy)' : '' )%></td>
+</tr>
+<%
+	}
+	if ( curObject.disp_login )
+	{
+%>
+<tr>
+	<td width="140" align="RIGHT"><%=tools.get_web_str('uf_login')%>:</td>
+	<td style="font-weight:normal"><%=curObject.login%></td>
+</tr>
+<%
+	}
+%>
+<tr>
+	<td>&nbsp;</td>
+</tr>
+<%
+	if ( curObject.disp_empty_fields || curObject.org_id.HasValue )
+	{
+%>
+<tr>
+	<td width="140" align="RIGHT"><%=tools.get_web_str('c_org')%></td>
+	<td style="font-weight:normal"><%=( curObject.org_id.HasValue ? tools_web.get_cur_lng_name( curObject.org_id.ForeignElem.disp_name ) : '---' )%></td>
+</tr>
+<%
+	}
+		
+	if ( curObject.org_id.HasValue && curObject.position_id.HasValue )
+	{
+		try
+		{
+			_pos = curObject.position_id.ForeignElem;
+%>	
+<tr>
+	<td width="140" align="RIGHT"><%=tools.get_web_str('c_subd')%></td>
+	<td style="font-weight:normal"><%=( _pos.parent_object_id.HasValue ? tools_web.get_cur_lng_name( OpenDoc( UrlFromDocID( _pos.parent_object_id ) ).TopElem.name ) : '---' )%></td>
+</tr>
+<tr>
+	<td width="140" align="RIGHT"><%=tools.get_web_str('c_position')%></td>
+	<td style="font-weight:normal"><%=( curObject.position_id.HasValue ? tools_web.get_cur_lng_name( _pos.name ) : '---' )%></td>
+</tr>
+<%
+		}
+		catch ( err )
+		{
+		}
+	}
+	
+	forumArray = XQuery( "for $elem in forums where $elem/person_id = " + curObjectID + " return $elem" );
+	if ( ArrayOptFirstElem( forumArray ) != undefined )
+	{
+%>	
+<tr>
+	<td>&nbsp;</td>
+</tr>
+<tr>
+	<td width="140" align="RIGHT"><%=tools.get_web_str('uf_person_forum')%>:</td>
+	<td>
+<%
+		for ( _forum in forumArray )
+		{
+%>
+			<a href="view_doc.html?mode=forums&doc_id=<%=curDocID%>&object_id=<%=_forum.PrimaryKey%>"><%=tools_web.get_cur_lng_name( _forum.name )%></a>&nbsp;
+<%
+		}
+%>
+	</td>
+</tr>
+<%
+	}
+	
+	if ( curObject.disp_personal_info )
+	{
+%>	
+<tr>
+	<td>&nbsp;</td>
+</tr>
+<%
+		if ( curObject.disp_empty_fields || curObject.email.HasValue )
+		{
+%>
+<tr>
+	<td width="140" align="RIGHT"><%=tools.get_web_str('uf_email')%>:</td>
+	<td><input type="TEXT" name="email" id="email_id" value="<%=HtmlEncode( curObject.email )%>" class="inputEdit" style="width:500px"></td>
+</tr>
+<%
+		}
+		if ( curObject.disp_empty_fields || curObject.phone.HasValue )
+		{
+%>
+<tr>
+	<td width="140" align="RIGHT"><%=tools.get_web_str('uf_phone')%>:</td>
+	<td><input type="TEXT" name="phone" id="phone_id" value="<%=HtmlEncode( curObject.phone )%>" class="inputEdit" style="width:500px"></td>
+</tr>
+<%
+		}
+		if ( curObject.disp_empty_fields || curObject.address.HasValue )
+		{
+%>
+<tr>
+	<td width="140" align="RIGHT"><%=tools.get_web_str('uf_address')%>:</td>
+	<td><input type="TEXT" name="address" id="address_id" value="<%=HtmlEncode( curObject.address )%>" class="inputEdit" style="width:500px"></td>
+</tr>
+<%
+		}
+		if ( curObject.disp_resume )
+		{ 
+			Elems = XQuery( 'for $elem in resumes where $elem/person_id=' + curObjectID + ' order by $elem/name return $elem' );
+			count = ArrayCount( Elems );
+			i = 0;
+%>
+		<tr>
+			<td width="140" align="RIGHT"><%=tools.get_web_str('c_resume')%>:</td>
+			<td>
+<% 
+					for ( _elem in Elems )
+					{
+						i++;
+						if ( _elem.name.HasValue ||	_elem.profession_area.HasValue )
+						{
+%>
+						<a href="view_doc.html?mode=resume&resume_id=<%=_elem.PrimaryKey%>&doc_id=<%=curDocID%>"><%=( _elem.name.HasValue ? _elem.name : tools.get_web_str('c_resume') )%></a><% count == i ? Response.Write(' ') : Response.Write(', ')%>
+<%
+						}
+					} 
+%>
+			</td>
+		</tr>
+<%	
+		}
+	}
+%>
+</table>
+<br>	
+	
+<%
+	readOnly = true;
+	Server.Execute( "view_custom_templates.html" );
+%>
+<br>
+
+<%
+	if ( can_write )
+	{
+%>
+<table width="100%" border="0" cellspacing="0" cellpadding="0" class="activator">
+<tr>
+	<td width="50%" align="CENTER" class="activator">
+		<input type="button" value="<%=tools.get_web_str('c_save')%>" onclick="doSubmit();" class="inputButton" onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';">
+	</td>			
+<%
+		if ( curObject.access.web_banned )
+		{
+%>
+	<td width="50%" align="CENTER"><img src="pics/no.gif" width="13" height="11" border="0" hspace="5"/>&nbsp;<%=tools.get_web_str('uf_web_banned')%><a href="#" style="cursor:pointer" 
+onclick="location.href='change_web_ban.html?doc_id=<%=curDocID%>&p=<%=curObjectID%>&sid=<%=tools.get_sum_sid( curDocID )%>&mode=person'" 
+title="<%=tools.get_web_str('uf_web_unbann')%>"><img src="pics/vwicn082.gif" width="13" height="11" border="0" hspace="5"/>&nbsp;<%=tools.get_web_str('uf_web_unbann')%></a></td>
+<%
+		}
+		else
+		{
+%>
+	<td width="50%" align="CENTER"><img src="pics/vwicn082.gif" width="13" height="11" border="0" hspace="5"/>&nbsp;<%=tools.get_web_str('uf_web_unbanned')%><a href="#" style="cursor:pointer" 
+onclick="location.href='change_web_ban.html?doc_id=<%=curDocID%>&p=<%=curObjectID%>&sid=<%=tools.get_sum_sid( curDocID )%>&mode=person'" 
+title="<%=tools.get_web_str('uf_web_bann')%>"><img src="pics/no.gif" width="13" height="11" border="0" hspace="5"/>&nbsp;<%=tools.get_web_str('uf_web_bann')%></a></td>
+<%
+		}
+%>
+</tr>
+</table>
+<br>
+<%
+	}
+
+	
+	if ( curObject.pict_url.HasValue && curObject.disp_personal_info )
+	{
+%>
+<table width="100%"  border="0" cellspacing="0" cellpadding="10">
+<tr class="description">
+	<td width="100%" valign="top"><img src="<%=curObject.pict_url%>" border="0"/></td>
+</tr>
+</table>
+	<br>
+<%
+	}
+	
+	
+	if ( curObject.disp_desc )
+	{
+		Server.Execute( "view_desc.html" );
+%>
+	<br/>
+<%
+	}
+
+
+	
+	if ( curObject.disp_files )
+	{
+		Server.Execute( "view_files.html" );
+%>
+	<br/>
+<%
+	}		
+%>
+
+</form>	
+
+<script>
+//<!--
+function doSubmit() 
+{
+	if ( document.getElementById( 'lastname_id' ).value == "" && document.getElementById( 'firstname_id' ).value == "" )
+	{
+		alert( "<%=tools.get_web_str('vperb_error1')%>" );
+		return false;
+	}
+	
+	var oBirthDate = document.getElementById( 'birth_date_id' );
+	if ( oBirthDate )
+	{
+		var re = new RegExp( "[0-9]{2}\.[0-9]{2}\.[0-9]{4}" );
+		if ( oBirthDate.value != "" && ( oBirthDate.value.match(re) == null || oBirthDate.value.length > 10 ) )
+		{
+			alert( "<%=tools.get_web_str('vperb_error2')%>" );
+			return false;
+		}
+	}
+	
+	try
+	{
+		_check_flag = check_required();
+	}
+	catch( dd )
+	{
+		_check_flag = true;
+	}
+	
+	if ( _check_flag )
+	    document.person_form.submit();
+}
+//-->
+</script>					
+

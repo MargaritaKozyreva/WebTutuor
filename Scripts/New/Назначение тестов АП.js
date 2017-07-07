@@ -1,32 +1,21 @@
 //-=Раздел описания глобальных переменных=-
-//orgFlag = 0;
-groupName = 1;
 departamentName = 2;
 userCode = 3;
 fullName = 4;
 positionName = 5;
 codeTests = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
-codeOrgStruct = {};
-codeOrgStruct[''] = 'LP';
-codeOrgStruct['виз'] = 'EK';
-codeOrgStruct['сгок'] = 'SG';
 logLine = '';
 logCreateUser = '';
 logActivateTest = '';
 activateCodeTest = '';
+codeGroup = 'AP';
 //**************************************
 
 //-=Раздел описания функций=-
 
 //поиск организации в WT
-function findOrg(orgName) {
-    if (StrLowerCase(orgName) == 'виз') {
-        itemsOrg = XQuery("for $elem in orgs where $elem/name='ООО \"ВИЗ-СТАЛЬ\"' return $elem");
-    } else if (StrLowerCase(orgName) == 'сгок') {
-        itemsOrg = XQuery("for $elem in orgs where $elem/name='ОАО \"СТОЙЛЕНСКИЙ ГОК\"' return $elem");
-    } else if (orgName == '') {
-        itemsOrg = XQuery("for $elem in orgs where $elem/name='ПАО \"НЛМК\"' return $elem");
-    }
+function findOrg() {
+    itemsOrg = XQuery("for $elem in orgs where $elem/name='ПАО \"НЛМК\"' return $elem");
     if (ArrayCount(itemsOrg) == 1) {
         return arr = [ArrayFirstElem(itemsOrg).id, ArrayFirstElem(itemsOrg).disp_name];
     } else
@@ -36,7 +25,6 @@ function findOrg(orgName) {
 //Создание новго подразделения
 function createDep(deptName, org) {
     XQDep = XQuery("for $elem in subdivisions where doc-contains($elem/id, 'wt_data', '[abbrDep=" + deptName + "]','subdivisions') and $elem/org_id=" + org[0] + " return $elem");
-    //XQDep = XQuery("for $elem in subdivisions where $elem/name='" + deptName + "' and $elem/org_id=" + org[0] + " return $elem");
     if (ArrayCount(XQDep) == 0) {
         try {
             newDep = OpenNewDoc('x-local://wtv/wtv_subdivision.xmd');
@@ -70,9 +58,7 @@ function createPos(posName, org, dep) {
             newPos.TopElem.name = posName;
             newPos.TopElem.org_id = Int(org[0]);
             newPos.TopElem.parent_object_id = Int(dep[0]);
-            //if (org[1] == 'ПАО НЛМК') {
             newPos.TopElem.custom_elems.ObtainChildByKey('flagDelete').value = true;
-            //}
             newPos.Save();
         } catch (e) {
             alert('Не удалось создать новую должность по причине: ' + ExtractUserError(e));
@@ -90,52 +76,43 @@ function createPos(posName, org, dep) {
 //Создание нового сотрудника
 function createUser(infoUser) {
     if (Trim(infoUser[fullName] != '')) {
-        //orgCode = codeOrgStruct[StrLowerCase(infoUser[orgFlag])];
-        orgCode = 'LP';
         try {
+            tabNumber = Trim(infoUser[userCode]);
             newUser = OpenNewDoc('x-local://wtv/wtv_collaborator.xmd');
             newUser.BindToDb(DefaultDb);
-            newUser.TopElem.code = orgCode + infoUser[userCode];
-            newUser.TopElem.custom_elems.ObtainChildByKey('userCode').value = infoUser[userCode];
+            newUser.TopElem.code = 'LP' + tabNumber;
+            newUser.TopElem.custom_elems.ObtainChildByKey('userCode').value = tabNumber;
             newUser.TopElem.custom_elems.ObtainChildByKey('flagForSync').value = true;
-            newUser.TopElem.login = 'DO*' + infoUser[userCode];
+            newUser.TopElem.login = 'DO*' + tabNumber;
+            newUser.TopElem.password = tabNumber;
 
-            newUser.TopElem.change_password = true;
-            newUser.TopElem.password = '';
             try {
                 newUser.TopElem.lastname = String(infoUser[fullName]).split(' ')[0];
                 newUser.TopElem.firstname = String(infoUser[fullName]).split(' ')[1];
-                //newUser.TopElem.middlename = String(infoUser[fullName]).split(' ')[2];
             } catch (e) {
-                logCreateUser += 'Не верный формат поля ФИО в исходном документе у сотрудника ' + source[i][fullName] + '. Сотрудник не обработан.'
+                logCreateUser += 'Не верный формат поля ФИО в исходном документе у сотрудника ' + infoUser[fullName] + '. Сотрудник не обработан.'
                 return 0;
             }
 
-            //linkOrg = findOrg(Trim(infoUser[orgFlag]));
-            linkOrg = findOrg('');
+            linkOrg = findOrg();
             if (linkOrg.length == 2) {
                 newUser.TopElem.org_id = Int(linkOrg[0]);
-                //newUser.TopElem.org_name = linkOrg[1];
             } else if (linkOrg.length == 1) {
                 logCreateUser += 'Невозможно однозначно определить организацию для сотрудника ' + infoUser[fullName] + ' или в БД не найдено организации.';
                 return 0;
             }
 
-            //TODO: сделать обработку исключений
             linkDep = createDep(Trim(infoUser[departamentName]), linkOrg);
             if (linkDep.length == 2) {
                 newUser.TopElem.position_parent_id = Int(linkDep[0]);
-                //newUser.TopElem.position_parent_name = linkDep[1];
             } else if (linkDep[0] == 0) {
                 logCreateUser += 'Не удалось создать подразделение для нового сотрудника ' + infoUser[fullName] + '. Обработка прервана.';
                 return 0;
             }
 
-            //TODO: сделать обработку исключений
             linkPos = createPos(Trim(infoUser[positionName]), linkOrg, linkDep);
             if (linkPos.length == 2) {
                 newUser.TopElem.position_id = Int(linkPos[0]);
-                //newUser.TopElem.position_name = linkPos[1];
             } else if (linkDep[0] == 0) {
                 logCreateUser += 'Не удалось создать должность для нового сотрудника ' + infoUser[fullName] + '. Обработка прервана.';
                 return 0;
@@ -152,9 +129,14 @@ function createUser(infoUser) {
 
 //Назначение тестов
 function activateTest(userInfo, XQUser) {
-    resutlXQGroups = XQuery("for $elem in groups where $elem/code='" + Trim(userInfo[groupName]) + "' return $elem");
+    resutlXQGroups = XQuery("for $elem in groups where $elem/code='" + codeGroup + "' return $elem");
     if (ArrayOptFirstElem(resutlXQGroups) != undefined) {
-        arrCodeTests = String(userInfo[codeTests]).split(';');
+        arrCodeTests = [];
+        for (var k = ArrayFirstElem(codeTests); k <= codeTests[codeTests.length - 1]; k++) {
+            if (userInfo[k] != '') {
+                arrCodeTests.push(userInfo[k]);
+            }
+        }
         if (arrCodeTests.length > 0) {
             for (var j = 0; j < arrCodeTests.length; j++) {
                 resultXQTests = XQuery("for $elem in assessments where $elem/code='" + Trim(arrCodeTests[j]) + "' return $elem");
@@ -182,8 +164,8 @@ function activateTest(userInfo, XQUser) {
             return 0;
         }
     } else {
-        logActivateTest += 'Не найдена группа ' + userInfo[groupName] + ' в WebTutor';
-        alert('Не найдена группа ' + userInfo[groupName] + ' в WebTutor');
+        logActivateTest += 'Не найдена группа АП в WebTutor';
+        alert('Не найдена группа АП в WebTutor');
         return 0;
     }
     return 1;
@@ -230,15 +212,13 @@ for (var i = 0; i < ArrayCount(source); i++) {
         return;
     }
     if (codeExcel) {
-        //if (StrLowerCase(Trim(source[i][orgFlag])) == 'виз' || Trim(source[i][orgFlag]) == '' || StrLowerCase(Trim(source[i][orgFlag])) == 'сгок') {
-        resultXQUsers = XQuery("for $elem in collaborators where $elem/code=LP'" + Trim(source[i][userCode]) + "' return $elem");
+        resultXQUsers = XQuery("for $elem in collaborators where $elem/code='LP" + Trim(source[i][userCode]) + "' return $elem");
         tmpLine = "<b>Результат обработки строки " + i + ": " + '</b>';
         if (ArrayCount(resultXQUsers) == 0) {
             resultCreateUser = createUser(source[i]);
             if (resultCreateUser == 1) {
                 tmpLine += 'создан новый сотрудник ' + source[i][fullName] + '. ';
-                //resultXQUsers = XQuery("for $elem in collaborators where $elem/code='" + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + source[i][userCode] + "' return $elem");
-                resultXQUsers = XQuery("for $elem in collaborators where $elem/code='" + Trim(source[i][userCode]) + "' return $elem");
+                resultXQUsers = XQuery("for $elem in collaborators where $elem/code='LP" + Trim(source[i][userCode]) + "' return $elem");
                 resultActivateTest = activateTest(source[i], resultXQUsers);
                 if (resultActivateTest == 1) {
                     tmpLine += 'Назначены тесты: ' + activateCodeTest;
@@ -252,7 +232,6 @@ for (var i = 0; i < ArrayCount(source); i++) {
             tmpLine += 'не удалось однозначно сопоставить загружаемого сотрудника ' + source[i][fullName] + ' по коду LP' + source[i][userCode] + '; ';
             continue;
         } else if (ArrayCount(resultXQUsers) == 1) {
-            //tmpLine += 'сотрудник с кодом ' + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + source[i][userCode] + ' найден в WebTutor. ';
             tmpLine += 'сотрудник с кодом LP' + Trim(source[i][userCode]) + ' найден в WebTutor. ';
             resultActivateTest = activateTest(source[i], resultXQUsers);
             if (resultActivateTest == 1) {
@@ -261,10 +240,6 @@ for (var i = 0; i < ArrayCount(source); i++) {
                 tmpLine += logActivateTest;
             }
         }
-        //} else {
-        //    alert('Ошибка в строке ' + i + ': поле Организация в Excel имеет недопустимый формат! Загрузка отменена');
-        //    return;
-        //}
     }
     createMessage(tmpLine + ';');
 }

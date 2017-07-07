@@ -105,10 +105,16 @@ function createUser(infoUser) {
             }
             newUser.TopElem.change_password = true;
             newUser.TopElem.password = '';
+            arrFIO = String(infoUser[fullName]).split(' ');
             try {
-                newUser.TopElem.lastname = String(infoUser[fullName]).split(' ')[0];
-                newUser.TopElem.firstname = String(infoUser[fullName]).split(' ')[1];
-                newUser.TopElem.middlename = String(infoUser[fullName]).split(' ')[2];
+                if (arrFIO.length == 2) {
+                    newUser.TopElem.lastname = String(infoUser[fullName]).split(' ')[0];
+                    newUser.TopElem.firstname = String(infoUser[fullName]).split(' ')[1];
+                } else if (arrFIO.length == 3) {
+                    newUser.TopElem.lastname = String(infoUser[fullName]).split(' ')[0];
+                    newUser.TopElem.firstname = String(infoUser[fullName]).split(' ')[1];
+                    newUser.TopElem.middlename = String(infoUser[fullName]).split(' ')[2];
+                }
             } catch (e) {
                 logCreateUser += 'Не верный формат поля ФИО в исходном документе у сотрудника ' + source[i][fullName] + '. Сотрудник не обработан.'
                 return 0;

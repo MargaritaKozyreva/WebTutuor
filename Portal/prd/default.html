@@ -1,110 +1,113 @@
 <%
-	curUserID = null;
-	curUser = null;
+curUserID = null;
+curUser = null;
 
-	Server.Execute( "include/host_init.html" );
+Server.Execute( "include/host_init.html" );
 
-	_url_path = UrlPath( Request.Url );
-	if ( ( _url_path == '/' || _url_path == '/default.html' ) && curHostSettings.default_web_design != 'default' && curWebDesignUrl != '' )
-	{
-		Response.Redirect( curWebDesignUrl + '/default.html' );
-		Cancel();
-	}
+_url_path = UrlPath( Request.Url );
+if ( ( _url_path == '/' || _url_path == '/default.html' ) && curHostSettings.default_web_design != 'default' && curWebDesignUrl != '' )
+{
+Response.Redirect( curWebDesignUrl + '/default.html' );
+Cancel();
+}
 %>
 
 <HTML XMLNS="http://www.w3.org/1999/xhtml">
-<HEAD>
-<link rel="icon" href="/favicon.ico" type="image/x-icon"/>
-<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon"/>
-<TITLE><%=tools.get_web_str('title_login')%></TITLE>
-<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=windows-1251" />
-<%Server.Execute( "include/head.html" )%>
-</HEAD>
+    <HEAD>
+        <link rel="icon" href="/favicon.ico" type="image/x-icon"/>
+        <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon"/>
+        <TITLE><%=tools.get_web_str('title_login')%></TITLE>
+        <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=windows-1251" />
+        <%Server.Execute( "include/head.html" )%>
+    </HEAD>
 
 
-<BODY class="defaultBody">
+    <BODY class="defaultBody">
 
-<TABLE ID="loginBodyTable" CLASS="loginBodyTable" CELLPADDING="0" CELLSPACING="0" BORDER="0" ALIGN="center">
-<TR>
-	<TD ID="docBodyTableTop" CLASS="bgTopUnder">
-		<TABLE WIDTH="100%" CELLPADDING="0" CELLSPACING="0" BORDER="0">
-			<TR>
-				<TD><DIV ID="bg_left_top" CLASS="loginLeftTop"><IMG SRC="pics/1blank.gif" BORDER="0"/></DIV></TD>
-				<TD><DIV ID="header_main" CLASS="loginHeader"><IMG SRC="pics/1blank.gif" BORDER="0"/></DIV></TD>
-			</TR>
-		</TABLE>
-	</TD>
-</TR>
-<TR>
-	<TD>
-		<TABLE WIDTH="100%"  border="0" CELLSPACING="0" CELLPADDING="0">
-			<TR>
-				<TD CLASS="mainMenuTop"><IMG SRC="pics/1blank.gif" WIDTH="1" HEIGHT="1" /></TD>
-			</TR>
-			<TR>
-				<TD CLASS="mainMenuCenter"><IMG SRC="pics/1blank.gif" WIDTH="1" HEIGHT="15" /></TD>
-			</TR>
-			<TR>
-				<TD CLASS="mainMenuBottom"><IMG SRC="pics/1blank.gif" WIDTH="1" HEIGHT="1" /></TD>
-			</TR>
-		</TABLE>
+        <TABLE ID="loginBodyTable" CLASS="loginBodyTable" CELLPADDING="0" CELLSPACING="0" BORDER="0" ALIGN="center">
+            <TR>
+                <TD ID="docBodyTableTop" CLASS="bgTopUnder">
+                    <TABLE WIDTH="100%" CELLPADDING="0" CELLSPACING="0" BORDER="0">
+                        <TR>
+                            <TD><DIV ID="bg_left_top" CLASS="loginLeftTop"><IMG SRC="pics/1blank.gif" BORDER="0"/></DIV></TD>
+                            <TD><DIV ID="header_main" CLASS="loginHeader"><IMG SRC="pics/1blank.gif" BORDER="0"/></DIV></TD>
+                        </TR>
+                    </TABLE>
+                </TD>
+            </TR>
+            <tr>
+                <p><%=curHostSettings%></p>
+            </tr>
+            <TR>
+                <TD>
+                    <TABLE WIDTH="100%"  border="0" CELLSPACING="0" CELLPADDING="0">
+                        <TR>
+                            <TD CLASS="mainMenuTop"><IMG SRC="pics/1blank.gif" WIDTH="1" HEIGHT="1" /></TD>
+                        </TR>
+                        <TR>
+                            <TD CLASS="mainMenuCenter"><IMG SRC="pics/1blank.gif" WIDTH="1" HEIGHT="15" /></TD>
+                        </TR>
+                        <TR>
+                            <TD CLASS="mainMenuBottom"><IMG SRC="pics/1blank.gif" WIDTH="1" HEIGHT="1" /></TD>
+                        </TR>
+                    </TABLE>
 
-		<TABLE WIDTH="100%"  border="0" CELLSPACING="0" CELLPADDING="0" ALIGN="center" CLASS="loginMainTable">
-		<FORM NAME="form1" METHOD="post" ACTION="enter.html">
-			<TR>
-				<TD CLASS="loginMainTDleft">
-					<H3 ALIGN="center"><%=tools.get_web_str('welcome_login')%></H3>
-					<%=tools.get_web_str('welcome_text')%>
-				</TD>
-				<TD CLASS="loginMainTDright">
-					<H3 ALIGN="center"><%=tools.get_web_str('enter_login')%></H3>
-					<DIV CLASS="loginBlock"><%=tools.get_web_str('login_registered')%><BR /><BR />	
-					<CENTER><INPUT NAME="submit" TYPE="submit" CLASS="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" VALUE="<%=tools.get_web_str('def_enter')%>" /></CENTER>
-					</DIV>
-<%
-if ( global_settings.settings.allow_self_register )
-{
-%>
-					<DIV CLASS="loginBlock" STYLE="margin-top:5px;"><%=tools.get_web_str('login_unregistered')%>&nbsp;<B><A HREF="<%=(global_settings.settings.self_register_form_page == 'user_form_selecting' ? 'user_form_selecting.html' : 'user_form.html')%>"><%=tools.get_web_str('self_register')%></A></B></DIV>
-<%
-}
-if ( global_settings.settings.allow_password_reminder )
-{
-%>
-					<DIV CLASS="loginBlock" STYLE="margin-top:5px; text-align:center"><A HREF="user_password_reminder.html"><%=tools.get_web_str('link_password_reminder')%></A></DIV>
-<%
-}
-if ( global_settings.settings.disp_anonymous_polls )
-{
-	xarrPolls = XQuery( 'for $elem in polls where $elem/is_anonymous = true() order by $elem/name return $elem' );
-	if ( ArrayOptFirstElem( xarrPolls ) != undefined )
-	{
-%>					
-					<DIV CLASS="loginBlock" STYLE="margin-top:5px; text-align:center"><%=tools_web.get_web_str('c_ononimny_poll')%>:<br/>
-<%
-		for ( catPollElem in xarrPolls )
-		{
-%>
-					<a href="view_poll_body.html?object_id=<%=catPollElem.PrimaryKey%>"><%=catPollElem.name%></a><br/>
-<%
-		}
-%>
-					</DIV>
-<%
-	}
-}
-%>
-				</TD>
-			</TR>
-		</FORM>
-		</TABLE>
-	</TD>
-</TR>
-<TR>
-	<TD>
-		<%Server.Execute( "include/user_footer.html" )%>
-	</TD>
-</TR>
-</TABLE>
-</BODY>
+                    <TABLE WIDTH="100%"  border="0" CELLSPACING="0" CELLPADDING="0" ALIGN="center" CLASS="loginMainTable">
+                        <FORM NAME="form1" METHOD="post" ACTION="enter.html">
+                            <TR>
+                                <TD CLASS="loginMainTDleft">
+                                    <H3 ALIGN="center"><%=tools.get_web_str('welcome_login')%></H3>
+                                    <%=tools.get_web_str('welcome_text')%>
+                                </TD>
+                                <TD CLASS="loginMainTDright">
+                                    <H3 ALIGN="center"><%=tools.get_web_str('enter_login')%></H3>
+                                    <DIV CLASS="loginBlock"><%=tools.get_web_str('login_registered')%><BR /><BR />	
+                                        <CENTER><INPUT NAME="submit" TYPE="submit" CLASS="inputButton" onMouseOver="this.className = 'inputButtonOver';" onMouseOut="this.className = 'inputButton';" VALUE="<%=tools.get_web_str('def_enter')%>" /></CENTER>
+                                    </DIV>
+                                    <%
+                                    if ( global_settings.settings.allow_self_register )
+                                    {
+                                    %>
+                                    <DIV CLASS="loginBlock" STYLE="margin-top:5px;"><%=tools.get_web_str('login_unregistered')%>&nbsp;<B><A HREF="<%=(global_settings.settings.self_register_form_page == 'user_form_selecting' ? 'user_form_selecting.html' : 'user_form.html')%>"><%=tools.get_web_str('self_register')%></A></B></DIV>
+                                    <%
+                                    }
+                                    if ( global_settings.settings.allow_password_reminder )
+                                    {
+                                    %>
+                                    <DIV CLASS="loginBlock" STYLE="margin-top:5px; text-align:center"><A HREF="user_password_reminder.html"><%=tools.get_web_str('link_password_reminder')%></A></DIV>
+                                    <%
+                                    }
+                                    if ( global_settings.settings.disp_anonymous_polls )
+                                    {
+                                    xarrPolls = XQuery( 'for $elem in polls where $elem/is_anonymous = true() order by $elem/name return $elem' );
+                                    if ( ArrayOptFirstElem( xarrPolls ) != undefined )
+                                    {
+                                    %>					
+                                    <DIV CLASS="loginBlock" STYLE="margin-top:5px; text-align:center"><%=tools_web.get_web_str('c_ononimny_poll')%>:<br/>
+                                        <%
+                                        for ( catPollElem in xarrPolls )
+                                        {
+                                        %>
+                                        <a href="view_poll_body.html?object_id=<%=catPollElem.PrimaryKey%>"><%=catPollElem.name%></a><br/>
+                                        <%
+                                        }
+                                        %>
+                                    </DIV>
+                                    <%
+                                    }
+                                    }
+                                    %>
+                                </TD>
+                            </TR>
+                        </FORM>
+                    </TABLE>
+                </TD>
+            </TR>
+            <TR>
+                <TD>
+                    <%Server.Execute( "include/user_footer.html" )%>
+                </TD>
+            </TR>
+        </TABLE>
+    </BODY>
 </HTML>

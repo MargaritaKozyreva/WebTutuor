@@ -270,7 +270,3 @@ for (var i = 0; i < ArrayCount(source); i++) {
 writeLog();
 
 //****************************
-
-
-a = "МАШИНИСТ ШИХТОПОДАЧИ";
-alert(String(StrTitleCase(StrRangePos(a, 0, 1))) + String(StrLowerCase(StrRightRangePos(а, 1))));

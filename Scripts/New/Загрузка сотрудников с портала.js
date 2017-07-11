@@ -213,9 +213,9 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
             }
             newUser.TopElem.email = StrLowerCase(Trim(lineArray[i][emailUser]));
             try {
-                newUser.TopElem.lastname = String(lineArray[i][fullName]).split(' ')[0];
-                newUser.TopElem.firstname = String(lineArray[i][fullName]).split(' ')[1];
-                newUser.TopElem.middlename = String(lineArray[i][fullName]).split(' ')[2];
+                newUser.TopElem.lastname =StrTitleCase(String(lineArray[i][fullName]).split(' ')[0]);
+                newUser.TopElem.firstname = StrTitleCase(String(lineArray[i][fullName]).split(' ')[1]);
+                newUser.TopElem.middlename = StrTitleCase(String(lineArray[i][fullName]).split(' ')[2]);
             } catch (e) {
                 alert('Неверный формат ФИО ' + lineArray[i][fullName]);
                 continue;

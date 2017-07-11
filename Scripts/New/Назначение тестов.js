@@ -92,19 +92,21 @@ function createPos(posName, org, dep) {
 function createUser(infoUser) {
     if (Trim(infoUser[fullName] != '')) {
         orgCode = codeOrgStruct[StrLowerCase(infoUser[orgFlag])];
+        tabNumber = Trim(infoUser[userCode]);
         try {
             newUser = OpenNewDoc('x-local://wtv/wtv_collaborator.xmd');
             newUser.BindToDb(DefaultDb);
-            newUser.TopElem.code = orgCode + infoUser[userCode];
-            newUser.TopElem.custom_elems.ObtainChildByKey('userCode').value = infoUser[userCode];
+            newUser.TopElem.code = orgCode + tabNumber;
+            newUser.TopElem.custom_elems.ObtainChildByKey('userCode').value = tabNumber;
             if (orgCode == 'EK' || orgCode == 'SG') {
-                newUser.TopElem.login = 'DO*' + orgCode + '*' + infoUser[userCode];
+                newUser.TopElem.login = 'DO*' + orgCode + '*' + tabNumber;
             } else {
                 newUser.TopElem.custom_elems.ObtainChildByKey('flagForSync').value = true;
-                newUser.TopElem.login = 'DO*' + infoUser[userCode];
+                newUser.TopElem.login = 'DO*' + tabNumber;
             }
-            newUser.TopElem.change_password = true;
-            newUser.TopElem.password = '';
+            //newUser.TopElem.change_password = true;
+            newUser.TopElem.password = tabNumber;
+
             arrFIO = String(infoUser[fullName]).split(' ');
             try {
                 if (arrFIO.length == 2) {

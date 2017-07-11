@@ -159,29 +159,11 @@ try {
 } catch (e) {
     alert("Невозможно открыть документ " + excelFileUrl + " из БД по причине: " + ExtractUserError(e));
 }
-//arrSrc = [];
 srcArr = ArrayFirstElem(source.TopElem);
-//массив из xls
-// for (i = 0; i < ArrayCount(srcArr); i++) {
-//     arrSrc.push(String(Trim(srcArr[i][userCode])));
-// }
 
 statusOrg = searchOrg();
 if (statusOrg[0] == 1) {
     usersForUpdate = XQuery("for $elem in collaborators where doc-contains($elem/id, 'wt_data', '[flagForSync=true]','collaborators') and contains($elem/code, 'LP') return $elem");
-    // arrUpd = [];
-    // if (ArrayCount(usersForUpdate) > 0) {
-    //     //массив из юзеров
-    //     for (userUpd in usersForUpdate) {
-    //         arrUpd.push(userUpd.code);
-    //     }
-    //     for (j = 0; j < ArrayCount(arrUpd); j++) {
-    //         if (arrSrc.indexOf(arrUpd[j]) != -1) {
-
-    //         }
-    //     }
-    // }
-
     if (ArrayCount(usersForUpdate) > 0) {
         for (user in usersForUpdate) {
             statusUpdate = 666;

@@ -204,6 +204,7 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
                 newUser.TopElem.login = 'DO*' + Trim(lineArray[i][userCode]);
             } else {
                 newUser.TopElem.login = 'DO*' + codeOrgStruct[lineArray[i][orgName]] + '*' + Trim(lineArray[i][userCode]);
+                newUser.TopElem.custom_elems.ObtainChildByKey("userCode").value = Trim(lineArray[i][userCode]);
             }
             if (lineArray[i][passUser] == '-$R#-' || lineArray[i][passUser] == '') {
                 newUser.TopElem.change_password = true;

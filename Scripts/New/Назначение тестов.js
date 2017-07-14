@@ -107,7 +107,11 @@ function createUser(infoUser) {
             //newUser.TopElem.change_password = true;
             newUser.TopElem.password = tabNumber;
 
-            arrFIO = String(infoUser[fullName]).split(' ');
+            arrFIO = [];
+            arr = String(infoUser[fullName]).split(' ');
+            for (i = 0; i < ArrayCount(arr); i++) {
+                if (arr[i] != '') arrFIO.push(arr[i]);
+            }
             try {
                 if (arrFIO.length == 2) {
                     newUser.TopElem.lastname = String(infoUser[fullName]).split(' ')[0];
@@ -225,6 +229,7 @@ try {
 source = ArrayFirstElem(sourceList.TopElem);
 for (var i = 0; i < ArrayCount(source); i++) {
     if (i == 0) continue;
+    if (source[userCode] == '' && source[fullName] == '') break;
     logActivateTest = '';
     activateCodeTest = '';
     try {

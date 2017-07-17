@@ -1,5 +1,5 @@
 //-=Раздел объявления переменных=-
-logFileUrl = 'c:/log.html';
+logFileUrl = 'C:/Program Files/WebSoft/WebTutorServer/Log_custom/log_new_';
 userCode = 0;
 fullName = 1;
 dateBir = 2;
@@ -140,7 +140,7 @@ function writeLog() {
         logLine += logMsg[i] + '</br>';
     }
     try {
-        PutFileData(logFileUrl, logLine);
+        PutFileData(logFileUrl + StrDate(Date(), false, false) + '.html', logLine);
     } catch (e) {
         alert('!Синхронизация с КиТ. Невозможно создать лог-файл: ' + ExtractUserError(e));
     }
@@ -149,7 +149,8 @@ function writeLog() {
 
 
 //-=Тело скрипта=-
-alert('!Синхронизация с КиТ. Обработка стартовала.');
+alert('---Синхронизация с КиТ. Обработка стартовала.');
+logMsg.push('Синхронизация с КиТ. Обработка стартовала.');
 linkSourceFile = XQuery("for $elem in resources where $elem/code='listKiT' return $elem");
 itemFile = ArrayFirstElem(linkSourceFile);
 docResource = OpenDoc(UrlFromDocID(itemFile.id));
@@ -157,7 +158,11 @@ excelFileUrl = docResource.TopElem.file_url;
 try {
     source = OpenDoc(excelFileUrl, 'format=excel');
 } catch (e) {
-    alert("Невозможно открыть документ " + excelFileUrl + " из БД по причине: " + ExtractUserError(e));
+    alert("!Невозможно открыть документ " + excelFileUrl + " из БД по причине: " + ExtractUserError(e));
+    logMsg.push("Невозможно открыть документ " + excelFileUrl + " из БД по причине: " + ExtractUserError(e));
+    logMsg.push('Синхронизация прервана!');
+    writeLog();
+    return;
 }
 srcArr = ArrayFirstElem(source.TopElem);
 
@@ -191,8 +196,12 @@ if (statusOrg[0] == 1) {
                 Doc.Save();
             }
         }
-        tools.start_agent(6428759161571211486);
+        if (tools.start_agent(6428759161571211486)) 
+            {
+                logMsg.push('Удаление лишних должностей и подразделений завершено успешно');
+            };
     } else {
+        logMsg.push('Нет сотрудников для обновления.');
         alert('!Синхронизация с КиТ. Нет сотрудников для обновления.')
     }
 } else {
@@ -200,12 +209,15 @@ if (statusOrg[0] == 1) {
 }
 
 if (ArrayCount(logMsg) > 0) {
-    writeLog();
     alert('!Синхронизация с КиТ. Обработка завершена. См. лог-файл')
 } else {
     alert('!Синхронизация с КиТ. Обработка завершена.');
 }
 
-tools.start_agent(6438908683374918216);
+logMsg.push('Синхронизация завершена');
+if (tools.start_agent(6438908683374918216)) {
+    logMsg.push('Пересохранение сотрудников выполнено успешно');
+};
 
+writeLog();
 //----------------------------------------------

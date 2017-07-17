@@ -1,5 +1,5 @@
 //-=Раздел объявления переменных=-
-logFileUrl = 'c:/log.html';
+logFileUrl = 'C:/Program Files/WebSoft/WebTutorServer/Log_custom/log_dismiss_';
 userCode = 0;
 fullName = 1;
 dateBir = 2;
@@ -44,6 +44,8 @@ function processUpdate(srcArr, depName, posName, user) {
             doc.TopElem.position_parent_name = procUpdate[1];
             doc.TopElem.position_id = Int(procUpdate[2]);
             doc.TopElem.position_name = procUpdate[3];
+            doc.TopElem.is_dismiss = true;
+            doc.TopElem.web_banned = true;
             doc.Save();
             return 1;
         } catch (e) {
@@ -138,7 +140,7 @@ function writeLog() {
         logLine += logMsg[i] + '</br>';
     }
     try {
-        PutFileData(logFileUrl, logLine);
+        PutFileData(logFileUrl + StrDate(Date(), false, false) + '.html', logLine);
     } catch (e) {
         alert('Невозможно создать лог-файл: ' + ExtractUserError(e));
     }
@@ -148,6 +150,7 @@ function writeLog() {
 
 //-=Тело скрипта=-
 alert('Синхронизация стартовала!');
+logMsg.push('Синхронизация стартовала!');
 linkSourceFile = XQuery("for $elem in resources where $elem/code='listKIT_dismiss' return $elem");
 itemFile = ArrayFirstElem(linkSourceFile);
 docResource = OpenDoc(UrlFromDocID(itemFile.id));
@@ -156,6 +159,10 @@ try {
     source = OpenDoc(excelFileUrl, 'format=excel');
 } catch (e) {
     alert("Невозможно открыть документ " + excelFileUrl + " из БД по причине: " + ExtractUserError(e));
+    logMsg.push("Невозможно открыть документ " + excelFileUrl + " из БД по причине: " + ExtractUserError(e));
+    logMsg.push('Синхронизация прервана!');
+    writeLog();
+    return;
 }
 
 srcArr = ArrayFirstElem(source.TopElem);
@@ -169,8 +176,8 @@ if (statusOrg[0] == 1) {
                 depName = Trim(StrTitleCase(srcArr[i][userCode]));
                 continue;
             } else {
-                users = XQuery("for $elem in collaborators where $elem/code='LP" + Trim(srcArr[i][userCode]) + "'and $elem/is_dismiss=1 return $elem");
-                //users = XQuery("for $elem in collaborators where $elem/code='LP" + Trim(srcArr[i][userCode]) + "' return $elem");
+                //users = XQuery("for $elem in collaborators where $elem/code='LP" + Trim(srcArr[i][userCode]) + "'and $elem/is_dismiss=1 return $elem");
+                users = XQuery("for $elem in collaborators where $elem/code='LP" + Trim(srcArr[i][userCode]) + "' return $elem");
                 if (ArrayCount(users) == 0) {
                     continue;
                 } else if (ArrayCount(users) > 0) {
@@ -185,12 +192,14 @@ if (statusOrg[0] == 1) {
         }
     }
 } else {
-    alert('Обработка прервана из-за ошибки. Смотри лог-файл.')
+    logMsg.push('Обработка прервана из-за ошибки.');
+    alert('Обработка прервана из-за ошибки. Не найдена организация. Смотри лог-файл.')
 }
 if (ArrayCount(logMsg) > 0) {
     writeLog();
     alert('Обработка завершена. См. лог-файл')
 }
+logMsg.push('Синхронизация завершена!');
 alert('Синхронизация закончена!');
 
 //----------------------------------------------

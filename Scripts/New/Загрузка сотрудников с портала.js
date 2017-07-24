@@ -44,7 +44,6 @@ function initCodeOrgStructure() {
 }
 
 //Проверка присутствия сотрудника в базе
-//function checkUser(code, org) {
 function checkUser(arr) {
     arrUsers = XQuery("for $elem in collaborators where $elem/code='" + codeOrgStruct[arr[orgName]] + arr[userCode] + "' return $elem");
     arrCount = ArrayCount(arrUsers);
@@ -57,6 +56,16 @@ function checkUser(arr) {
                     doc.TopElem.change_password = true;
                 } else {
                     doc.TopElem.password = Trim(arr[passUser]);
+                }
+                if (codeOrgStruct[arr[orgName]] != 'LP') {
+                    try {
+                        newUser.TopElem.lastname = StrTitleCase(String(arr[fullName]).split(' ')[0]);
+                        newUser.TopElem.firstname = StrTitleCase(String(arr[fullName]).split(' ')[1]);
+                        newUser.TopElem.middlename = StrTitleCase(String(arr[fullName]).split(' ')[2]);
+                    } catch (e) {
+                        anyError.push('Неверный формат ФИО ' + arr[fullName]);
+                        continue;
+                    }
                 }
                 doc.TopElem.email = StrLowerCase(arr[emailUser]);
                 doc.Save();
@@ -214,7 +223,7 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
             }
             newUser.TopElem.email = StrLowerCase(Trim(lineArray[i][emailUser]));
             try {
-                newUser.TopElem.lastname =StrTitleCase(String(lineArray[i][fullName]).split(' ')[0]);
+                newUser.TopElem.lastname = StrTitleCase(String(lineArray[i][fullName]).split(' ')[0]);
                 newUser.TopElem.firstname = StrTitleCase(String(lineArray[i][fullName]).split(' ')[1]);
                 newUser.TopElem.middlename = StrTitleCase(String(lineArray[i][fullName]).split(' ')[2]);
             } catch (e) {
@@ -229,7 +238,7 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
                 if (linkDep.length == 2) {
                     newUser.TopElem.position_parent_id = linkDep[0];
                     newUser.TopElem.position_parent_name = linkDep[1];
-                    pos = StrTitleCase(String(Trim(lineArray[i][posName])).substr(0,1)) + String(Trim(lineArray[i][posName])).substr(1);
+                    pos = StrTitleCase(String(Trim(lineArray[i][posName])).substr(0, 1)) + String(Trim(lineArray[i][posName])).substr(1);
                     linkPos = findPos(pos, linkOrg, linkDep);
                     if (linkPos.length == 2) {
                         newUser.TopElem.position_id = linkPos[0];

@@ -14,6 +14,7 @@ logLine = '';
 logCreateUser = '';
 logActivateTest = '';
 activateCodeTest = '';
+now = new Date();
 //**************************************
 
 //-=Раздел описания функций=-
@@ -40,7 +41,9 @@ function createDep(deptName, org) {
         try {
             newDep = OpenNewDoc('x-local://wtv/wtv_subdivision.xmd');
             newDep.BindToDb(DefaultDb);
-            newDep.TopElem.code = '!delete';
+            if (org[1] == 'ПАО НЛМК') {
+                newDep.TopElem.code = '!delete';
+            }
             newDep.TopElem.name = deptName;
             newDep.TopElem.org_id = Int(org[0]);
             if (org[1] == 'ПАО НЛМК') {
@@ -67,7 +70,9 @@ function createPos(posName, org, dep) {
         try {
             newPos = OpenNewDoc('x-local://wtv/wtv_position.xmd');
             newPos.BindToDb(DefaultDb);
-            newPos.TopElem.code = '!delete';
+            if (org[1] == 'ПАО НЛМК') {
+                newPos.TopElem.code = '!delete';
+            }
             newPos.TopElem.name = String(StrTitleCase(posName));
             newPos.TopElem.org_id = Int(org[0]);
             newPos.TopElem.parent_object_id = Int(dep[0]);
@@ -179,10 +184,27 @@ function activateTest(userInfo, XQUser) {
                     reappointment = Param.reappointment == '1' || Param.reappointment == 'true' || Param.reappointment == true;
                     try {
                         if (reappointment) {
-                            tools.activate_test_to_person(ArrayFirstElem(XQUser).id, ArrayFirstElem(resultXQTests).id, null, null, null, null, null, null, DateOffset(Date(), 86400), Int(ArrayFirstElem(resutlXQGroups).id));
+                            docTest = tools.activate_test_to_person(ArrayFirstElem(XQUser).id, ArrayFirstElem(resultXQTests).id, null, null, null, null, null, null, DateOffset(Date(), 86400), Int(ArrayFirstElem(resutlXQGroups).id));
                         } else {
-                            tools.activate_test_to_person(ArrayFirstElem(XQUser).id, ArrayFirstElem(resultXQTests).id, null, null, null, null, null, null, null, Int(ArrayFirstElem(resutlXQGroups).id));
+                            docTest = tools.activate_test_to_person(ArrayFirstElem(XQUser).id, ArrayFirstElem(resultXQTests).id, null, null, null, null, null, null, null, Int(ArrayFirstElem(resutlXQGroups).id));
                         }
+                        try {
+                            docS = docTest.DocID;
+                            flagNew = true;
+                        } catch (e) {
+                            flagNew = false;
+                        }
+                        if (flagNew) {
+                            doc = OpenDoc(UrlFromDocID(Int(docS)));
+                            doc.TopElem.start_usage_date = now;
+                            doc.Save();
+                        } else {
+                            realActiveTest = XQuery('for $elem in active_test_learnings where $elem/id=' + docTest + ' return $elem');
+                            doc = OpenDoc(UrlFromDocID(ArrayFirstElem(realActiveTest).id));
+                            doc.TopElem.start_usage_date = now;
+                            doc.Save();
+                        }
+
                         activateCodeTest += ArrayFirstElem(resultXQTests).code + ' ';
                     } catch (e) {
                         logActivateTest += 'При назначении теста произошла ошибка: ' + ExtractUserError(e);

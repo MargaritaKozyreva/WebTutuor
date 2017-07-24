@@ -9,6 +9,7 @@ logCreateUser = '';
 logActivateTest = '';
 activateCodeTest = '';
 codeGroup = 'AP';
+now = new Date();
 //**************************************
 
 //-=Раздел описания функций=-
@@ -147,10 +148,27 @@ function activateTest(userInfo, XQUser) {
                     reappointment = Param.reappointment == '1' || Param.reappointment == 'true' || Param.reappointment == true;
                     try {
                         if (reappointment) {
-                            tools.activate_test_to_person(ArrayFirstElem(XQUser).id, ArrayFirstElem(resultXQTests).id, null, null, null, null, null, null, DateOffset(Date(), 86400), Int(ArrayFirstElem(resutlXQGroups).id));
+                            docTest = tools.activate_test_to_person(ArrayFirstElem(XQUser).id, ArrayFirstElem(resultXQTests).id, null, null, null, null, null, null, DateOffset(Date(), 86400), Int(ArrayFirstElem(resutlXQGroups).id));
                         } else {
-                            tools.activate_test_to_person(ArrayFirstElem(XQUser).id, ArrayFirstElem(resultXQTests).id, null, null, null, null, null, null, null, Int(ArrayFirstElem(resutlXQGroups).id));
+                            docTest = tools.activate_test_to_person(ArrayFirstElem(XQUser).id, ArrayFirstElem(resultXQTests).id, null, null, null, null, null, null, null, Int(ArrayFirstElem(resutlXQGroups).id));
                         }
+                        try {
+                            docS = docTest.DocID;
+                            flagNew = true;
+                        } catch (e) {
+                            flagNew = false;
+                        }
+                        if (flagNew) {
+                            doc = OpenDoc(UrlFromDocID(Int(docS)));
+                            doc.TopElem.start_usage_date = now;
+                            doc.Save();
+                        } else {
+                            realActiveTest = XQuery('for $elem in active_test_learnings where $elem/id=' + docTest + ' return $elem');
+                            doc = OpenDoc(UrlFromDocID(ArrayFirstElem(realActiveTest).id));
+                            doc.TopElem.start_usage_date = now;
+                            doc.Save();
+                        }
+
                         activateCodeTest += ArrayFirstElem(resultXQTests).code + ' ';
                     } catch (e) {
                         logActivateTest += 'При назначении теста произошла ошибка: ' + ExtractUserError(e);

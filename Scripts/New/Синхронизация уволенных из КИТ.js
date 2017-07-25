@@ -45,7 +45,7 @@ function processUpdate(srcArr, depName, posName, user) {
             doc.TopElem.position_id = Int(procUpdate[2]);
             doc.TopElem.position_name = procUpdate[3];
             doc.TopElem.is_dismiss = true;
-            doc.TopElem.web_banned = true;
+            doc.TopElem.last_data.web_banned = true;
             doc.Save();
             return 1;
         } catch (e) {

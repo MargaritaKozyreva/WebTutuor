@@ -51,12 +51,14 @@ function checkUser(arr) {
         for (user in arrUsers) {
             try {
                 doc = OpenDoc(UrlFromDocID(user.id));
-                if (Trim(arr[passUser]) == '' || Trim(arr[passUser]) == '-$R#-') {
-                    doc.TopElem.password = '';
+
+                if ((Trim(arr[passUser]) == '' || Trim(arr[passUser]) == '-$R#-') && doc.TopElem.password == '') {
                     doc.TopElem.change_password = true;
-                } else {
+                }
+                if (doc.TopElem.password == '') {
                     doc.TopElem.password = Trim(arr[passUser]);
                 }
+
                 if (codeOrgStruct[arr[orgName]] != 'LP') {
                     try {
                         newUser.TopElem.lastname = StrTitleCase(String(arr[fullName]).split(' ')[0]);
@@ -213,7 +215,7 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
                 newUser.TopElem.login = 'DO*' + Trim(lineArray[i][userCode]);
             } else {
                 newUser.TopElem.login = 'DO*' + codeOrgStruct[lineArray[i][orgName]] + '*' + Trim(lineArray[i][userCode]);
-                newUser.TopElem.custom_elems.ObtainChildByKey("userCode").value = Trim(lineArray[i][userCode]);
+                //newUser.TopElem.custom_elems.ObtainChildByKey("userCode").value = Trim(lineArray[i][userCode]);
             }
             if (lineArray[i][passUser] == '-$R#-' || lineArray[i][passUser] == '') {
                 newUser.TopElem.change_password = true;
@@ -222,14 +224,26 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
                 newUser.TopElem.password = lineArray[i][passUser];
             }
             newUser.TopElem.email = StrLowerCase(Trim(lineArray[i][emailUser]));
-            try {
-                newUser.TopElem.lastname = StrTitleCase(String(lineArray[i][fullName]).split(' ')[0]);
-                newUser.TopElem.firstname = StrTitleCase(String(lineArray[i][fullName]).split(' ')[1]);
-                newUser.TopElem.middlename = StrTitleCase(String(lineArray[i][fullName]).split(' ')[2]);
-            } catch (e) {
-                alert('Неверный формат ФИО ' + lineArray[i][fullName]);
-                continue;
+
+            arrFIO = [];
+            arr = String(lineArray[i][fullName]).split(' ');
+            for (k = 0; k < ArrayCount(arr); k++) {
+                if (arr[k] != '') arrFIO.push(arr[k]);
             }
+            try {
+                if (arrFIO.length == 2) {
+                    newUser.TopElem.lastname = StrTitleCase(String(lineArray[i][fullName]).split(' ')[0]);
+                    newUser.TopElem.firstname = String(lineArray[i][fullName]).split(' ')[1];
+                } else if (arrFIO.length == 3) {
+                    newUser.TopElem.lastname = StrTitleCase(String(lineArray[i][fullName]).split(' ')[0]);
+                    newUser.TopElem.firstname = StrTitleCase(String(lineArray[i][fullName]).split(' ')[1]);
+                    newUser.TopElem.middlename = StrTitleCase(String(lineArray[i][fullName]).split(' ')[2]);
+                }
+            } catch (e) {
+                logCreateUser += 'Не верный формат поля ФИО в исходном документе у сотрудника ' + source[i][fullName] + '. Сотрудник не обработан.'
+                return 0;
+            }
+
             linkOrg = findOrg(Trim(lineArray[i][orgName]));
             if (linkOrg.length == 2) {
                 newUser.TopElem.org_id = linkOrg[0];

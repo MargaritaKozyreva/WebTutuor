@@ -55,15 +55,15 @@ function checkUser(arr) {
                 if ((Trim(arr[passUser]) == '' || Trim(arr[passUser]) == '-$R#-') && doc.TopElem.password == '') {
                     doc.TopElem.change_password = true;
                 }
-                if (doc.TopElem.password == '') {
-                    doc.TopElem.password = Trim(arr[passUser]);
-                }
+                //if (doc.TopElem.password == '') {
+                doc.TopElem.password = Trim(arr[passUser]);
+                //}
 
                 if (codeOrgStruct[arr[orgName]] != 'LP') {
                     try {
-                        newUser.TopElem.lastname = StrTitleCase(String(arr[fullName]).split(' ')[0]);
-                        newUser.TopElem.firstname = StrTitleCase(String(arr[fullName]).split(' ')[1]);
-                        newUser.TopElem.middlename = StrTitleCase(String(arr[fullName]).split(' ')[2]);
+                        doc.TopElem.lastname = StrTitleCase(String(arr[fullName]).split(' ')[0]);
+                        doc.TopElem.firstname = StrTitleCase(String(arr[fullName]).split(' ')[1]);
+                        doc.TopElem.middlename = StrTitleCase(String(arr[fullName]).split(' ')[2]);
                     } catch (e) {
                         anyError.push('Неверный формат ФИО ' + arr[fullName]);
                         continue;

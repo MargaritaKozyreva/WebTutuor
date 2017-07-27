@@ -252,6 +252,7 @@ source = ArrayFirstElem(sourceList.TopElem);
 for (var i = 0; i < ArrayCount(source); i++) {
     if (i == 0) continue;
     if (source[i][userCode] == '' && source[i][fullName] == '') break;
+    flag = false;
     logActivateTest = '';
     activateCodeTest = '';
     try {
@@ -267,13 +268,47 @@ for (var i = 0; i < ArrayCount(source); i++) {
     }
     if (codeExcel) {
         if (StrLowerCase(Trim(source[i][orgFlag])) == 'виз' || Trim(source[i][orgFlag]) == '' || StrLowerCase(Trim(source[i][orgFlag])) == 'сгок') {
-            resultXQUsers = XQuery("for $elem in collaborators where $elem/code='" + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + source[i][userCode] + "' return $elem");
             tmpLine = "<b>Результат обработки строки " + i + ": " + '</b>';
-            if (ArrayCount(resultXQUsers) == 0) {
-                resultCreateUser = createUser(source[i]);
-                if (resultCreateUser == 1) {
-                    tmpLine += 'создан новый сотрудник ' + source[i][fullName] + '. ';
-                    resultXQUsers = XQuery("for $elem in collaborators where $elem/code='" + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + source[i][userCode] + "' return $elem");
+            
+            standartUsers = XQuery("for $elem in cc_standartuserss where $elem/code='" + Trim(source[i][userCode]) + "' return $elem");
+            if (ArrayCount(standartUsers) == 0) {
+                tmpLine += '<b>не удалось сопоставить сотрудника с табельным номером ' + source[i][userCode] + ' со списком SAP <b>';
+                continue;
+            } else if (ArrayCount(standartUsers) > 1) {
+                tmpLine += '<b>не удалось однозначно сопоставить сотрудника с табельным номером ' + source[i][userCode] + ' со списком SAP <b>';
+                continue;
+            } else {
+                for (user in standartUsers) {
+                    if (StrLowerCase(String(user.name).split(' ')[0]) == StrLowerCase(String(source[i][fullName]).split(' ')[0])) {
+                        //if (StrContains(user.name, String(source[i][fullName]).split(' ')[0], true)) {
+                        flag = true;
+                    } else {
+                        tmpLine += 'сотрудник ' + source[i][fullName] + ' не прошел проверку с SAP';
+                        continue;
+                    }
+                }
+            }
+            
+            if (flag) {
+                resultXQUsers = XQuery("for $elem in collaborators where $elem/code='" + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + source[i][userCode] + "' return $elem");
+                if (ArrayCount(resultXQUsers) == 0) {
+                    resultCreateUser = createUser(source[i]);
+                    if (resultCreateUser == 1) {
+                        tmpLine += 'создан новый сотрудник ' + source[i][fullName] + '. ';
+                        resultXQUsers = XQuery("for $elem in collaborators where $elem/code='" + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + source[i][userCode] + "' return $elem");
+                        resultActivateTest = activateTest(source[i], resultXQUsers);
+                        if (resultActivateTest == 1) {
+                            tmpLine += 'Назначены тесты: ' + activateCodeTest;
+                        } else {
+                            tmpLine += logActivateTest;
+                        }
+                    } else {
+                        tmpLine += logCreateUser;
+                    }
+                } else if (ArrayCount(resultXQUsers) > 1) {
+                    tmpLine += 'не удалось однозначно сопоставить загружаемого сотрудника ' + source[i][fullName] + ' по коду ' + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + source[i][userCode] + '; ';
+                    continue;
+                } else if (ArrayCount(resultXQUsers) == 1) {
                     resultActivateTest = activateTest(source[i], resultXQUsers);
                     if (resultActivateTest == 1) {
                         tmpLine += 'Назначены тесты: ' + activateCodeTest;
@@ -281,18 +316,8 @@ for (var i = 0; i < ArrayCount(source); i++) {
                         tmpLine += logActivateTest;
                     }
                 } else {
-                    tmpLine += logCreateUser;
-                }
-            } else if (ArrayCount(resultXQUsers) > 1) {
-                tmpLine += 'не удалось однозначно сопоставить загружаемого сотрудника ' + source[i][fullName] + ' по коду ' + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + source[i][userCode] + '; ';
-                continue;
-            } else if (ArrayCount(resultXQUsers) == 1) {
-                tmpLine += 'сотрудник с кодом ' + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + source[i][userCode] + ' найден в WebTutor. ';
-                resultActivateTest = activateTest(source[i], resultXQUsers);
-                if (resultActivateTest == 1) {
-                    tmpLine += 'Назначены тесты: ' + activateCodeTest;
-                } else {
-                    tmpLine += logActivateTest;
+                    tmpLine += '<b>сотрудник с кодом ' + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + source[i][userCode] + ' найден в WebTutor, но не прошел проверку со списком SAP<b> ';
+                    continue;
                 }
             }
         } else {
@@ -302,6 +327,7 @@ for (var i = 0; i < ArrayCount(source); i++) {
     }
     createMessage(tmpLine + ';');
 }
+
 writeLog();
 
 //****************************

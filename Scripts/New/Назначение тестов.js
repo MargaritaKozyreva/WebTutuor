@@ -114,8 +114,8 @@ function createUser(infoUser) {
 
             arrFIO = [];
             arr = String(infoUser[fullName]).split(' ');
-            for (i = 0; i < ArrayCount(arr); i++) {
-                if (arr[i] != '') arrFIO.push(arr[i]);
+            for (o = 0; o < ArrayCount(arr); o++) {
+                if (arr[o] != '') arrFIO.push(arr[o]);
             }
             try {
                 if (arrFIO.length == 2) {
@@ -127,7 +127,7 @@ function createUser(infoUser) {
                     newUser.TopElem.middlename = String(infoUser[fullName]).split(' ')[2];
                 }
             } catch (e) {
-                logCreateUser += 'Не верный формат поля ФИО в исходном документе у сотрудника ' + source[i][fullName] + '. Сотрудник не обработан.'
+                logCreateUser += 'Не верный формат поля ФИО в исходном документе у сотрудника ' + infoUser[fullName] + '. Сотрудник не обработан.'
                 return 0;
             }
 
@@ -184,9 +184,14 @@ function activateTest(userInfo, XQUser) {
                     reappointment = Param.reappointment == '1' || Param.reappointment == 'true' || Param.reappointment == true;
                     try {
                         if (reappointment) {
-                            docTest = tools.activate_test_to_person(ArrayFirstElem(XQUser).id, ArrayFirstElem(resultXQTests).id, null, null, null, null, null, null, DateOffset(Date(), 86400), Int(ArrayFirstElem(resutlXQGroups).id));
+                            //docTest = tools.activate_test_to_person(ArrayFirstElem(XQUser).id, ArrayFirstElem(resultXQTests).id, null, null, null, null, null, null, DateOffset(Date(), 86400), Int(ArrayFirstElem(resutlXQGroups).id));
+                            docTest = tools.activate_test_to_person(XQUser, ArrayFirstElem(resultXQTests).id, null, null, null, null, null, null, DateOffset(Date(), 86400), Int(ArrayFirstElem(resutlXQGroups).id));
                         } else {
-                            docTest = tools.activate_test_to_person(ArrayFirstElem(XQUser).id, ArrayFirstElem(resultXQTests).id, null, null, null, null, null, null, null, Int(ArrayFirstElem(resutlXQGroups).id));
+                            //testID = ArrayFirstElem(resultXQTests).id;
+                            //alert(XQUser);
+                            //userID = ArrayFirstElem(XQUser).id;
+                            //alert(ArrayFirstElem(XQUser).id);
+                            docTest = tools.activate_test_to_person(XQUser, ArrayFirstElem(resultXQTests).id, null, null, null, null, null, null, null, ArrayFirstElem(resutlXQGroups).id);
                         }
                         try {
                             docS = docTest.DocID;
@@ -249,9 +254,11 @@ try {
 }
 
 source = ArrayFirstElem(sourceList.TopElem);
+//alert(ArrayCount(source));
 for (var i = 0; i < ArrayCount(source); i++) {
     if (i == 0) continue;
     if (source[i][userCode] == '' && source[i][fullName] == '') break;
+    //alert(source[i][userCode]);
     flag = false;
     logActivateTest = '';
     activateCodeTest = '';
@@ -269,13 +276,15 @@ for (var i = 0; i < ArrayCount(source); i++) {
     if (codeExcel) {
         if (StrLowerCase(Trim(source[i][orgFlag])) == 'виз' || Trim(source[i][orgFlag]) == '' || StrLowerCase(Trim(source[i][orgFlag])) == 'сгок') {
             tmpLine = "<b>Результат обработки строки " + i + ": " + '</b>';
-            
+
             standartUsers = XQuery("for $elem in cc_standartuserss where $elem/code='" + Trim(source[i][userCode]) + "' return $elem");
             if (ArrayCount(standartUsers) == 0) {
-                tmpLine += '<b>не удалось сопоставить сотрудника с табельным номером ' + source[i][userCode] + ' со списком SAP <b>';
+                tmpLine += '<b>не удалось сопоставить сотрудника с табельным номером ' + source[i][userCode] + ' со списком SAP</b>';
+                createMessage(tmpLine + ';');
                 continue;
             } else if (ArrayCount(standartUsers) > 1) {
-                tmpLine += '<b>не удалось однозначно сопоставить сотрудника с табельным номером ' + source[i][userCode] + ' со списком SAP <b>';
+                tmpLine += '<b>не удалось однозначно сопоставить сотрудника с табельным номером ' + source[i][userCode] + ' со списком SAP</b>';
+                createMessage(tmpLine + ';');
                 continue;
             } else {
                 for (user in standartUsers) {
@@ -283,20 +292,20 @@ for (var i = 0; i < ArrayCount(source); i++) {
                         //if (StrContains(user.name, String(source[i][fullName]).split(' ')[0], true)) {
                         flag = true;
                     } else {
-                        tmpLine += 'сотрудник ' + source[i][fullName] + ' не прошел проверку с SAP';
+                        tmpLine += '<b>сотрудник ' + source[i][fullName] + ' не прошел проверку с SAP</b>';
                         continue;
                     }
                 }
             }
-            
+
             if (flag) {
                 resultXQUsers = XQuery("for $elem in collaborators where $elem/code='" + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + source[i][userCode] + "' return $elem");
                 if (ArrayCount(resultXQUsers) == 0) {
                     resultCreateUser = createUser(source[i]);
                     if (resultCreateUser == 1) {
                         tmpLine += 'создан новый сотрудник ' + source[i][fullName] + '. ';
-                        resultXQUsers = XQuery("for $elem in collaborators where $elem/code='" + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + source[i][userCode] + "' return $elem");
-                        resultActivateTest = activateTest(source[i], resultXQUsers);
+                        resultXQUsers = XQuery("for $elem in collaborators where $elem/code='" + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + Trim(source[i][userCode]) + "' return $elem");
+                        resultActivateTest = activateTest(source[i], ArrayFirstElem(resultXQUsers).id);
                         if (resultActivateTest == 1) {
                             tmpLine += 'Назначены тесты: ' + activateCodeTest;
                         } else {
@@ -309,14 +318,14 @@ for (var i = 0; i < ArrayCount(source); i++) {
                     tmpLine += 'не удалось однозначно сопоставить загружаемого сотрудника ' + source[i][fullName] + ' по коду ' + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + source[i][userCode] + '; ';
                     continue;
                 } else if (ArrayCount(resultXQUsers) == 1) {
-                    resultActivateTest = activateTest(source[i], resultXQUsers);
+                    resultActivateTest = activateTest(source[i], ArrayFirstElem(resultXQUsers).id);
                     if (resultActivateTest == 1) {
                         tmpLine += 'Назначены тесты: ' + activateCodeTest;
                     } else {
                         tmpLine += logActivateTest;
                     }
                 } else {
-                    tmpLine += '<b>сотрудник с кодом ' + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + source[i][userCode] + ' найден в WebTutor, но не прошел проверку со списком SAP<b> ';
+                    tmpLine += '<b>сотрудник с кодом ' + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + source[i][userCode] + ' найден в WebTutor, но не прошел проверку со списком SAP</b> ';
                     continue;
                 }
             }

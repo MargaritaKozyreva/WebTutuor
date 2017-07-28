@@ -57,6 +57,7 @@ function checkUser(arr) {
                 }
                 //if (doc.TopElem.password == '') {
                 doc.TopElem.password = Trim(arr[passUser]);
+                doc.TopElem.change_password = false;
                 //}
 
                 if (codeOrgStruct[arr[orgName]] != 'LP') {

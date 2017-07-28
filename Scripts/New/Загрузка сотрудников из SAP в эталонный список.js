@@ -1,5 +1,5 @@
 //-=Раздел объявления переменных=-
-logFileUrl = 'c:/Program Files/WebSoft_2.7.3.13_test2/WebTutorServer/Log_custom/log_standart_';
+logFileUrl = 'c:/Program Files/WebSoft/WebTutorServer/Log_custom/log_standart_';
 codeUser = 0;
 fullName = 1;
 codeDep = 2;

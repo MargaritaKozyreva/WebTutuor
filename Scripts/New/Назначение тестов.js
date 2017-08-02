@@ -254,11 +254,9 @@ try {
 }
 
 source = ArrayFirstElem(sourceList.TopElem);
-//alert(ArrayCount(source));
 for (var i = 0; i < ArrayCount(source); i++) {
     if (i == 0) continue;
     if (source[i][userCode] == '' && source[i][fullName] == '') break;
-    //alert(source[i][userCode]);
     flag = false;
     logActivateTest = '';
     activateCodeTest = '';
@@ -277,28 +275,31 @@ for (var i = 0; i < ArrayCount(source); i++) {
         if (StrLowerCase(Trim(source[i][orgFlag])) == 'виз' || Trim(source[i][orgFlag]) == '' || StrLowerCase(Trim(source[i][orgFlag])) == 'сгок') {
             tmpLine = "<b>Результат обработки строки " + i + ": " + '</b>';
 
-            standartUsers = XQuery("for $elem in cc_standartuserss where $elem/code='" + Trim(source[i][userCode]) + "' return $elem");
-            if (ArrayCount(standartUsers) == 0) {
-                tmpLine += '<b>не удалось сопоставить сотрудника с табельным номером ' + source[i][userCode] + ' со списком SAP</b>';
-                createMessage(tmpLine + ';');
-                continue;
-            } else if (ArrayCount(standartUsers) > 1) {
-                tmpLine += '<b>не удалось однозначно сопоставить сотрудника с табельным номером ' + source[i][userCode] + ' со списком SAP</b>';
-                createMessage(tmpLine + ';');
-                continue;
-            } else {
-                for (user in standartUsers) {
-                    if (StrLowerCase(String(user.name).split(' ')[0]) == StrLowerCase(String(source[i][fullName]).split(' ')[0])) {
-                        //if (StrContains(user.name, String(source[i][fullName]).split(' ')[0], true)) {
-                        flag = true;
-                    } else {
-                        tmpLine += '<b>сотрудник ' + source[i][fullName] + ' не прошел проверку с SAP</b>';
-                        continue;
+            //проверка SAP
+            if (Trim(source[i][orgFlag]) == '') {
+                standartUsers = XQuery("for $elem in cc_standartsapusers where $elem/code='" + Trim(source[i][userCode]) + "' return $elem");
+                if (ArrayCount(standartUsers) == 0) {
+                    tmpLine += '<b>не удалось сопоставить сотрудника с табельным номером ' + source[i][userCode] + ' со списком SAP</b>';
+                    createMessage(tmpLine + ';');
+                    continue;
+                } else if (ArrayCount(standartUsers) > 1) {
+                    tmpLine += '<b>не удалось однозначно сопоставить сотрудника с табельным номером ' + source[i][userCode] + ' со списком SAP</b>';
+                    createMessage(tmpLine + ';');
+                    continue;
+                } else {
+                    for (user in standartUsers) {
+                        if (StrLowerCase(String(user.name).split(' ')[0]) == StrLowerCase(String(source[i][fullName]).split(' ')[0])) {
+                            //if (StrContains(user.name, String(source[i][fullName]).split(' ')[0], true)) {
+                            flag = true;
+                        } else {
+                            tmpLine += '<b>сотрудник с кодом ' + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + source[i][userCode] + ' найден в WebTutor, но не прошел проверку со списком SAP</b> ';
+                            continue;
+                        }
                     }
                 }
             }
 
-            if (flag) {
+            if ((flag && Trim(source[i][orgFlag]) == '') || (StrLowerCase(Trim(source[i][orgFlag])) == 'виз' || StrLowerCase(Trim(source[i][orgFlag])) == 'сгок')) {
                 resultXQUsers = XQuery("for $elem in collaborators where $elem/code='" + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + source[i][userCode] + "' return $elem");
                 if (ArrayCount(resultXQUsers) == 0) {
                     resultCreateUser = createUser(source[i]);
@@ -324,9 +325,6 @@ for (var i = 0; i < ArrayCount(source); i++) {
                     } else {
                         tmpLine += logActivateTest;
                     }
-                } else {
-                    tmpLine += '<b>сотрудник с кодом ' + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + source[i][userCode] + ' найден в WebTutor, но не прошел проверку со списком SAP</b> ';
-                    continue;
                 }
             }
         } else {

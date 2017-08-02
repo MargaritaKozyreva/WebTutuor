@@ -27,7 +27,7 @@ function processUpdate(srcArr, user) {
 
 function processCreate(srcArr) {
     try {
-        newUser = OpenNewDoc('x-local://udt/udt_cc_standartusers.xmd');
+        newUser = OpenNewDoc('x-local://udt/udt_cc_standartsapuser.xmd');
         newUser.BindToDb(DefaultDb);
         newUser.TopElem.code = srcArr[codeUser];
         newUser.TopElem.name = srcArr[fullName];
@@ -88,7 +88,7 @@ for (var i = 0; i < ArrayCount(srcArr); i++) {
     if (code > 999999) {
         continue;
     }
-    users = XQuery("for $elem in cc_standartuserss where $elem/code='" + Trim(srcArr[i][codeUser]) + "' return $elem");
+    users = XQuery("for $elem in cc_standartsapusers where $elem/code='" + Trim(srcArr[i][codeUser]) + "' return $elem");
     if (ArrayCount(users) == 0) {
         statusCreate = processCreate(srcArr[i]);
     } else if (ArrayCount(users) > 0) {

@@ -98,7 +98,11 @@ function findOrg(orgName) {
 
 //Поиск поздазделеия по имени в базе
 function findDep(depCode, depName, org) {
-    itemsDep = XQuery("for $elem in subdivisions where $elem/code='" + Trim(depCode) + "' and $elem/org_id=" + org[0] + " return $elem");
+    if (depCode == 0) {
+        itemsDep = XQuery("for $elem in subdivisions where $elem/name='" + Trim(depName) + "' and $elem/org_id=" + org[0] + " return $elem");
+    } else {
+        itemsDep = XQuery("for $elem in subdivisions where $elem/code='" + Trim(depCode) + "' and $elem/org_id=" + org[0] + " return $elem");
+    }
     if (ArrayCount(itemsDep) > 1) {
         return arr = [2];
     } else if (ArrayCount(itemsDep) == 1) {
@@ -107,14 +111,17 @@ function findDep(depCode, depName, org) {
         try {
             newDep = OpenNewDoc('x-local://wtv/wtv_subdivision.xmd');
             newDep.BindToDb(DefaultDb);
-            //newCode.TopElem.code = depCode;
+            if (depCode != 0) {
+                newDep.TopElem.code = depCode;
+            } else {
+                if (org[1] == 'ПАО НЛМК') {
+                    newDep.TopElem.code = '!temp';
+                }
+            }
             newDep.TopElem.name = depName;
             newDep.TopElem.org_id = Int(org[0]);
-            if (org[1] == 'ПАО НЛМК') {
-                newDep.TopElem.code = '!temp';
-                newDep.TopElem.custom_elems.ObtainChildByKey('flagDelete').value = true;
-            }
             newDep.Save();
+
             return arr = [newDep.DocID, depName];
         } catch (e) {
             alert('Не удалось создать новое позразделение по причине: ' + ExtractUserError(e));
@@ -138,8 +145,8 @@ function findPos(posName, org, dep) {
             newPos.TopElem.org_id = Int(org[0]);
             newPos.TopElem.parent_object_id = Int(dep[0]);
             if (org[1] == 'ПАО НЛМК') {
-                newPos.TopElem.code = '!delete';
-                newPos.TopElem.custom_elems.ObtainChildByKey('flagDelete').value = true;
+                //newPos.TopElem.code = '!delete';
+                //newPos.TopElem.custom_elems.ObtainChildByKey('flagDelete').value = true;
             }
             newPos.Save();
             return arr = [newPos.DocID, StrTitleCase(StrLowerCase(posName))];
@@ -200,90 +207,104 @@ try {
 }
 lineArray = ArrayFirstElem(sourceList.TopElem);
 for (var i = 0; i < ArrayCount(lineArray); i++) {
+    flagPAO = false;
     objUser = checkUser(lineArray[i]);
     if (objUser == 2) {
         multipleUsers.push('Строка ' + Int(i + 1) + ': табельный номер ' + String(lineArray[i][userCode]) + ', организация ' + lineArray[i][orgName]);
     } else if (objUser == 0) {
         //новый юзер
         try {
-            usersSAP = XQuery("for $elem in cc_standartsapusers where $elem/code='" + lineArray[i][userCode] + "' return $elem");
-            if (ArrayCount(usersSAP) == 1) {
-                userSAP = ArrayFirstElem(usersSAP);
-                newUser = OpenNewDoc('x-local://wtv/wtv_collaborator.xmd');
-                newUser.BindToDb(DefaultDb);
-                newUser.TopElem.code = codeOrgStruct[lineArray[i][orgName]] + Trim(lineArray[i][userCode]);
-                newUser.TopElem.custom_elems.ObtainChildByKey("userCode").value = Trim(lineArray[i][userCode]);
-                if (lineArray[i][orgName] == 'ПАО "НЛМК"') {
-                    //newUser.TopElem.custom_elems.ObtainChildByKey("flagForSync").value = true;
-                }
-                if (codeOrgStruct[lineArray[i][orgName]] == 'LP') {
-                    newUser.TopElem.login = 'DO*' + Trim(lineArray[i][userCode]);
-                } else {
-                    newUser.TopElem.login = 'DO*' + codeOrgStruct[lineArray[i][orgName]] + '*' + Trim(lineArray[i][userCode]);
-                    //newUser.TopElem.custom_elems.ObtainChildByKey("userCode").value = Trim(lineArray[i][userCode]);
-                }
-                if (lineArray[i][passUser] == '-$R#-' || lineArray[i][passUser] == '') {
-                    newUser.TopElem.change_password = true;
-                    newUser.TopElem.password = '';
-                } else {
-                    newUser.TopElem.password = lineArray[i][passUser];
-                }
-                newUser.TopElem.email = StrLowerCase(Trim(lineArray[i][emailUser]));
+            newUser = OpenNewDoc('x-local://wtv/wtv_collaborator.xmd');
+            newUser.BindToDb(DefaultDb);
 
-                arrFIO = [];
-                arr = String(userSAP.name).split(' ');
-                for (k = 0; k < ArrayCount(arr); k++) {
-                    if (arr[k] != '') arrFIO.push(arr[k]);
-                }
-                try {
-                    if (arrFIO.length == 2) {
-                        newUser.TopElem.lastname = arrFIO[0];
-                        newUser.TopElem.firstname = arrFIO[1];
-                    } else if (arrFIO.length == 3) {
-                        newUser.TopElem.lastname = arrFIO[0];
-                        newUser.TopElem.firstname = arrFIO[1];
-                        newUser.TopElem.middlename = arrFIO[2];
+            newUser.TopElem.code = codeOrgStruct[lineArray[i][orgName]] + Trim(lineArray[i][userCode]);
+            newUser.TopElem.custom_elems.ObtainChildByKey("userCode").value = Trim(lineArray[i][userCode]);
+
+            if (codeOrgStruct[lineArray[i][orgName]] == 'LP') {
+                newUser.TopElem.login = 'DO*' + Trim(lineArray[i][userCode]);
+            } else {
+                newUser.TopElem.login = 'DO*' + codeOrgStruct[lineArray[i][orgName]] + '*' + Trim(lineArray[i][userCode]);
+            }
+
+            if (lineArray[i][passUser] == '-$R#-' || lineArray[i][passUser] == '') {
+                newUser.TopElem.change_password = true;
+                newUser.TopElem.password = '';
+            } else {
+                newUser.TopElem.password = lineArray[i][passUser];
+            }
+
+            newUser.TopElem.email = StrLowerCase(Trim(lineArray[i][emailUser]));
+
+            if (lineArray[i][orgName] == 'ПАО "НЛМК"') {
+                usersSAP = XQuery("for $elem in cc_standartsapusers where $elem/code='" + lineArray[i][userCode] + "' return $elem");
+                if (ArrayCount(usersSAP) == 1) {
+                    userSAP = ArrayFirstElem(usersSAP);
+                    if (StrLowerCase(String(userSAP.name).split(' ')[0]) == StrLowerCase(String(lineArray[i][fullName]).split(' ')[0])) {
+                        flagPAO = true;
                     } else {
-                        alert(0 / 0);
+                        anyError.push('Строка '+ i +': сотрудник с табельным номером ' + lineArray[i][userCode] + ' не прошел проверку в SAP. Сотрудник не обработан.');
+                        continue;
                     }
-                } catch (e) {
-                    logCreateUser += 'Не верный формат поля ФИО в исходном документе у сотрудника ' + source[i][fullName] + '. Сотрудник не обработан.'
-                    return 0;
+                } else if (ArrayCount(usersSAP) > 1) {
+                    anyError.push('Не удалось однозначно определить сотрудника с табельным номером ' + lineArray[i][userCode] + ' в списке SAP. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
+                    continue;
+                } else if (ArrayCount(usersSAP) == 0) {
+                    anyError.push('Не удалось найти сотрудника с табельным номером ' + lineArray[i][userCode] + ' в списке SAP. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
+                    continue;
                 }
+            }
 
+            arrFIO = [];
+            if (flagPAO) {
+                arr = String(userSAP.name).split(' ');
+            } else {
+                arr = String(lineArray[i][fullName]).split(' ');
+            }
+
+            for (k = 0; k < ArrayCount(arr); k++) {
+                if (arr[k] != '') arrFIO.push(arr[k]);
+            }
+            try {
+                newUser.TopElem.lastname = arrFIO[0];
+                newUser.TopElem.firstname = arrFIO[1];
+                newUser.TopElem.middlename = arrFIO[2];
+            } catch (e) {
+                logCreateUser += 'Не верный формат поля ФИО в исходном документе у сотрудника ' + source[i][fullName] + '. Сотрудник не обработан.'
+                break;
+            }
+
+            if (flagPAO) {
                 linkOrg = findOrg(Trim(userSAP.nameorg));
-                if (linkOrg.length == 2) {
-                    newUser.TopElem.org_id = linkOrg[0];
-                    newUser.TopElem.org_name = linkOrg[1];
+            } else {
+                linkOrg = findOrg(Trim(lineArray[i][orgName]));
+            }
+            if (linkOrg.length == 2) {
+                newUser.TopElem.org_id = linkOrg[0];
+                newUser.TopElem.org_name = linkOrg[1];
+                if (flagPAO) {
                     linkDep = findDep(Trim(userSAP.codedep), Trim(userSAP.namedep), linkOrg);
-                    if (linkDep.length == 2) {
-                        newUser.TopElem.position_parent_id = linkDep[0];
-                        newUser.TopElem.position_parent_name = linkDep[1];
+                } else {
+                    linkDep = findDep(0, lineArray[i][depName], linkOrg);
+                }
+                if (linkDep.length == 2) {
+                    newUser.TopElem.position_parent_id = linkDep[0];
+                    newUser.TopElem.position_parent_name = linkDep[1];
+                    if (flagPAO) {
                         pos = StrTitleCase(String(Trim(userSAP.namepos)).substr(0, 1)) + String(Trim(userSAP.namepos)).substr(1);
-                        linkPos = findPos(pos, linkOrg, linkDep);
-                        if (linkPos.length == 2) {
-                            newUser.TopElem.position_id = linkPos[0];
-                            newUser.TopElem.position_name = linkPos[1];
-                        } else {
-                            switch (linkPos[0]) {
-                                case 0:
-                                    anyError.push('Не создана должность ' + userSAP.namepos + '. Сотрудник из строки ' + Int(i + 1) + ' не обработан');
-                                    break;
-                                case 2:
-                                    anyError.push('Не удалось однозначно определить должность ' + userSAP.namepos + ' в WT. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
-                                    break;
-                                default:
-                                    break;
-                            }
-                            continue;
-                        }
                     } else {
-                        switch (linkDep[0]) {
+                        pos = StrTitleCase(String(Trim(lineArray[i][posName])).substr(0, 1)) + String(Trim(lineArray[i][posName])).substr(1);
+                    }
+                    linkPos = findPos(pos, linkOrg, linkDep);
+                    if (linkPos.length == 2) {
+                        newUser.TopElem.position_id = linkPos[0];
+                        newUser.TopElem.position_name = linkPos[1];
+                    } else {
+                        switch (linkPos[0]) {
                             case 0:
-                                anyError.push('Не создано подразделение ' + userSAP.namedep + '. Сотрудник из строки ' + Int(i + 1) + ' не обработан');
+                                anyError.push('Не создана должность ' + lineArray[i][posName] + '. Сотрудник из строки ' + Int(i + 1) + ' не обработан');
                                 break;
                             case 2:
-                                anyError.push('Не удалось однозначно определить подразделение ' + userSAP.namedep + ' в WT. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
+                                anyError.push('Не удалось однозначно определить должность ' + lineArray[i][posName] + ' в WT. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
                                 break;
                             default:
                                 break;
@@ -291,26 +312,32 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
                         continue;
                     }
                 } else {
-                    switch (linkOrg[0]) {
+                    switch (linkDep[0]) {
                         case 0:
-                            anyError.push('Не удалось найти организацию ' + userSAP.nameorg + ' в WT. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
+                            anyError.push('Не создано подразделение ' + lineArray[i][depName] + '. Сотрудник из строки ' + Int(i + 1) + ' не обработан');
                             break;
                         case 2:
-                            anyError.push('Не удалось однозначно определить организацию ' + userSAP.nameorg + ' в WT. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
+                            anyError.push('Не удалось однозначно определить подразделение ' + lineArray[i][depName] + ' в WT. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
                             break;
                         default:
                             break;
                     }
                     continue;
                 }
-                newUser.Save();
-            } else if (ArrayCount(usersSAP) > 1) {
-                anyError.push('Не удалось однозначно определить сотрудника с табельным номером ' + lineArray[i][userCode] + ' в списке SAP. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
-                break;
-            } else if (ArrayCount(userSAP)==0) {
-                anyError.push('Не удалось найти сотрудника с табельным номером ' + lineArray[i][userCode] + ' в списке SAP. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
-                break;
+            } else {
+                switch (linkOrg[0]) {
+                    case 0:
+                        anyError.push('Не удалось найти организацию ' + lineArray[i][orgName] + ' в WT. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
+                        break;
+                    case 2:
+                        anyError.push('Не удалось однозначно определить организацию ' + lineArray[i][orgName] + ' в WT. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
+                        break;
+                    default:
+                        break;
+                }
+                continue;
             }
+            newUser.Save();
         } catch (e) {
             alert('Невозможно создать нового сотрудника: ' + ExtractUserError(e));
             break;

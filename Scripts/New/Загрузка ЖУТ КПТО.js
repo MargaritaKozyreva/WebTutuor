@@ -23,12 +23,13 @@ function processUpdate(srcArr, testID) {
         doc.TopElem.depname = Trim(srcArr[nameDep]);
         doc.TopElem.area = Trim(srcArr[codeArea]);
         doc.TopElem.poscode = Trim(srcArr[codePos]);
-        doc.TopElem.posname = Trim(srcArr[namePos]);
+        doc.TopElem.posname = StrTitleCase(String(Trim(srcArr[namePos])));
         doc.TopElem.rankppk = Trim(srcArr[rankPPK]);
         doc.TopElem.rankpek = Trim(srcArr[rankPEK]);
         doc.TopElem.rankatt = Trim(srcArr[rankAtt]);
         doc.TopElem.developer = Trim(srcArr[nameDev]);
         doc.TopElem.oldcode = Trim(srcArr[codeOld]);
+        doc.TopElem.newflag = '1';
         doc.Save();
         return 1;
     } catch (e) {
@@ -47,12 +48,13 @@ function processCreate(srcArr) {
         newTest.TopElem.depname = Trim(srcArr[nameDep]);
         newTest.TopElem.area = Trim(srcArr[codeArea]);
         newTest.TopElem.poscode = Trim(srcArr[codePos]);
-        newTest.TopElem.posname = Trim(srcArr[namePos]);
+        newTest.TopElem.posname = StrTitleCase(String(Trim(srcArr[namePos])));
         newTest.TopElem.rankppk = Trim(srcArr[rankPPK]);
         newTest.TopElem.rankpek = Trim(srcArr[rankPEK]);
         newTest.TopElem.rankatt = Trim(srcArr[rankAtt]);
         newTest.TopElem.developer = Trim(srcArr[nameDev]);
         newTest.TopElem.oldcode = Trim(srcArr[codeOld]);
+        newTest.TopElem.newflag = '1';
         newTest.Save();
         return 1;
     } catch (e) {
@@ -70,6 +72,19 @@ function writeLog() {
         PutFileData(logFileUrl + StrDate(Date(), false, false) + '.html', logLine);
     } catch (e) {
         alert('!Эталонный список. Невозможно создать лог-файл: ' + ExtractUserError(e));
+    }
+}
+
+function DeleteOldItems() {
+    list = XQuery('for $elem in cc_journalkptos where $elem/newflag="" return $elem');
+    for (elem in list) {
+        DeleteDoc(UrlFromDocID(elem.id));
+    }
+    list = XQuery('for $elem in cc_journalkptos return $elem');
+    for (elem in list) {
+        doc = OpenDoc(UrlFromDocID(elem.id));
+        doc.TopElem.newflag = "";
+        doc.Save();
     }
 }
 //------------------------------------------------
@@ -91,29 +106,63 @@ try {
 
 srcArr = ArrayFirstElem(source.TopElem);
 var nullStr = 0;
+oldTests = false;
 for (var i = 0; i < ArrayCount(srcArr); i++) {
     if (i == 0 || i == 1 || i == 2) continue;
     if (nullStr >= 5) {
-        break;
+        oldTests = true;
     }
     if (srcArr[i][codeTest] == '') {
         nullStr += 1;
         continue;
     }
-    tests = XQuery("for $elem in cc_journalkptos where $elem/code='" + Trim(srcArr[i][codeTest]) + "' return $elem");
-    if (ArrayCount(tests) == 0) {
-        statusCreate = processCreate(srcArr[i]);
-    } else if (ArrayCount(tests) > 0) {
-        if (ArrayCount(tests) > 1) {
-            logMsg.push('Множественное совпадение тестов в журнале КПТО по коду ' + ArrayFirstElem(tests).code);
-        };
-        for (test in tests) {
-            statusUpdate = processUpdate(srcArr[i], test.id);
+    if (!oldTests) {
+        tests = XQuery("for $elem in cc_journalkptos where $elem/code='" + Trim(srcArr[i][codeTest]) + "' return $elem");
+        if (ArrayCount(tests) == 0) {
+            statusCreate = processCreate(srcArr[i]);
+        } else if (ArrayCount(tests) > 0) {
+            if (ArrayCount(tests) > 1) {
+                logMsg.push('Множественное совпадение тестов в журнале КПТО по коду ' + ArrayFirstElem(tests).code);
+            };
+            for (test in tests) {
+                statusUpdate = processUpdate(srcArr[i], test.id);
+            }
+        }
+    } else {
+        if (srcArr[i][codeTest] == '' || StrContains(StrLowerCase(String(srcArr[i][codeTest])), 'отмененные', true)) continue;
+        strNewTest = StrLowerCase(String(Trim(srcArr[i][codeDep])));
+        if (StrContains(strNewTest, '-') || StrContains(strNewTest, 'отменен')) continue;
+        if (StrContains(strNewTest, 'заменен')) {
+            kod = 0;
+            try {
+                kod = Int(String(strNewTest).split(' ')[1]);
+            } catch (e) {
+                logMsg.push('Строка ' + i + ': неверный формат поля с новым кодом теста. Описание ошибки: ' + e);
+                continue;
+            }
+            tests = XQuery("for $elem in cc_journalkptos where $elem/code='" + kod + "' return $elem");
+            try {
+                kod2 = Int(String(Trim(srcArr[i][codeTest])).split(' ')[0]);
+            } catch (e) {
+                logMsg.push('Строка ' + i + ': неверный формат поля со старым кодом теста. Описание ошибки: ' + e);
+                continue;
+            }
+            for (test in tests) {
+                doc = OpenDoc(UrlFromDocID(test.id));
+                doc.TopElem.oldcode = kod2;
+                doc.Save();
+            }
+        } else {
+            logMsg.push('Строка ' + i + ': неизвестный формат поля с новым кодом теста!');
+            continue;
         }
     }
 }
+
+DeleteOldItems();
+
 now = new Date();
-logMsg.push(String(now) + ': !ЖУТ КПТО. Обработка завершена.')
+logMsg.push(String(now) + ': !ЖУТ КПТО. Обработка завершена.');
 writeLog();
 
 //----------------------------------------------

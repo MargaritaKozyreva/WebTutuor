@@ -13,8 +13,8 @@ function processUpdate(srcArr, user) {
     try {
         doc = OpenDoc(UrlFromDocID(user.id));
         doc.TopElem.name = Trim(String(srcArr[fullName]));
-        doc.TopElem.codedep = Trim(String(srcArr[codeDep]));
-        doc.TopElem.namedep = StrTitleCase(Trim(String(srcArr[nameDep])));
+        doc.TopElem.codedep = Int(Trim(String(srcArr[codeDep])));
+        doc.TopElem.namedep = StrReplace(StrTitleCase(Trim(String(srcArr[nameDep]))), 'n', '№ ');
         doc.TopElem.namepos = Trim(String(srcArr[namePos]));
         doc.TopElem.nameorg = Trim(String(srcArr[nameOrg]));
         doc.Save();
@@ -29,12 +29,12 @@ function processCreate(srcArr) {
     try {
         newUser = OpenNewDoc('x-local://udt/udt_cc_standartsapuser.xmd');
         newUser.BindToDb(DefaultDb);
-        newUser.TopElem.code = srcArr[codeUser];
-        newUser.TopElem.name = srcArr[fullName];
-        newUser.TopElem.codedep = srcArr[codeDep];
-        newUser.TopElem.namedep = srcArr[nameDep];
-        newUser.TopElem.namepos = srcArr[namePos];
-        newUser.TopElem.nameorg = srcArr[nameOrg];
+        newUser.TopElem.code = Int(Trim(String(srcArr[codeUser])));
+        newUser.TopElem.name = Trim(String(srcArr[fullName]));
+        newUser.TopElem.codedep = Int(Trim(String(srcArr[codeDep])));
+        newUser.TopElem.namedep = StrReplace(StrTitleCase(Trim(String(srcArr[nameDep]))), 'n', '№ ');
+        newUser.TopElem.namepos = Trim(String(srcArr[namePos]));
+        newUser.TopElem.nameorg = Trim(String(srcArr[nameOrg]));
         newUser.Save();
         return 1;
     } catch (e) {
@@ -59,6 +59,7 @@ function writeLog() {
 
 //-=Тело скрипта=-
 now = new Date();
+alert(String(now) + ': !Эталонный список. Обработка стартовала.');
 logMsg.push(String(now) + ': !Эталонный список. Обработка стартовала.');
 linkSourceFile = XQuery("for $elem in resources where $elem/code='listSAP' return $elem");
 itemFile = ArrayFirstElem(linkSourceFile);
@@ -67,6 +68,7 @@ excelFileUrl = docResource.TopElem.file_url;
 try {
     source = OpenDoc(excelFileUrl, 'format=excel');
 } catch (e) {
+    alert("Невозможно открыть документ " + excelFileUrl + " из БД по причине: " + ExtractUserError(e));
     logMsg.push("Невозможно открыть документ " + excelFileUrl + " из БД по причине: " + ExtractUserError(e));
     return;
 }
@@ -101,6 +103,7 @@ for (var i = 0; i < ArrayCount(srcArr); i++) {
     }
 }
 now = new Date();
+alert(String(now) + ': !Эталонный список. Обработка завершена.');
 logMsg.push(String(now) + ': !Эталонный список. Обработка завершена.')
 writeLog();
 

@@ -188,7 +188,6 @@ function activateTest(userInfo, XQUser) {
                             doc.TopElem.start_usage_date = now;
                             doc.Save();
                         }
-
                         activateCodeTest += ArrayFirstElem(resultXQTests).code + ' ';
                     } catch (e) {
                         logActivateTest += 'При назначении теста произошла ошибка: ' + ExtractUserError(e);
@@ -235,6 +234,7 @@ try {
 source = ArrayFirstElem(sourceList.TopElem);
 for (var i = 0; i < ArrayCount(source); i++) {
     if (i == 0) continue;
+    if (source[i][userCode]=='') continue;
     logActivateTest = '';
     activateCodeTest = '';
     try {

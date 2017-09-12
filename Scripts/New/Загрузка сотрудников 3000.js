@@ -67,7 +67,21 @@ function initCodeOrgStructure() {
 
 //Проверка присутствия сотрудника в базе
 function checkUser(arr) {
-    arrUsers = XQuery("for $elem in collaborators where $elem/code='" + codeOrgStruct[arr[orgName]] + arr[userCode] + "' return $elem");
+    arrOrgs = XQuery("for $elem in orgs where $elem/name='" + arr[orgName] + "' return $elem");
+    arrCount = ArrayCount(arrOrgs);
+    if (arrCount > 1) {
+        anyError.push('Найдено более одной организации ' + arr[orgName] + '. Строка с номером ' + processLines);
+        return 3;
+    } else if (arrCount = 1) {
+        for (org in orgs) {
+            orgID = org.id;
+        }
+    } else if (arrCount = 0) {
+        anyError.push('не найдено ни одной организации с названием ' + arr[orgName] + '. Строка с номером ' + processLines);
+        return 4;
+    }
+
+    arrUsers = XQuery("for $elem in collaborators where $elem/org_id=" + orgID + " and $elem/code='" + Trim(codeOrgStruct[arr[orgName]]) + "/" + Trim(arr[userCode]) + "' return $elem");
     arrCount = ArrayCount(arrUsers);
     if (arrCount > 0) {
         for (user in arrUsers) {
@@ -79,19 +93,19 @@ function checkUser(arr) {
                 }
                 //if (doc.TopElem.password == '') {
                 doc.TopElem.password = Trim(arr[passUser]);
-                doc.TopElem.change_password = false;
+                //doc.TopElem.change_password = false;
                 //}
 
-                if (codeOrgStruct[arr[orgName]] != 'LP') {
-                    try {
-                        doc.TopElem.lastname = StrTitleCase(String(arr[fullName]).split(' ')[0]);
-                        doc.TopElem.firstname = StrTitleCase(String(arr[fullName]).split(' ')[1]);
-                        doc.TopElem.middlename = StrTitleCase(String(arr[fullName]).split(' ')[2]);
-                    } catch (e) {
-                        anyError.push('Неверный формат ФИО ' + arr[fullName]);
-                        continue;
-                    }
+                //if (codeOrgStruct[arr[orgName]] != 'LP') {
+                try {
+                    doc.TopElem.lastname = StrTitleCase(String(arr[fullName]).split(' ')[0]);
+                    doc.TopElem.firstname = StrTitleCase(String(arr[fullName]).split(' ')[1]);
+                    doc.TopElem.middlename = StrTitleCase(String(arr[fullName]).split(' ')[2]);
+                } catch (e) {
+                    anyError.push('Неверный формат ФИО ' + arr[fullName]);
+                    continue;
                 }
+                //}
                 doc.TopElem.email = StrLowerCase(arr[emailUser]);
                 doc.Save();
             } catch (e) {
@@ -110,7 +124,7 @@ function checkUser(arr) {
 
 //Поиск организации по имени в базе
 function findOrg(orgName) {
-    itemsOrg = XQuery("for $elem in orgs where $elem/name='" + orgName + "' return $elem");
+    itemsOrg = XQuery("for $elem in orgs where $elem/name='" + Trim(orgName) + "' return $elem");
     if (ArrayCount(itemsOrg) > 1) {
         return arr = [2];
     } else if (ArrayCount(itemsOrg) == 1) {
@@ -240,14 +254,14 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
             newUser = OpenNewDoc('x-local://wtv/wtv_collaborator.xmd');
             newUser.BindToDb(DefaultDb);
 
-            newUser.TopElem.code = codeOrgStruct[lineArray[i][orgName]] + Trim(lineArray[i][userCode]);
+            newUser.TopElem.code = codeOrgStruct[lineArray[i][orgName]] + "/" + Trim(lineArray[i][userCode]);
             newUser.TopElem.custom_elems.ObtainChildByKey("userCode").value = Trim(lineArray[i][userCode]);
 
-            if (codeOrgStruct[lineArray[i][orgName]] == 'LP') {
-                newUser.TopElem.login = 'DO*' + Trim(lineArray[i][userCode]);
-            } else {
-                newUser.TopElem.login = 'DO*' + codeOrgStruct[lineArray[i][orgName]] + '*' + Trim(lineArray[i][userCode]);
-            }
+            //if (codeOrgStruct[lineArray[i][orgName]] == 'LP') {
+            //    newUser.TopElem.login = 'DO*' + Trim(lineArray[i][userCode]);
+            //} else {
+            newUser.TopElem.login = codeOrgStruct[lineArray[i][orgName]] + '*' + Trim(lineArray[i][userCode]);
+            //}
 
             if (lineArray[i][passUser] == '-$R#-' || lineArray[i][passUser] == '') {
                 newUser.TopElem.change_password = true;
@@ -288,11 +302,11 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
                 if (arr[k] != '') arrFIO.push(arr[k]);
             }
             try {
-                newUser.TopElem.lastname = arrFIO[0];
-                newUser.TopElem.firstname = arrFIO[1];
-                newUser.TopElem.middlename = arrFIO[2];
+                newUser.TopElem.lastname = StrTitleCase(String(Trim(arrFIO[0])));
+                newUser.TopElem.firstname = StrTitleCase(String(Trim(arrFIO[1])));
+                newUser.TopElem.middlename = StrTitleCase(String(Trim(arrFIO[2])));
             } catch (e) {
-                logCreateUser += 'Не верный формат поля ФИО в исходном документе у сотрудника ' + source[i][fullName] + '. Сотрудник не обработан.'
+                logCreateUser += 'Не верный формат поля ФИО в исходном документе у сотрудника ' + source[i][fullName] + '. Сотрудник не обработан.';
                 break;
             }
 
@@ -366,9 +380,12 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
             break;
         }
         processLines += 1;
-    } else if (objUser == 1)
+    } else if (objUser == 1) {
         //есть юзер
         duplicateUser.push('Строка ' + Int(i + 1) + ': табельный номер ' + lineArray[i][userCode] + ', организация ' + lineArray[i][orgName]);
+    } else if ((objUser == 3) || (objUser == 4)) {
+        break;
+    }
 }
 
 writeLog(multipleUsers, duplicateUser, anyError);

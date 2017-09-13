@@ -20,12 +20,8 @@ activateCodeTest = '';
 
 //поиск организации в WT
 function findOrg(orgName) {
-    if (StrLowerCase(orgName) == 'виз') {
-        itemsOrg = XQuery("for $elem in orgs where $elem/name='ООО \"ВИЗ-СТАЛЬ\"' return $elem");
-    } else if (StrLowerCase(orgName) == 'сгок') {
-        itemsOrg = XQuery("for $elem in orgs where $elem/name='ОАО \"СТОЙЛЕНСКИЙ  ГОК\"' return $elem");
-    } else if (orgName == '') {
-        itemsOrg = XQuery("for $elem in orgs where $elem/name='ПАО \"НЛМК\"' return $elem");
+    if (StrLowerCase(orgName) == 'сгок') {
+        itemsOrg = XQuery("for $elem in orgs where $elem/name='ОАО \"СТОЙЛЕНСКИЙ ГОК\"' return $elem");
     }
     if (ArrayCount(itemsOrg) == 1) {
         return arr = [ArrayFirstElem(itemsOrg).id, ArrayFirstElem(itemsOrg).disp_name];
@@ -40,12 +36,8 @@ function createDep(deptName, org) {
         try {
             newDep = OpenNewDoc('x-local://wtv/wtv_subdivision.xmd');
             newDep.BindToDb(DefaultDb);
-            newDep.TopElem.code = '!delete';
             newDep.TopElem.name = deptName;
             newDep.TopElem.org_id = Int(org[0]);
-            if (org[1] == 'ПАО НЛМК') {
-                newDep.TopElem.custom_elems.ObtainChildByKey('flagDelete').value = true;
-            }
             newDep.Save();
         } catch (e) {
             alert('Не удалось создать новое позразделение по причине: ' + ExtractUserError(e));
@@ -67,13 +59,9 @@ function createPos(posName, org, dep) {
         try {
             newPos = OpenNewDoc('x-local://wtv/wtv_position.xmd');
             newPos.BindToDb(DefaultDb);
-            newPos.TopElem.code = '!delete';
             newPos.TopElem.name = String(StrTitleCase(posName));
             newPos.TopElem.org_id = Int(org[0]);
             newPos.TopElem.parent_object_id = Int(dep[0]);
-            if (org[1] == 'ПАО НЛМК') {
-                newPos.TopElem.custom_elems.ObtainChildByKey('flagDelete').value = true;
-            }
             newPos.Save();
         } catch (e) {
             alert('Не удалось создать новую должность по причине: ' + ExtractUserError(e));
@@ -95,14 +83,9 @@ function createUser(infoUser) {
         try {
             newUser = OpenNewDoc('x-local://wtv/wtv_collaborator.xmd');
             newUser.BindToDb(DefaultDb);
-            newUser.TopElem.code = orgCode + infoUser[userCode];
+            newUser.TopElem.code = '2010/' + infoUser[userCode];
             newUser.TopElem.custom_elems.ObtainChildByKey('userCode').value = infoUser[userCode];
-            if (orgCode == 'EK' || orgCode == 'SG') {
-                newUser.TopElem.login = 'DO*' + orgCode + '*' + infoUser[userCode];
-            } else {
-                newUser.TopElem.custom_elems.ObtainChildByKey('flagForSync').value = true;
-                newUser.TopElem.login = 'DO*' + infoUser[userCode];
-            }
+            newUser.TopElem.login = '2010*' + infoUser[userCode];
             //newUser.TopElem.change_password = true;
             newUser.TopElem.password = '';
             try {
@@ -226,20 +209,20 @@ for (var i = 0; i < ArrayCount(source); i++) {
         errMess = 'Ошибка в строке ' + i + ': в поле Табельный номер в Excel могут присутствовать только цифры! Загрузка отменена';
         if (i == 1) {
             alert(errMess);
-        } else (
-            alert(errMess + '. Результаты обработки см. в log.html.')
-        )
+        } else {
+            alert(errMess + '. Результаты обработки см. в log.html.');
+        }
         return;
     }
     if (codeExcel) {
-        if (StrLowerCase(Trim(source[i][orgFlag])) == 'виз' || Trim(source[i][orgFlag]) == '' || StrLowerCase(Trim(source[i][orgFlag])) == 'сгок') {
-            resultXQUsers = XQuery("for $elem in collaborators where $elem/code='" + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + source[i][userCode] + "' return $elem");
+        if (StrLowerCase(Trim(source[i][orgFlag])) == 'сгок') {
+            resultXQUsers = XQuery("for $elem in collaborators where $elem/code='2010/" + source[i][userCode] + "' return $elem");
             tmpLine = "<b>Результат обработки строки " + i + ": " + '</b>';
             if (ArrayCount(resultXQUsers) == 0) {
                 resultCreateUser = createUser(source[i]);
                 if (resultCreateUser == 1) {
                     tmpLine += 'создан новый сотрудник ' + source[i][fullName] + '. ';
-                    resultXQUsers = XQuery("for $elem in collaborators where $elem/code='" + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + source[i][userCode] + "' return $elem");
+                    resultXQUsers = XQuery("for $elem in collaborators where $elem/code='2010/" + source[i][userCode] + "' return $elem");
                     resultActivateTest = activateTest(source[i], resultXQUsers);
                     if (resultActivateTest == 1) {
                         tmpLine += 'Назначены тесты: ' + activateCodeTest;
@@ -250,10 +233,10 @@ for (var i = 0; i < ArrayCount(source); i++) {
                     tmpLine += logCreateUser;
                 }
             } else if (ArrayCount(resultXQUsers) > 1) {
-                tmpLine += 'не удалось однозначно сопоставить загружаемого сотрудника ' + source[i][fullName] + ' по коду ' + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + source[i][userCode] + '; ';
+                tmpLine += 'не удалось однозначно сопоставить загружаемого сотрудника ' + source[i][fullName] + ' по коду 2010/' + source[i][userCode] + '; ';
                 continue;
             } else if (ArrayCount(resultXQUsers) == 1) {
-                tmpLine += 'сотрудник с кодом ' + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + source[i][userCode] + ' найден в WebTutor. ';
+                tmpLine += 'сотрудник с кодом 2010/' + source[i][userCode] + ' найден в WebTutor. ';
                 resultActivateTest = activateTest(source[i], resultXQUsers);
                 if (resultActivateTest == 1) {
                     tmpLine += 'Назначены тесты: ' + activateCodeTest;

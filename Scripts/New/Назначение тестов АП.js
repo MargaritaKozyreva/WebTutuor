@@ -78,9 +78,9 @@ function createUser(infoUser, userSAP) {
         try {
             newUser = OpenNewDoc('x-local://wtv/wtv_collaborator.xmd');
             newUser.BindToDb(DefaultDb);
-            newUser.TopElem.code = 'LP' + tabNumber;
+            newUser.TopElem.code = '1010/' + tabNumber;
             newUser.TopElem.custom_elems.ObtainChildByKey('userCode').value = tabNumber;
-            newUser.TopElem.login = 'DO*' + tabNumber;
+            newUser.TopElem.login = '1010*' + tabNumber;
             newUser.TopElem.password = tabNumber;
 
             arr = String(userSAP.name).split(' ');
@@ -274,12 +274,12 @@ for (var i = 0; i < ArrayCount(source); i++) {
         }
 
         if (flag) {
-            resultXQUsers = XQuery("for $elem in collaborators where $elem/code='LP" + Trim(source[i][userCode]) + "' return $elem");
+            resultXQUsers = XQuery("for $elem in collaborators where $elem/code='1010/" + Trim(source[i][userCode]) + "' return $elem");
             if (ArrayCount(resultXQUsers) == 0) {
                 resultCreateUser = createUser(source[i], user);
                 if (resultCreateUser == 1) {
                     tmpLine += 'создан новый сотрудник ' + source[i][fullName] + '. ';
-                    resultXQUsers = XQuery("for $elem in collaborators where $elem/code='LP" + Trim(source[i][userCode]) + "' return $elem");
+                    resultXQUsers = XQuery("for $elem in collaborators where $elem/code='1010/" + Trim(source[i][userCode]) + "' return $elem");
                     resultActivateTest = activateTest(source[i], resultXQUsers);
                     if (resultActivateTest == 1) {
                         tmpLine += 'Назначены тесты: ' + activateCodeTest;
@@ -290,7 +290,7 @@ for (var i = 0; i < ArrayCount(source); i++) {
                     tmpLine += logCreateUser;
                 }
             } else if (ArrayCount(resultXQUsers) > 1) {
-                tmpLine += 'не удалось однозначно сопоставить загружаемого сотрудника ' + source[i][fullName] + ' по коду LP' + source[i][userCode] + '; ';
+                tmpLine += 'не удалось однозначно сопоставить загружаемого сотрудника ' + source[i][fullName] + ' по коду 1010/' + source[i][userCode] + '; ';
                 continue;
             } else if (ArrayCount(resultXQUsers) == 1) {
                 resultActivateTest = activateTest(source[i], resultXQUsers);

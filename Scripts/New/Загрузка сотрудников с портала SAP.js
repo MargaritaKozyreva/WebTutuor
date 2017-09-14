@@ -269,7 +269,7 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
                 newUser.TopElem.firstname = arrFIO[1];
                 newUser.TopElem.middlename = arrFIO[2];
             } catch (e) {
-                logCreateUser += 'Не верный формат поля ФИО в исходном документе у сотрудника ' + source[i][fullName] + '. Сотрудник не обработан.'
+                anyError.push('Не верный формат поля ФИО в исходном документе у сотрудника ' + source[i][fullName] + '. Сотрудник не обработан.');
                 break;
             }
 

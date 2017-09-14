@@ -1,12 +1,11 @@
 //-=Раздел объявления переменных=-
-excelFileUrl = 'x-local:///c:/pololin_sa/Docs/Заявки/Заявка шаблон/С портала/order.xls';
-logFileUrl = 'c:/log.html';
+excelFileUrl = 'x-local:///c:/order3000.xls';
+logFileUrl = 'c:/Disk D/log.html';
 userCode = 0;
 fullName = 1;
 orgName = 2;
 depName = 3;
 posName = 4;
-passUser = 5;
 emailUser = 6;
 processLines = 0;
 codeOrgStruct = {};
@@ -28,10 +27,10 @@ function initCodeOrgStructure() {
     codeOrgStruct['ОАО "Вторчермет"'] = 'F013';
     codeOrgStruct['ОАО "ДОЛОМИТ"'] = 'F007';
     codeOrgStruct['ОАО "СТАГДОК"'] = 'F008';
-    codeOrgStruct['ОАО "СТОЙЛЕНСКИЙ  ГОК"'] = '2010';
+    codeOrgStruct['ОАО "СТОЙЛЕНСКИЙ ГОК"'] = '2010';
     codeOrgStruct['ОАО "Чувашвтормет"'] = 'F032';
-    codeOrgStruct['ООО "ГОК "Жерновский - 1"'] = '2020';
-    codeOrgStruct['ООО "ГОК "Усинский - 3"'] = '2030';
+    codeOrgStruct['ООО "ГОК "Жерновский-1"'] = '2020';
+    codeOrgStruct['ООО "ГОК "Усинский-3"'] = '2030';
     codeOrgStruct['ООО "ВИЗ-СТАЛЬ"'] = '1020';
     codeOrgStruct['ООО "Торговый дом НЛМК"'] = '9020';
     codeOrgStruct['ООО "Вторчермет НЛМК Башкортостан"'] = 'F018';
@@ -61,8 +60,6 @@ function initCodeOrgStructure() {
     codeOrgStruct['ООО "ПО Татвторчермет"'] = 'F029';
     codeOrgStruct['ООО "СТРОИТЕЛЬНО-МОНТАЖНЫЙ ТРЕСТ НЛМК"'] = 'F011';
     codeOrgStruct['ПАО "НЛМК"'] = '1010';
-    //codeOrgStruct['ОАО "НСММЗ"'] = 'EK';
-    //codeOrgStruct['ООО "НПД"'] = 'LP';
 }
 
 //Проверка присутствия сотрудника в базе
@@ -72,31 +69,25 @@ function checkUser(arr) {
     if (arrCount > 1) {
         anyError.push('Найдено более одной организации ' + arr[orgName] + '. Строка с номером ' + processLines);
         return 3;
-    } else if (arrCount = 1) {
-        for (org in orgs) {
+    } else if (arrCount == 1) {
+        for (org in arrOrgs) {
             orgID = org.id;
         }
-    } else if (arrCount = 0) {
-        anyError.push('не найдено ни одной организации с названием ' + arr[orgName] + '. Строка с номером ' + processLines);
+    } else if (arrCount == 0) {
+        anyError.push('Не найдено ни одной организации с названием ' + arr[orgName] + '. Строка с номером ' + processLines);
         return 4;
     }
 
-    arrUsers = XQuery("for $elem in collaborators where $elem/org_id=" + orgID + " and $elem/code='" + Trim(codeOrgStruct[arr[orgName]]) + "/" + Trim(arr[userCode]) + "' return $elem");
+    codeOrg = Trim(codeOrgStruct[arr[orgName]]);
+    arrUsers = XQuery("for $elem in collaborators where $elem/org_id=" + orgID + " and $elem/code='" + codeOrg + "/" + Trim(arr[userCode]) + "' return $elem");
     arrCount = ArrayCount(arrUsers);
-    if (arrCount > 0) {
-        for (user in arrUsers) {
-            try {
+
+    //сотрудник есть в БД, не ПАО
+    if (arrCount == 1) {
+        if (codeOrg != '1010') {
+            for (user in arrUsers) {
                 doc = OpenDoc(UrlFromDocID(user.id));
 
-                if ((Trim(arr[passUser]) == '' || Trim(arr[passUser]) == '-$R#-') && doc.TopElem.password == '') {
-                    doc.TopElem.change_password = true;
-                }
-                //if (doc.TopElem.password == '') {
-                doc.TopElem.password = Trim(arr[passUser]);
-                //doc.TopElem.change_password = false;
-                //}
-
-                //if (codeOrgStruct[arr[orgName]] != 'LP') {
                 try {
                     doc.TopElem.lastname = StrTitleCase(String(arr[fullName]).split(' ')[0]);
                     doc.TopElem.firstname = StrTitleCase(String(arr[fullName]).split(' ')[1]);
@@ -105,44 +96,92 @@ function checkUser(arr) {
                     anyError.push('Неверный формат ФИО ' + arr[fullName]);
                     continue;
                 }
-                //}
-                doc.TopElem.email = StrLowerCase(arr[emailUser]);
-                doc.Save();
-            } catch (e) {
-                anyError.push('Не удалось обновить информацию о сотруднике с кодом ' + codeOrgStruct[arr[orgName]] + arr[userCode] + ' по причине: ' + ExtractUserError(e));
+
+                linkOrg = findOrg(arr[orgName]);
+                if (linkOrg.length == 2) {
+                    doc.TopElem.org_id = linkOrg[0];
+                    linkDep = findDep(0, arr[depName], linkOrg);
+                    if (linkDep.length == 2) {
+                        doc.TopElem.position_parent_id = linkDep[0];
+                        linkPos = findPos(Trim(arr[posName]), linkOrg, linkDep);
+                        if (linkPos.length == 2) {
+                            doc.TopElem.position_id = linkPos[0];
+                        } else {
+                            switch (linkPos[0]) {
+                                case 0:
+                                    anyError.push('Не создана должность ' + arr[posName] + '. Сотрудник из строки ' + processLines + ' не обработан');
+                                    break;
+                                case 2:
+                                    anyError.push('Не удалось однозначно определить должность ' + arr[posName] + ' в WT. Сотрудник из строки ' + processLines + ' не обработан.');
+                                    break;
+                                default:
+                                    break;
+                            }
+                            continue;
+                        }
+                    } else {
+                        switch (linkDep[0]) {
+                            case 0:
+                                anyError.push('Не создано подразделение ' + arr[depName] + '. Сотрудник из строки ' + processLines + ' не обработан');
+                                break;
+                            case 2:
+                                anyError.push('Не удалось однозначно определить подразделение ' + arr[depName] + ' в WT. Сотрудник из строки ' + processLines + ' не обработан.');
+                                break;
+                            default:
+                                break;
+                        }
+                        continue;
+                    }
+                } else {
+                    switch (linkOrg[0]) {
+                        case 0:
+                            anyError.push('Не удалось найти организацию ' + arr[orgName] + ' в WT. Сотрудник из строки ' + processLines + ' не обработан.');
+                            break;
+                        case 2:
+                            anyError.push('Не удалось однозначно определить организацию ' + arr[orgName] + ' в WT. Сотрудник из строки ' + processLines + ' не обработан.');
+                            break;
+                        default:
+                            break;
+                    }
+                    continue;
+                }
+                try {
+                    doc.Save();
+                } catch (e) {
+                    anyError.push('Не удалось обновить информацию о сотруднике с кодом ' + codeOrg + '/' + arr[userCode] + ' по причине: ' + ExtractUserError(e));
+                }
             }
-        }
-        if (arrCount == 1) {
-            return 1;
-        } else if (arrCount > 1) {
-            return 2;
         }
     } else if (arrCount == 0) {
         return 0;
+    } else if (arrCount > 1) {
+        return 2;
     }
+    return 1;
 }
 
 //Поиск организации по имени в базе
 function findOrg(orgName) {
     itemsOrg = XQuery("for $elem in orgs where $elem/name='" + Trim(orgName) + "' return $elem");
     if (ArrayCount(itemsOrg) > 1) {
-        return arr = [2];
+        return arrR = [2];
     } else if (ArrayCount(itemsOrg) == 1) {
-        return arr = [ArrayFirstElem(itemsOrg).id, ArrayFirstElem(itemsOrg).disp_name];
-    } else return arr = [0];
+        return arrR = [ArrayFirstElem(itemsOrg).id, ArrayFirstElem(itemsOrg).disp_name];
+    } else return arrR = [0];
 }
 
 //Поиск поздазделеия по имени в базе
 function findDep(depCode, depName, org) {
+    if (depName == '') depName = '-';
     if (depCode == 0) {
         itemsDep = XQuery("for $elem in subdivisions where $elem/name='" + Trim(depName) + "' and $elem/org_id=" + org[0] + " return $elem");
     } else {
         itemsDep = XQuery("for $elem in subdivisions where $elem/code='" + Trim(depCode) + "' and $elem/org_id=" + org[0] + " return $elem");
     }
     if (ArrayCount(itemsDep) > 1) {
-        return arr = [2];
+        return arrR = [2];
     } else if (ArrayCount(itemsDep) == 1) {
-        return arr = [ArrayFirstElem(itemsDep).id, ArrayFirstElem(itemsDep).name];
+        return arrR = [ArrayFirstElem(itemsDep).id, ArrayFirstElem(itemsDep).name];
     } else if (ArrayCount(itemsDep) == 0) {
         try {
             newDep = OpenNewDoc('x-local://wtv/wtv_subdivision.xmd');
@@ -158,10 +197,10 @@ function findDep(depCode, depName, org) {
             newDep.TopElem.org_id = Int(org[0]);
             newDep.Save();
 
-            return arr = [newDep.DocID, depName];
+            return arrR = [newDep.DocID, depName];
         } catch (e) {
             alert('Не удалось создать новое позразделение по причине: ' + ExtractUserError(e));
-            return arr = [0];
+            return arrR = [0];
         }
     }
 }
@@ -170,9 +209,9 @@ function findDep(depCode, depName, org) {
 function findPos(posName, org, dep) {
     itemsPos = XQuery("for $elem in positions where $elem/name='" + posName + "'and $elem/org_id=" + org[0] + " and $elem/parent_object_id=" + dep[0] + " return $elem");
     if (ArrayCount(itemsPos) > 1) {
-        return arr = [2];
+        return arrR = [2];
     } else if (ArrayCount(itemsPos) == 1) {
-        return arr = [ArrayFirstElem(itemsPos).id, ArrayFirstElem(itemsPos).name];
+        return arrR = [ArrayFirstElem(itemsPos).id, ArrayFirstElem(itemsPos).name];
     } else if (ArrayCount(itemsPos) == 0) {
         try {
             newPos = OpenNewDoc('x-local://wtv/wtv_position.xmd');
@@ -180,14 +219,10 @@ function findPos(posName, org, dep) {
             newPos.TopElem.name = StrTitleCase(StrLowerCase(posName));
             newPos.TopElem.org_id = Int(org[0]);
             newPos.TopElem.parent_object_id = Int(dep[0]);
-            if (org[1] == 'ПАО НЛМК') {
-                //newPos.TopElem.code = '!delete';
-                //newPos.TopElem.custom_elems.ObtainChildByKey('flagDelete').value = true;
-            }
             newPos.Save();
-            return arr = [newPos.DocID, StrTitleCase(StrLowerCase(posName))];
+            return arrR = [newPos.DocID, StrTitleCase(StrLowerCase(posName))];
         } catch (e) {
-            return arr = [0];
+            return arrR = [0];
         }
     }
 }
@@ -244,52 +279,46 @@ try {
 lineArray = ArrayFirstElem(sourceList.TopElem);
 for (var i = 0; i < ArrayCount(lineArray); i++) {
     if (i == 0) continue;
+    processLines += 1;
+    if (lineArray[i][userCode] == '') continue;
     flagPAO = false;
     objUser = checkUser(lineArray[i]);
     if (objUser == 2) {
         multipleUsers.push('Строка ' + Int(i + 1) + ': табельный номер ' + String(lineArray[i][userCode]) + ', организация ' + lineArray[i][orgName]);
     } else if (objUser == 0) {
+
+        //проверка SAP
+        if (lineArray[i][orgName] == 'ПАО "НЛМК"') {
+            usersSAP = XQuery("for $elem in cc_standartuserss where $elem/code='" + lineArray[i][userCode] + "' return $elem");
+            if (ArrayCount(usersSAP) == 1) {
+                userSAP = ArrayFirstElem(usersSAP);
+                if (StrLowerCase(String(userSAP.name).split(' ')[0]) == StrLowerCase(String(lineArray[i][fullName]).split(' ')[0])) {
+                    flagPAO = true;
+                } else {
+                    anyError.push('Строка ' + i + ': сотрудник с табельным номером ' + lineArray[i][userCode] + ' не прошел проверку в SAP. Сотрудник не обработан.');
+                    continue;
+                }
+            } else if (ArrayCount(usersSAP) > 1) {
+                anyError.push('Не удалось однозначно определить сотрудника с табельным номером ' + lineArray[i][userCode] + ' в списке SAP. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
+                continue;
+            } else if (ArrayCount(usersSAP) == 0) {
+                anyError.push('Не удалось найти сотрудника с табельным номером ' + lineArray[i][userCode] + ' в списке SAP. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
+                continue;
+            }
+        }
+
         //новый юзер
         try {
             newUser = OpenNewDoc('x-local://wtv/wtv_collaborator.xmd');
             newUser.BindToDb(DefaultDb);
 
-            newUser.TopElem.code = codeOrgStruct[lineArray[i][orgName]] + "/" + Trim(lineArray[i][userCode]);
+            orgSp = Trim(lineArray[i][orgName]);
+            newUser.TopElem.code = codeOrgStruct[orgSp] + "/" + Trim(lineArray[i][userCode]);
             newUser.TopElem.custom_elems.ObtainChildByKey("userCode").value = Trim(lineArray[i][userCode]);
-
-            //if (codeOrgStruct[lineArray[i][orgName]] == 'LP') {
-            //    newUser.TopElem.login = 'DO*' + Trim(lineArray[i][userCode]);
-            //} else {
-            newUser.TopElem.login = codeOrgStruct[lineArray[i][orgName]] + '*' + Trim(lineArray[i][userCode]);
-            //}
-
-            if (lineArray[i][passUser] == '-$R#-' || lineArray[i][passUser] == '') {
-                newUser.TopElem.change_password = true;
-                newUser.TopElem.password = '';
-            } else {
-                newUser.TopElem.password = lineArray[i][passUser];
-            }
-
-            newUser.TopElem.email = StrLowerCase(Trim(lineArray[i][emailUser]));
-
-            if (lineArray[i][orgName] == 'ПАО "НЛМК"') {
-                usersSAP = XQuery("for $elem in cc_standartsapusers where $elem/code='" + lineArray[i][userCode] + "' return $elem");
-                if (ArrayCount(usersSAP) == 1) {
-                    userSAP = ArrayFirstElem(usersSAP);
-                    if (StrLowerCase(String(userSAP.name).split(' ')[0]) == StrLowerCase(String(lineArray[i][fullName]).split(' ')[0])) {
-                        flagPAO = true;
-                    } else {
-                        anyError.push('Строка ' + i + ': сотрудник с табельным номером ' + lineArray[i][userCode] + ' не прошел проверку в SAP. Сотрудник не обработан.');
-                        continue;
-                    }
-                } else if (ArrayCount(usersSAP) > 1) {
-                    anyError.push('Не удалось однозначно определить сотрудника с табельным номером ' + lineArray[i][userCode] + ' в списке SAP. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
-                    continue;
-                } else if (ArrayCount(usersSAP) == 0) {
-                    anyError.push('Не удалось найти сотрудника с табельным номером ' + lineArray[i][userCode] + ' в списке SAP. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
-                    continue;
-                }
-            }
+            newUser.TopElem.login = codeOrgStruct[orgSp] + '*' + Trim(lineArray[i][userCode]);
+            newUser.TopElem.change_password = true;
+            newUser.TopElem.password = '';
+            //newUser.TopElem.email = StrLowerCase(Trim(lineArray[i][emailUser]));
 
             arrFIO = [];
             if (flagPAO) {
@@ -306,8 +335,8 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
                 newUser.TopElem.firstname = StrTitleCase(String(Trim(arrFIO[1])));
                 newUser.TopElem.middlename = StrTitleCase(String(Trim(arrFIO[2])));
             } catch (e) {
-                logCreateUser += 'Не верный формат поля ФИО в исходном документе у сотрудника ' + source[i][fullName] + '. Сотрудник не обработан.';
-                break;
+                anyError.push('Не верный формат поля ФИО в исходном документе у сотрудника ' + lineArray[i][fullName] + '. Сотрудник не обработан.');
+                continue;
             }
 
             if (flagPAO) {
@@ -379,12 +408,12 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
             alert('Невозможно создать нового сотрудника: ' + ExtractUserError(e));
             break;
         }
-        processLines += 1;
+        
     } else if (objUser == 1) {
         //есть юзер
         duplicateUser.push('Строка ' + Int(i + 1) + ': табельный номер ' + lineArray[i][userCode] + ', организация ' + lineArray[i][orgName]);
     } else if ((objUser == 3) || (objUser == 4)) {
-        break;
+        continue;
     }
 }
 

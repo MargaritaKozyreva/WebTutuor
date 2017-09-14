@@ -6,10 +6,6 @@ departamentName = 3;
 positionName = 4;
 codeTests = 5;
 groupName = 6;
-codeOrgStruct = {};
-codeOrgStruct[''] = 'LP';
-codeOrgStruct['виз'] = 'EK';
-codeOrgStruct['сгок'] = 'SG';
 logLine = '';
 logCreateUser = '';
 logActivateTest = '';
@@ -79,7 +75,6 @@ function createPos(posName, org, dep) {
 //Создание нового сотрудника
 function createUser(infoUser) {
     if (Trim(infoUser[fullName] != '')) {
-        orgCode = codeOrgStruct[StrLowerCase(infoUser[orgFlag])];
         try {
             newUser = OpenNewDoc('x-local://wtv/wtv_collaborator.xmd');
             newUser.BindToDb(DefaultDb);

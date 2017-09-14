@@ -7,9 +7,8 @@ positionName = 4;
 codeTests = 5;
 groupName = 6;
 codeOrgStruct = {};
-codeOrgStruct[''] = 'LP';
-codeOrgStruct['виз'] = 'EK';
-codeOrgStruct['сгок'] = 'SG';
+codeOrgStruct[''] = '1010';
+codeOrgStruct['виз'] = '1020';
 logLine = '';
 logCreateUser = '';
 logActivateTest = '';
@@ -23,8 +22,6 @@ now = new Date();
 function findOrg(orgName) {
     if (StrLowerCase(orgName) == 'виз') {
         itemsOrg = XQuery("for $elem in orgs where $elem/name='ООО \"ВИЗ-СТАЛЬ\"' return $elem");
-    } else if (StrLowerCase(orgName) == 'сгок') {
-        itemsOrg = XQuery("for $elem in orgs where $elem/name='ОАО \"СТОЙЛЕНСКИЙ ГОК\"' return $elem");
     } else if (orgName == '') {
         itemsOrg = XQuery("for $elem in orgs where $elem/name='ПАО \"НЛМК\"' return $elem");
     }
@@ -71,9 +68,6 @@ function createPos(posName, org, dep) {
         try {
             newPos = OpenNewDoc('x-local://wtv/wtv_position.xmd');
             newPos.BindToDb(DefaultDb);
-            if (org[1] != 'ПАО НЛМК') {
-                newPos.TopElem.code = '!temp';
-            }
             newPos.TopElem.name = String(StrTitleCase(posName));
             newPos.TopElem.org_id = Int(org[0]);
             newPos.TopElem.parent_object_id = Int(dep[0]);
@@ -100,14 +94,9 @@ function createUser(infoUser, userSAP) {
         try {
             newUser = OpenNewDoc('x-local://wtv/wtv_collaborator.xmd');
             newUser.BindToDb(DefaultDb);
-            newUser.TopElem.code = orgCode + tabNumber;
+            newUser.TopElem.code = orgCode + '/' + tabNumber;
             newUser.TopElem.custom_elems.ObtainChildByKey('userCode').value = tabNumber;
-            if (orgCode == 'EK' || orgCode == 'SG') {
-                newUser.TopElem.login = 'DO*' + orgCode + '*' + tabNumber;
-            } else {
-                //newUser.TopElem.custom_elems.ObtainChildByKey('flagForSync').value = true;
-                newUser.TopElem.login = 'DO*' + tabNumber;
-            }
+            newUser.TopElem.login = orgCode + '*' + tabNumber;
             newUser.TopElem.password = tabNumber;
 
             if (flagPAO) {
@@ -229,7 +218,6 @@ function activateTest(userInfo, XQUser) {
                             doc.TopElem.start_usage_date = now;
                             doc.Save();
                         }
-
                         activateCodeTest += ArrayFirstElem(resultXQTests).code + ' ';
                     } catch (e) {
                         logActivateTest += 'При назначении теста произошла ошибка: ' + ExtractUserError(e);
@@ -292,7 +280,7 @@ for (var i = 0; i < ArrayCount(source); i++) {
         return;
     }
     if (codeExcel) {
-        if (StrLowerCase(Trim(source[i][orgFlag])) == 'виз' || Trim(source[i][orgFlag]) == '' || StrLowerCase(Trim(source[i][orgFlag])) == 'сгок') {
+        if (StrLowerCase(Trim(source[i][orgFlag])) == 'виз' || Trim(source[i][orgFlag]) == '') {
             tmpLine = "<b>Результат обработки строки " + i + ": " + '</b>';
 
             //проверка SAP
@@ -319,8 +307,8 @@ for (var i = 0; i < ArrayCount(source); i++) {
                 }
             }
 
-            if ((flag && Trim(source[i][orgFlag]) == '') || (StrLowerCase(Trim(source[i][orgFlag])) == 'виз' || StrLowerCase(Trim(source[i][orgFlag])) == 'сгок')) {
-                resultXQUsers = XQuery("for $elem in collaborators where $elem/code='" + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + source[i][userCode] + "' return $elem");
+            if ((flag && Trim(source[i][orgFlag]) == '') || (StrLowerCase(Trim(source[i][orgFlag])) == 'виз')) {
+                resultXQUsers = XQuery("for $elem in collaborators where $elem/code='" + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + '/' + source[i][userCode] + "' return $elem");
                 if (ArrayCount(resultXQUsers) == 0) {
                     if (flag) {
                         resultCreateUser = createUser(source[i], user);
@@ -329,7 +317,7 @@ for (var i = 0; i < ArrayCount(source); i++) {
                     }
                     if (resultCreateUser == 1) {
                         tmpLine += 'создан новый сотрудник ' + source[i][fullName] + '. ';
-                        resultXQUsers = XQuery("for $elem in collaborators where $elem/code='" + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + Trim(source[i][userCode]) + "' return $elem");
+                        resultXQUsers = XQuery("for $elem in collaborators where $elem/code='" + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + '/' + Trim(source[i][userCode]) + "' return $elem");
                         resultActivateTest = activateTest(source[i], ArrayFirstElem(resultXQUsers).id);
                         if (resultActivateTest == 1) {
                             tmpLine += 'Назначены тесты: ' + activateCodeTest;
@@ -340,7 +328,7 @@ for (var i = 0; i < ArrayCount(source); i++) {
                         tmpLine += logCreateUser;
                     }
                 } else if (ArrayCount(resultXQUsers) > 1) {
-                    tmpLine += 'не удалось однозначно сопоставить загружаемого сотрудника ' + source[i][fullName] + ' по коду ' + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + source[i][userCode] + '; ';
+                    tmpLine += 'не удалось однозначно сопоставить загружаемого сотрудника ' + source[i][fullName] + ' по коду ' + codeOrgStruct[StrLowerCase(Trim(source[i][orgFlag]))] + '/' + source[i][userCode] + '; ';
                     continue;
                 } else if (ArrayCount(resultXQUsers) == 1) {
                     resultActivateTest = activateTest(source[i], ArrayFirstElem(resultXQUsers).id);

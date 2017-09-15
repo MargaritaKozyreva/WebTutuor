@@ -64,22 +64,8 @@ function initCodeOrgStructure() {
 
 //Проверка присутствия сотрудника в базе
 function checkUser(arr) {
-    arrOrgs = XQuery("for $elem in orgs where $elem/name='" + arr[orgName] + "' return $elem");
-    arrCount = ArrayCount(arrOrgs);
-    if (arrCount > 1) {
-        anyError.push('Найдено более одной организации ' + arr[orgName] + '. Строка с номером ' + processLines);
-        return 3;
-    } else if (arrCount == 1) {
-        for (org in arrOrgs) {
-            orgID = org.id;
-        }
-    } else if (arrCount == 0) {
-        anyError.push('Не найдено ни одной организации с названием ' + arr[orgName] + '. Строка с номером ' + processLines);
-        return 4;
-    }
-
     codeOrg = Trim(codeOrgStruct[arr[orgName]]);
-    arrUsers = XQuery("for $elem in collaborators where $elem/org_id=" + orgID + " and $elem/code='" + codeOrg + "/" + Trim(arr[userCode]) + "' return $elem");
+    arrUsers = XQuery("for $elem in collaborators where $elem/code='" + codeOrg + "/" + Trim(arr[userCode]) + "' return $elem");
     arrCount = ArrayCount(arrUsers);
 
     //сотрудник есть в БД, не ПАО
@@ -152,12 +138,12 @@ function checkUser(arr) {
                 }
             }
         }
+        return 1;
     } else if (arrCount == 0) {
         return 0;
     } else if (arrCount > 1) {
         return 2;
     }
-    return 1;
 }
 
 //Поиск организации по имени в базе

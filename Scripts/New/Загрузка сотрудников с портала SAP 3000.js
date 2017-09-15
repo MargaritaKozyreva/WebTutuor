@@ -65,22 +65,20 @@ function initCodeOrgStructure() {
 
 //Проверка присутствия сотрудника в базе
 function checkUser(arr) {
-    arrUsers = XQuery("for $elem in collaborators where $elem/code='" + codeOrgStruct[arr[orgName]] + arr[userCode] + "' return $elem");
+    arrUsers = XQuery("for $elem in collaborators where $elem/code='" + codeOrgStruct[arr[orgName]] + '/' + arr[userCode] + "' return $elem");
     arrCount = ArrayCount(arrUsers);
-    if (arrCount > 0) {
+    if (arrCount == 1) {
         for (user in arrUsers) {
             try {
                 doc = OpenDoc(UrlFromDocID(user.id));
 
+                doc.TopElem.password = Trim(arr[passUser]);
+                doc.TopElem.change_password = false;
                 if ((Trim(arr[passUser]) == '' || Trim(arr[passUser]) == '-$R#-') && doc.TopElem.password == '') {
                     doc.TopElem.change_password = true;
                 }
-                //if (doc.TopElem.password == '') {
-                doc.TopElem.password = Trim(arr[passUser]);
-                doc.TopElem.change_password = false;
-                //}
 
-                if (codeOrgStruct[arr[orgName]] != 'LP') {
+                if (codeOrgStruct[arr[orgName]] != '1010') {
                     try {
                         doc.TopElem.lastname = StrTitleCase(String(arr[fullName]).split(' ')[0]);
                         doc.TopElem.firstname = StrTitleCase(String(arr[fullName]).split(' ')[1]);
@@ -96,13 +94,11 @@ function checkUser(arr) {
                 anyError.push('Не удалось обновить информацию о сотруднике с кодом ' + codeOrgStruct[arr[orgName]] + arr[userCode] + ' по причине: ' + ExtractUserError(e));
             }
         }
-        if (arrCount == 1) {
-            return 1;
-        } else if (arrCount > 1) {
-            return 2;
-        }
+        return 1;
     } else if (arrCount == 0) {
         return 0;
+    } else if (arrCount > 1) {
+        return 2;
     }
 }
 
@@ -164,10 +160,6 @@ function findPos(posName, org, dep) {
             newPos.TopElem.name = StrTitleCase(StrLowerCase(posName));
             newPos.TopElem.org_id = Int(org[0]);
             newPos.TopElem.parent_object_id = Int(dep[0]);
-            if (org[1] == 'ПАО НЛМК') {
-                //newPos.TopElem.code = '!delete';
-                //newPos.TopElem.custom_elems.ObtainChildByKey('flagDelete').value = true;
-            }
             newPos.Save();
             return arr = [newPos.DocID, StrTitleCase(StrLowerCase(posName))];
         } catch (e) {
@@ -228,25 +220,41 @@ try {
 lineArray = ArrayFirstElem(sourceList.TopElem);
 for (var i = 0; i < ArrayCount(lineArray); i++) {
     flagPAO = false;
+    codeOrg = codeOrgStruct[lineArray[i][orgName]];
     objUser = checkUser(lineArray[i]);
     if (objUser == 2) {
         multipleUsers.push('Строка ' + Int(i + 1) + ': табельный номер ' + String(lineArray[i][userCode]) + ', организация ' + lineArray[i][orgName]);
     } else if (objUser == 0) {
+        //проверка SAP
+        if (codeOrg == '1010') {
+            usersSAP = XQuery("for $elem in cc_standartsapusers where $elem/code='" + lineArray[i][userCode] + "' return $elem");
+            if (ArrayCount(usersSAP) == 1) {
+                userSAP = ArrayFirstElem(usersSAP);
+                if (StrLowerCase(String(userSAP.name).split(' ')[0]) == StrLowerCase(String(lineArray[i][fullName]).split(' ')[0])) {
+                    flagPAO = true;
+                } else {
+                    anyError.push('Строка ' + i + ': сотрудник с табельным номером ' + lineArray[i][userCode] + ' не прошел проверку в SAP. Сотрудник не обработан.');
+                    continue;
+                }
+            } else if (ArrayCount(usersSAP) > 1) {
+                anyError.push('Не удалось однозначно определить сотрудника с табельным номером ' + lineArray[i][userCode] + ' в списке SAP. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
+                continue;
+            } else if (ArrayCount(usersSAP) == 0) {
+                anyError.push('Не удалось найти сотрудника с табельным номером ' + lineArray[i][userCode] + ' в списке SAP. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
+                continue;
+            }
+        }
+
         //новый юзер
         try {
             newUser = OpenNewDoc('x-local://wtv/wtv_collaborator.xmd');
             newUser.BindToDb(DefaultDb);
 
-            newUser.TopElem.code = codeOrgStruct[lineArray[i][orgName]] + Trim(lineArray[i][userCode]);
+            newUser.TopElem.code = codeOrg + '/' + Trim(lineArray[i][userCode]);
             newUser.TopElem.custom_elems.ObtainChildByKey("userCode").value = Trim(lineArray[i][userCode]);
+            newUser.TopElem.login = codeOrg + '*' + Trim(lineArray[i][userCode]);
 
-            if (codeOrgStruct[lineArray[i][orgName]] == 'LP') {
-                newUser.TopElem.login = 'DO*' + Trim(lineArray[i][userCode]);
-            } else {
-                newUser.TopElem.login = 'DO*' + codeOrgStruct[lineArray[i][orgName]] + '*' + Trim(lineArray[i][userCode]);
-            }
-
-            if (lineArray[i][passUser] == '-$R#-' || lineArray[i][passUser] == '') {
+            if (lineArray[i][passUser] == '-$R#-' || Trim(lineArray[i][passUser]) == '') {
                 newUser.TopElem.change_password = true;
                 newUser.TopElem.password = '';
             } else {
@@ -254,25 +262,6 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
             }
 
             newUser.TopElem.email = StrLowerCase(Trim(lineArray[i][emailUser]));
-
-            if (lineArray[i][orgName] == 'ПАО "НЛМК"') {
-                usersSAP = XQuery("for $elem in cc_standartsapusers where $elem/code='" + lineArray[i][userCode] + "' return $elem");
-                if (ArrayCount(usersSAP) == 1) {
-                    userSAP = ArrayFirstElem(usersSAP);
-                    if (StrLowerCase(String(userSAP.name).split(' ')[0]) == StrLowerCase(String(lineArray[i][fullName]).split(' ')[0])) {
-                        flagPAO = true;
-                    } else {
-                        anyError.push('Строка ' + i + ': сотрудник с табельным номером ' + lineArray[i][userCode] + ' не прошел проверку в SAP. Сотрудник не обработан.');
-                        continue;
-                    }
-                } else if (ArrayCount(usersSAP) > 1) {
-                    anyError.push('Не удалось однозначно определить сотрудника с табельным номером ' + lineArray[i][userCode] + ' в списке SAP. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
-                    continue;
-                } else if (ArrayCount(usersSAP) == 0) {
-                    anyError.push('Не удалось найти сотрудника с табельным номером ' + lineArray[i][userCode] + ' в списке SAP. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
-                    continue;
-                }
-            }
 
             arrFIO = [];
             if (flagPAO) {

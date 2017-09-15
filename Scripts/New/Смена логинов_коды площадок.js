@@ -29,8 +29,9 @@ for (user in users) {
     code = codeOrgStruct[org];
     doc = OpenDoc(UrlFromDocID(user.id));
     userCode = String(doc.TopElem.code).substr(2);
-    doc.TopElem.login = String(code) + userCode;
+    doc.TopElem.login = String(code) + '*' + userCode;
     doc.TopElem.code = String(code) + '/' + userCode;
+    doc.TopElem.custom_elems.ObtainChildByKey('userCode').value = userCode;
     try {
         doc.Save();
         ok++;

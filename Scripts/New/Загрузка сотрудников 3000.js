@@ -279,7 +279,6 @@ try {
 lineArray = ArrayFirstElem(sourceList.TopElem);
 for (var i = 0; i < ArrayCount(lineArray); i++) {
     if (i == 0) continue;
-    processLines += 1;
     if (lineArray[i][userCode] == '') continue;
     flagPAO = false;
     objUser = checkUser(lineArray[i]);
@@ -408,7 +407,7 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
             alert('Невозможно создать нового сотрудника: ' + ExtractUserError(e));
             break;
         }
-        
+        processLines += 1;
     } else if (objUser == 1) {
         //есть юзер
         duplicateUser.push('Строка ' + Int(i + 1) + ': табельный номер ' + lineArray[i][userCode] + ', организация ' + lineArray[i][orgName]);

@@ -1,18 +1,19 @@
 //-=Раздел объявления переменных=-
 excelFileUrl = 'x-local:///c:/order3000.xls';
-logFileUrl = 'c:/Disk D/log.html';
+logFileUrl = 'c:/log.html';
 userCode = 0;
 fullName = 1;
 orgName = 2;
 depName = 3;
 posName = 4;
-emailUser = 6;
+emailUser = 5;
 processLines = 0;
 codeOrgStruct = {};
 codeLoginStruct = {};
 multipleUsers = [];
 duplicateUser = [];
 anyError = [];
+idCourse = 0;
 //--------------------------------------------------
 
 //-=Раздел объявления функций=-
@@ -70,9 +71,13 @@ function checkUser(arr) {
 
     //сотрудник есть в БД, не ПАО
     if (arrCount == 1) {
-        if (codeOrg != '1010') {
-            for (user in arrUsers) {
-                doc = OpenDoc(UrlFromDocID(user.id));
+        for (user in arrUsers) {
+            doc = OpenDoc(UrlFromDocID(user.id));
+            if (codeOrg == '1010' && doc.TopElem.email == '') {
+                doc.TopElem.email = Trim(arr[emailUser]);
+            }
+
+            if (codeOrg != '1010') {
 
                 try {
                     doc.TopElem.lastname = StrTitleCase(String(arr[fullName]).split(' ')[0]);
@@ -82,6 +87,8 @@ function checkUser(arr) {
                     anyError.push('Неверный формат ФИО ' + arr[fullName]);
                     continue;
                 }
+
+                doc.TopElem.email = Trim(arr[emailUser]);
 
                 linkOrg = findOrg(arr[orgName]);
                 if (linkOrg.length == 2) {
@@ -131,12 +138,18 @@ function checkUser(arr) {
                     }
                     continue;
                 }
-                try {
-                    doc.Save();
-                } catch (e) {
-                    anyError.push('Не удалось обновить информацию о сотруднике с кодом ' + codeOrg + '/' + arr[userCode] + ' по причине: ' + ExtractUserError(e));
-                }
+                // try {
+                //     doc.Save();
+                // } catch (e) {
+                //     anyError.push('Не удалось обновить информацию о сотруднике с кодом ' + codeOrg + '/' + arr[userCode] + ' по причине: ' + ExtractUserError(e));
+                // }
             }
+            try {
+                doc.Save();
+            } catch (e) {
+                anyError.push('Не удалось обновить информацию о сотруднике с кодом ' + codeOrg + '/' + arr[userCode] + ' по причине: ' + ExtractUserError(e));
+            }
+            course = tools.activate_course_to_person(user.id, idCourse);
         }
         return 1;
     } else if (arrCount == 0) {
@@ -256,15 +269,30 @@ function ShowMesssages() {
 
 //-=Тело скрипта=-
 initCodeOrgStructure();
+var courses;
+courses = XQuery("for $elem in courses where $elem/code='KONFINT' return $elem");
+if (ArrayCount(courses) > 1) {
+    alert('В базе найдено больее двух курсов с кодом KONFINT!. Загрузка остановлена.');
+    return;
+} else if (ArrayCount(courses) == 1) {
+    for (item in courses) {
+        idCourse = item.id;
+    }
+} else {
+    alert('В базе не найден курс с кодом KONFINT!. Загрузка остановлена.');
+    return;
+}
+
 try {
     sourceList = OpenDoc(excelFileUrl, 'format=excel');
 } catch (e) {
     alert('Невозможно открыть файл с данными: ' + ExtractUserError(e));
     return;
 }
+
 lineArray = ArrayFirstElem(sourceList.TopElem);
 for (var i = 0; i < ArrayCount(lineArray); i++) {
-    if (i == 0) continue;
+    //if (i == 0) continue;
     if (lineArray[i][userCode] == '') continue;
     flagPAO = false;
     objUser = checkUser(lineArray[i]);
@@ -274,7 +302,7 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
 
         //проверка SAP
         if (lineArray[i][orgName] == 'ПАО "НЛМК"') {
-            usersSAP = XQuery("for $elem in cc_standartuserss where $elem/code='" + lineArray[i][userCode] + "' return $elem");
+            usersSAP = XQuery("for $elem in cc_standartsapusers where $elem/code='" + lineArray[i][userCode] + "' return $elem");
             if (ArrayCount(usersSAP) == 1) {
                 userSAP = ArrayFirstElem(usersSAP);
                 if (StrLowerCase(String(userSAP.name).split(' ')[0]) == StrLowerCase(String(lineArray[i][fullName]).split(' ')[0])) {
@@ -389,14 +417,17 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
                 continue;
             }
             newUser.Save();
+            course = tools.activate_course_to_person(newUser.DocID, idCourse);
         } catch (e) {
             alert('Невозможно создать нового сотрудника: ' + ExtractUserError(e));
             break;
         }
+
         processLines += 1;
     } else if (objUser == 1) {
         //есть юзер
         duplicateUser.push('Строка ' + Int(i + 1) + ': табельный номер ' + lineArray[i][userCode] + ', организация ' + lineArray[i][orgName]);
+
     } else if ((objUser == 3) || (objUser == 4)) {
         continue;
     }

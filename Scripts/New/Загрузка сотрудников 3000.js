@@ -14,6 +14,7 @@ multipleUsers = [];
 duplicateUser = [];
 anyError = [];
 idCourse = 0;
+idGroup = 0;
 //--------------------------------------------------
 
 //-=Раздел объявления функций=-
@@ -73,8 +74,10 @@ function checkUser(arr) {
     if (arrCount == 1) {
         for (user in arrUsers) {
             doc = OpenDoc(UrlFromDocID(user.id));
-            if (codeOrg == '1010' && doc.TopElem.email == '') {
+            if (Trim(arr[emailUser]) != '0') {
                 doc.TopElem.email = Trim(arr[emailUser]);
+            } else {
+                doc.TopElem.email = '';
             }
 
             if (codeOrg != '1010') {
@@ -87,8 +90,6 @@ function checkUser(arr) {
                     anyError.push('Неверный формат ФИО ' + arr[fullName]);
                     continue;
                 }
-
-                doc.TopElem.email = Trim(arr[emailUser]);
 
                 linkOrg = findOrg(arr[orgName]);
                 if (linkOrg.length == 2) {
@@ -149,7 +150,7 @@ function checkUser(arr) {
             } catch (e) {
                 anyError.push('Не удалось обновить информацию о сотруднике с кодом ' + codeOrg + '/' + arr[userCode] + ' по причине: ' + ExtractUserError(e));
             }
-            course = tools.activate_course_to_person(user.id, idCourse);
+            course = tools.activate_course_to_person(user.id, idCourse,,,,,,,idGroup);
         }
         return 1;
     } else if (arrCount == 0) {
@@ -280,6 +281,19 @@ if (ArrayCount(courses) > 1) {
     }
 } else {
     alert('В базе не найден курс с кодом KONFINT!. Загрузка остановлена.');
+    return;
+}
+
+groups = XQuery("for #elem in groups where $elem/code='KONFLICT' return $elem");
+if (ArrayCount(groups) > 1) {
+    alert('В базе найдено больее двух групп с кодом KONFLICT!. Загрузка остановлена.');
+    return;
+} else if (ArrayCount(courses) == 1) {
+    for (item in groups) {
+        idGroup = item.id;
+    }
+} else {
+    alert('В базе не найдено группы с кодом KONFLICT!. Загрузка остановлена.');
     return;
 }
 
@@ -417,7 +431,7 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
                 continue;
             }
             newUser.Save();
-            course = tools.activate_course_to_person(newUser.DocID, idCourse);
+            course = tools.activate_course_to_person(newUser.DocID, idCourse,,,,,,,idGroup);
         } catch (e) {
             alert('Невозможно создать нового сотрудника: ' + ExtractUserError(e));
             break;

@@ -283,7 +283,7 @@ if (ArrayCount(courses) > 1) {
     alert('В базе не найден курс с кодом KONFINT!. Загрузка остановлена.');
     return;
 }
-
+var groups;
 groups = XQuery("for #elem in groups where $elem/code='KONFLICT' return $elem");
 if (ArrayCount(groups) > 1) {
     alert('В базе найдено больее двух групп с кодом KONFLICT!. Загрузка остановлена.');

@@ -62,7 +62,8 @@ for (var i = 0; i < ArrayCount(srcArr); i++) {
             if (ln1 == ln2) {
                 doc.TopElem.is_dismiss = true;
                 doc.TopElem.last_data.web_banned = true;
-                doc.TopElem.custom_elems.ObtainChildByKey("dateDismiss").value = ParseDate(srcArr[i][dateDismiss]);
+                doc.TopElem.dismiss_date = ParseDate(srcArr[i][dateDismiss]);
+                //doc.TopElem.custom_elems.ObtainChildByKey("dateDismiss").value = ParseDate(srcArr[i][dateDismiss]);
             } else {
                 logMsg.push('Табельный номер ' + code + ': не совпадают фамилии!');
                 continue;

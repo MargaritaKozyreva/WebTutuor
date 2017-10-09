@@ -14,9 +14,14 @@ function checkUser(user) {
     if (ArrayCount(usersSAP) == 1) {
         userSAP = ArrayFirstElem(usersSAP);
         userDB = OpenDoc(UrlFromDocID(user.id));
-        userDB.TopElem.lastname = StrTitleCase(String(userSAP.name).split(' ')[0]);
-        userDB.TopElem.firstname = StrTitleCase(String(userSAP.name).split(' ')[1]);
-        userDB.TopElem.middlename = StrTitleCase(String(userSAP.name).split(' ')[2]);
+        try {
+            userDB.TopElem.lastname = StrTitleCase(String(userSAP.name).split(' ')[0]);
+            userDB.TopElem.firstname = StrTitleCase(String(userSAP.name).split(' ')[1]);
+            userDB.TopElem.middlename = StrTitleCase(String(userSAP.name).split(' ')[2]);
+        } catch (e) {
+            anyError.push('Неверный формат ФИО у сотрудника с табельным номером ' + userCodeNum + '. Сотрудник не обработан');
+            return;
+        }
         userDB.TopElem.custom_elems.ObtainChildByKey("userCode").value = userCodeNum;
         linkOrg = findOrg(Trim(userSAP.nameorg));
         if (linkOrg.length == 2) {
@@ -154,10 +159,12 @@ function ShowMesssages() {
 //**************************************
 
 //-=Тело скрипта=-
+alert('!Агент синхронизации стартовал.');
 users = XQuery("for $elem in collaborators where contains($elem/code, '1010/') return $elem");
 for (user in users) {
     checkUser(user);
 }
 ShowMesssages();
 writeLog(anyError);
+alert('!Агент синхронизации завершил работу.');
 //************************************

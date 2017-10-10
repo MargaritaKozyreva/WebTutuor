@@ -80,7 +80,11 @@ function checkUser(user) {
         anyError.push('Не удалось однозначно определить сотрудника с табельным номером ' + userCodeNum + ' в списке SAP. Сотрудник не обработан.');
         return;
     } else if (ArrayCount(usersSAP) == 0) {
-        anyError.push('Не удалось найти сотрудника с табельным номером ' + userCodeNum + ' в списке SAP. Сотрудник не обработан.');
+        if (user.is_dismiss) {
+            anyError.push('Не удалось найти <b>уволенного</b> сотрудника с табельным номером ' + userCodeNum + ' в списке SAP. Сотрудник не обработан.');
+        } else {
+            anyError.push('Не удалось найти сотрудника с табельным номером ' + userCodeNum + ' в списке SAP. Сотрудник не обработан.');
+        }
         return;
     }
 }

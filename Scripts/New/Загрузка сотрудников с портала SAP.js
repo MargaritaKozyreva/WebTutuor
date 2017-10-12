@@ -12,7 +12,8 @@ processLines = 0;
 codeOrgStruct = {};
 codeLoginStruct = {};
 multipleUsers = [];
-duplicateUser = [];
+duplicateUsers = [];
+createUsers = [];
 anyError = [];
 //--------------------------------------------------
 
@@ -20,47 +21,65 @@ anyError = [];
 
 //Инициализация структуры префиксов кодов организаций
 function initCodeOrgStructure() {
-    codeOrgStruct['ПАО "НЛМК"'] = 'LP';
-    codeOrgStruct['ООО "НЛМК-ИТ"'] = 'LP';
-    codeOrgStruct['ОАО "СТОЙЛЕНСКИЙ  ГОК"'] = 'SG';
-    codeOrgStruct['ООО "ВИЗ-СТАЛЬ"'] = 'EK';
-    codeOrgStruct['ОАО "АЛТАЙ-КОКС"'] = 'AK';
-    codeOrgStruct['ООО "НЛМК-Сорт"'] = 'EK';
-    codeOrgStruct['ООО "НЛМК-УЧЕТНЫЙ ЦЕНТР"'] = 'LP';
-    codeOrgStruct['ООО "ГАЗОБЕТОН 48"'] = 'LP';
-    codeOrgStruct['АО "НЛМК - Инжиниринг"'] = 'LP';
-    codeOrgStruct['ООО "НЛМК-КАЛУГА"'] = 'KG';
-    codeOrgStruct['ООО "НЛМК-МЕТИЗ"'] = 'EK';
-    codeOrgStruct['ОАО "НСММЗ"'] = 'EK';
-    codeOrgStruct['ООО "НЛМК-Урал Сервис"'] = 'EK';
-    codeOrgStruct['АО "НЛМК-Урал"'] = 'EK';
-    codeOrgStruct['ОАО "ВИЗ"'] = 'EK';
-    codeOrgStruct['ОАО "УралНИИАС"'] = 'EK';
-    codeOrgStruct['ООО "НЛМК-Связь"'] = 'LP';
-    codeOrgStruct['ООО "НПД"'] = 'LP';
-    codeOrgStruct['ОАО "ДОЛОМИТ"'] = 'LP';
-    codeOrgStruct['ОАО "СТАГДОК"'] = 'LP';
-    codeOrgStruct['ООО "Торговый дом НЛМК"'] = 'LP';
+    codeOrgStruct['АО "НЛМК-Инжиниринг"'] = 'F050';
+    codeOrgStruct['АО "НЛМК-Урал"'] = '5010';
+    codeOrgStruct['ОАО "УралНИИАС"'] = 'F033';
+    codeOrgStruct['ОАО "АЛТАЙ-КОКС"'] = '3010';
+    codeOrgStruct['ОАО "ВИЗ"'] = 'F034';
+    codeOrgStruct['ОАО "Вторчермет"'] = 'F013';
+    codeOrgStruct['ОАО "ДОЛОМИТ"'] = 'F007';
+    codeOrgStruct['ОАО "СТАГДОК"'] = 'F008';
+    codeOrgStruct['ОАО "СТОЙЛЕНСКИЙ ГОК"'] = '2010';
+    codeOrgStruct['ОАО "Чувашвтормет"'] = 'F032';
+    codeOrgStruct['ООО "ГОК "Жерновский-1"'] = '2020';
+    codeOrgStruct['ООО "ГОК "Усинский-3"'] = '2030';
+    codeOrgStruct['ООО "ВИЗ-СТАЛЬ"'] = '1020';
+    codeOrgStruct['ООО "Торговый дом НЛМК"'] = '9020';
+    codeOrgStruct['ООО "Вторчермет НЛМК Башкортостан"'] = 'F018';
+    codeOrgStruct['ООО "Вторчермет НЛМК Волга"'] = 'F019';
+    codeOrgStruct['ООО "Вторчермет НЛМК Восток"'] = 'F020';
+    codeOrgStruct['ООО "Вторчермет НЛМК Запад"'] = 'F022';
+    codeOrgStruct['ООО "Вторчермет НЛМК Западная Сибирь"'] = 'F023';
+    codeOrgStruct['ООО "Вторчермет НЛМК Пермь"'] = 'F024';
+    codeOrgStruct['ООО "Вторчермет НЛМК Поволжье"'] = 'F025';
+    codeOrgStruct['ООО "Вторчермет НЛМК Республика"'] = 'F026';
+    codeOrgStruct['ООО "Вторчермет НЛМК Север"'] = 'F027';
+    codeOrgStruct['ООО "Вторчермет НЛМК Сибирь"'] = 'F028';
+    codeOrgStruct['ООО "Вторчермет НЛМК Урал"'] = 'F012';
+    codeOrgStruct['ООО "Вторчермет НЛМК Центр"'] = 'F030';
+    codeOrgStruct['ООО "Вторчермет НЛМК Черноземье"'] = 'F031';
+    codeOrgStruct['ООО "Вторчермет НЛМК Юг"'] = 'F021';
+    codeOrgStruct['ООО "Вторчермет НЛМК"'] = 'F014';
+    codeOrgStruct['ООО "ГАЗОБЕТОН 48"'] = 'F006';
+    codeOrgStruct['ООО "НЛМК-ИТ"'] = '9010';
+    codeOrgStruct['ООО "НЛМК-КАЛУГА"'] = '5020';
+    codeOrgStruct['ООО "НЛМК-МЕТИЗ"'] = '5030';
+    codeOrgStruct['ООО "НЛМК-Связь"'] = '9030';
+    codeOrgStruct['ООО "НЛМК-Сорт"'] = 'F017';
+    codeOrgStruct['ООО "НЛМК-Урал Сервис"'] = '4010';
+    codeOrgStruct['ООО "НЛМК-УЧЕТНЫЙ ЦЕНТР"'] = 'F001';
+    codeOrgStruct['ООО "НОВОЛИПЕЦКАЯ МЕТАЛЛОБАЗА"'] = 'F009';
+    codeOrgStruct['ООО "ПО Татвторчермет"'] = 'F029';
+    codeOrgStruct['ООО "СТРОИТЕЛЬНО-МОНТАЖНЫЙ ТРЕСТ НЛМК"'] = 'F011';
+    codeOrgStruct['ПАО "НЛМК"'] = '1010';
 }
 
 //Проверка присутствия сотрудника в базе
 function checkUser(arr) {
-    arrUsers = XQuery("for $elem in collaborators where $elem/code='" + codeOrgStruct[arr[orgName]] + arr[userCode] + "' return $elem");
+    arrUsers = XQuery("for $elem in collaborators where $elem/code='" + codeOrgStruct[arr[orgName]] + '/' + arr[userCode] + "' return $elem");
     arrCount = ArrayCount(arrUsers);
-    if (arrCount > 0) {
+    if (arrCount == 1) {
         for (user in arrUsers) {
             try {
                 doc = OpenDoc(UrlFromDocID(user.id));
 
+                doc.TopElem.password = Trim(arr[passUser]);
+                doc.TopElem.change_password = false;
                 if ((Trim(arr[passUser]) == '' || Trim(arr[passUser]) == '-$R#-') && doc.TopElem.password == '') {
                     doc.TopElem.change_password = true;
                 }
-                //if (doc.TopElem.password == '') {
-                doc.TopElem.password = Trim(arr[passUser]);
-                doc.TopElem.change_password = false;
-                //}
 
-                if (codeOrgStruct[arr[orgName]] != 'LP') {
+                if (codeOrgStruct[arr[orgName]] != '1010') {
                     try {
                         doc.TopElem.lastname = StrTitleCase(String(arr[fullName]).split(' ')[0]);
                         doc.TopElem.firstname = StrTitleCase(String(arr[fullName]).split(' ')[1]);
@@ -73,16 +92,26 @@ function checkUser(arr) {
                 doc.TopElem.email = StrLowerCase(arr[emailUser]);
                 doc.Save();
             } catch (e) {
-                anyError.push('Не удалось обновить информацию о сотруднике с кодом ' + codeOrgStruct[arr[orgName]] + arr[userCode] + ' по причине: ' + ExtractUserError(e));
+                anyError.push('Не удалось обновить информацию о сотруднике с кодом ' + codeOrgStruct[arr[orgName]] + '/' + arr[userCode] + ' по причине: ' + ExtractUserError(e));
+                return 3;
             }
-        }
-        if (arrCount == 1) {
-            return 1;
-        } else if (arrCount > 1) {
-            return 2;
+            try {
+                flag = tools.create_notification('7_1', user.id);
+                if (flag) {
+                    return 1;
+                } else {
+                    return 3;
+                }
+            } catch (e) {
+                anyError.push('Не удалось отправить уведомление сотруднику с кодом ' + codeOrgStruct[arr[orgName]] + '/' + arr[userCode] + ' по причине: ' + ExtractUserError(e));
+                return 3;
+            }
+            //return 1;
         }
     } else if (arrCount == 0) {
         return 0;
+    } else if (arrCount > 1) {
+        return 2;
     }
 }
 
@@ -144,10 +173,6 @@ function findPos(posName, org, dep) {
             newPos.TopElem.name = StrTitleCase(StrLowerCase(posName));
             newPos.TopElem.org_id = Int(org[0]);
             newPos.TopElem.parent_object_id = Int(dep[0]);
-            if (org[1] == 'ПАО НЛМК') {
-                //newPos.TopElem.code = '!delete';
-                //newPos.TopElem.custom_elems.ObtainChildByKey('flagDelete').value = true;
-            }
             newPos.Save();
             return arr = [newPos.DocID, StrTitleCase(StrLowerCase(posName))];
         } catch (e) {
@@ -157,8 +182,15 @@ function findPos(posName, org, dep) {
 }
 
 //Вывод лога в файл
-function writeLog(multiple, duplicate, error) {
+function writeLog(multiple, duplicate, error, create) {
     resultStr = '';
+    if (create.length > 0) {
+        createStr = '<b>Сотрудники, созданные в БД (новые сотрудники):</b></br>';
+        for (item in create) {
+            createStr += item + '</br>';
+        }
+        resultStr += createStr;
+    }
     if (error.length > 0) {
         errorStr = '<b>Критические ошибки при обработке Excel:</b></br>';
         for (item in error) {
@@ -189,10 +221,10 @@ function writeLog(multiple, duplicate, error) {
 
 //Отображение результатов обработки
 function ShowMesssages() {
-    if (multipleUsers.length == 0 && duplicateUser.length == 0 && anyError.length == 0) {
-        alert('Загружено ' + processLines + ' сотрудников.')
+    if (multipleUsers.length == 0 && duplicateUsers.length == 0 && anyError.length == 0) {
+        alert('Создано ' + processLines + ' новых сотрудников.');
     } else {
-        alert('Загружено ' + processLines + ' новых сотрудников. \nЕсть необработанные строки, см. файл-лог C:\\log.html.');
+        alert('Создано ' + processLines + ' новых сотрудников.\nЕсть необработанные строки, см. файл-лог C:\\log.html.');
     }
 }
 //**************************************
@@ -208,25 +240,41 @@ try {
 lineArray = ArrayFirstElem(sourceList.TopElem);
 for (var i = 0; i < ArrayCount(lineArray); i++) {
     flagPAO = false;
+    codeOrg = codeOrgStruct[lineArray[i][orgName]];
     objUser = checkUser(lineArray[i]);
     if (objUser == 2) {
         multipleUsers.push('Строка ' + Int(i + 1) + ': табельный номер ' + String(lineArray[i][userCode]) + ', организация ' + lineArray[i][orgName]);
     } else if (objUser == 0) {
+        //проверка SAP
+        if (codeOrg == '1010') {
+            usersSAP = XQuery("for $elem in cc_standartsapusers where $elem/code='" + lineArray[i][userCode] + "' return $elem");
+            if (ArrayCount(usersSAP) == 1) {
+                userSAP = ArrayFirstElem(usersSAP);
+                if (StrLowerCase(String(userSAP.name).split(' ')[0]) == StrLowerCase(String(lineArray[i][fullName]).split(' ')[0])) {
+                    flagPAO = true;
+                } else {
+                    anyError.push('Строка ' + i + ': сотрудник с табельным номером ' + lineArray[i][userCode] + ' не прошел проверку в SAP. Сотрудник не обработан.');
+                    continue;
+                }
+            } else if (ArrayCount(usersSAP) > 1) {
+                anyError.push('Не удалось однозначно определить сотрудника с табельным номером ' + lineArray[i][userCode] + ' в списке SAP. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
+                continue;
+            } else if (ArrayCount(usersSAP) == 0) {
+                anyError.push('Не удалось найти сотрудника с табельным номером ' + lineArray[i][userCode] + ' в списке SAP. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
+                continue;
+            }
+        }
+
         //новый юзер
         try {
             newUser = OpenNewDoc('x-local://wtv/wtv_collaborator.xmd');
             newUser.BindToDb(DefaultDb);
 
-            newUser.TopElem.code = codeOrgStruct[lineArray[i][orgName]] + Trim(lineArray[i][userCode]);
+            newUser.TopElem.code = codeOrg + '/' + Trim(lineArray[i][userCode]);
             newUser.TopElem.custom_elems.ObtainChildByKey("userCode").value = Trim(lineArray[i][userCode]);
+            newUser.TopElem.login = codeOrg + '*' + Trim(lineArray[i][userCode]);
 
-            if (codeOrgStruct[lineArray[i][orgName]] == 'LP') {
-                newUser.TopElem.login = 'DO*' + Trim(lineArray[i][userCode]);
-            } else {
-                newUser.TopElem.login = 'DO*' + codeOrgStruct[lineArray[i][orgName]] + '*' + Trim(lineArray[i][userCode]);
-            }
-
-            if (lineArray[i][passUser] == '-$R#-' || lineArray[i][passUser] == '') {
+            if (lineArray[i][passUser] == '-$R#-' || Trim(lineArray[i][passUser]) == '') {
                 newUser.TopElem.change_password = true;
                 newUser.TopElem.password = '';
             } else {
@@ -234,25 +282,6 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
             }
 
             newUser.TopElem.email = StrLowerCase(Trim(lineArray[i][emailUser]));
-
-            if (lineArray[i][orgName] == 'ПАО "НЛМК"') {
-                usersSAP = XQuery("for $elem in cc_standartsapusers where $elem/code='" + lineArray[i][userCode] + "' return $elem");
-                if (ArrayCount(usersSAP) == 1) {
-                    userSAP = ArrayFirstElem(usersSAP);
-                    if (StrLowerCase(String(userSAP.name).split(' ')[0]) == StrLowerCase(String(lineArray[i][fullName]).split(' ')[0])) {
-                        flagPAO = true;
-                    } else {
-                        anyError.push('Строка '+ i +': сотрудник с табельным номером ' + lineArray[i][userCode] + ' не прошел проверку в SAP. Сотрудник не обработан.');
-                        continue;
-                    }
-                } else if (ArrayCount(usersSAP) > 1) {
-                    anyError.push('Не удалось однозначно определить сотрудника с табельным номером ' + lineArray[i][userCode] + ' в списке SAP. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
-                    continue;
-                } else if (ArrayCount(usersSAP) == 0) {
-                    anyError.push('Не удалось найти сотрудника с табельным номером ' + lineArray[i][userCode] + ' в списке SAP. Сотрудник из строки ' + Int(i + 1) + ' не обработан.');
-                    continue;
-                }
-            }
 
             arrFIO = [];
             if (flagPAO) {
@@ -343,11 +372,24 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
             break;
         }
         processLines += 1;
-    } else if (objUser == 1)
+        try {
+            flagNew = tools.create_notification('7_1', newUser.DocID);
+            if (flagNew) {
+                createUsers.push('Сотрудник с кодом ' + codeOrg + '/' + Trim(lineArray[i][userCode]) + 'успешно создан. Сообщение отправлено.');
+            } else {
+                createUsers.push('Сотрудник с кодом ' + codeOrg + '/' + Trim(lineArray[i][userCode]) + 'успешно создан. <b>Сообщение НЕ отправлено!!!</b>.');
+            }
+        } catch (e) {
+            anyError.push('Не удалось отправить уведомление сотруднику с кодом ' + codeOrg + '/' + Trim(lineArray[i][userCode]) + ' по причине: ' + ExtractUserError(e));
+        }
+    } else if (objUser == 1) {
         //есть юзер
-        duplicateUser.push('Строка ' + Int(i + 1) + ': табельный номер ' + lineArray[i][userCode] + ', организация ' + lineArray[i][orgName]);
+        duplicateUsers.push('Строка ' + Int(i + 1) + ': табельный номер ' + lineArray[i][userCode] + ', организация ' + lineArray[i][orgName] + '. Сообщение отправлено.');
+    } else if (objUser==3) {
+        duplicateUsers.push('Строка ' + Int(i + 1) + ': табельный номер ' + lineArray[i][userCode] + ', организация ' + lineArray[i][orgName] + '. <b>Сообщение НЕ отправлено!!!</b>');
+    }
 }
 
-writeLog(multipleUsers, duplicateUser, anyError);
+writeLog(multipleUsers, duplicateUsers, anyError, createUsers);
 ShowMesssages();
 //************************************

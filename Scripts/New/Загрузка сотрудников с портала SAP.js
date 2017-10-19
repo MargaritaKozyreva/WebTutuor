@@ -375,9 +375,9 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
         try {
             flagNew = tools.create_notification('7_1', newUser.DocID);
             if (flagNew) {
-                createUsers.push('Сотрудник с кодом ' + codeOrg + '/' + Trim(lineArray[i][userCode]) + 'успешно создан. Сообщение отправлено.');
+                createUsers.push('Сотрудник с кодом ' + codeOrg + '/' + Trim(lineArray[i][userCode]) + ' успешно создан. Сообщение отправлено.');
             } else {
-                createUsers.push('Сотрудник с кодом ' + codeOrg + '/' + Trim(lineArray[i][userCode]) + 'успешно создан. <b>Сообщение НЕ отправлено!!!</b>.');
+                createUsers.push('Сотрудник с кодом ' + codeOrg + '/' + Trim(lineArray[i][userCode]) + ' успешно создан. <b>Сообщение НЕ отправлено!!!</b>.');
             }
         } catch (e) {
             anyError.push('Не удалось отправить уведомление сотруднику с кодом ' + codeOrg + '/' + Trim(lineArray[i][userCode]) + ' по причине: ' + ExtractUserError(e));

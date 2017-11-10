@@ -74,11 +74,11 @@ function checkUser(arr) {
     if (arrCount == 1) {
         for (user in arrUsers) {
             doc = OpenDoc(UrlFromDocID(user.id));
-            if (Trim(arr[emailUser]) != '0') {
-                doc.TopElem.email = Trim(arr[emailUser]);
-            } else {
-                doc.TopElem.email = '';
-            }
+            //if (Trim(arr[emailUser]) != '0') {
+            doc.TopElem.email = Trim(StrLowerCase(arr[emailUser]));
+            //} else {
+            //    doc.TopElem.email = '';
+            //}
 
             if (codeOrg != '1010') {
 
@@ -150,7 +150,7 @@ function checkUser(arr) {
             } catch (e) {
                 anyError.push('Не удалось обновить информацию о сотруднике с кодом ' + codeOrg + '/' + arr[userCode] + ' по причине: ' + ExtractUserError(e));
             }
-            course = tools.activate_course_to_person(user.id, idCourse,,,,,,,idGroup);
+            course = tools.activate_course_to_person(user.id, idCourse, null, null, null, null, null, null, idGroup);
         }
         return 1;
     } else if (arrCount == 0) {
@@ -283,8 +283,8 @@ if (ArrayCount(courses) > 1) {
     alert('В базе не найден курс с кодом KONFINT!. Загрузка остановлена.');
     return;
 }
-var groups;
-groups = XQuery("for #elem in groups where $elem/code='KONFLICT' return $elem");
+var groups, course;
+groups = XQuery("for $elem in groups where $elem/code='KONFLICT' return $elem");
 if (ArrayCount(groups) > 1) {
     alert('В базе найдено больее двух групп с кодом KONFLICT!. Загрузка остановлена.');
     return;
@@ -345,7 +345,7 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
             newUser.TopElem.login = codeOrgStruct[orgSp] + '*' + Trim(lineArray[i][userCode]);
             newUser.TopElem.change_password = true;
             newUser.TopElem.password = '';
-            //newUser.TopElem.email = StrLowerCase(Trim(lineArray[i][emailUser]));
+            newUser.TopElem.email = StrLowerCase(Trim(lineArray[i][emailUser]));
 
             arrFIO = [];
             if (flagPAO) {
@@ -431,7 +431,7 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
                 continue;
             }
             newUser.Save();
-            course = tools.activate_course_to_person(newUser.DocID, idCourse,,,,,,,idGroup);
+            course = tools.activate_course_to_person(newUser.DocID, idCourse, null, null, null, null, null, null, idGroup);
         } catch (e) {
             alert('Невозможно создать нового сотрудника: ' + ExtractUserError(e));
             break;

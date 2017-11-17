@@ -11,7 +11,7 @@
 %>
 <HTML XMLNS="http://www.w3.org/1999/xhtml">
 <HEAD>
-<TITLE>Восстановление пароля</TITLE>
+<TITLE>Регистрация в СДО NLMK-WebTutor</TITLE>
 <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=windows-1251" />
 <%Server.Execute( "include/head.html" )%>
 <style type="text/css">
@@ -61,7 +61,7 @@
 	</TABLE>
 		
 	<TABLE WIDTH="100%"  border="0" CELLSPACING="0" CELLPADDING="0" ALIGN="center"  class="registerTable">
-	<FORM NAME="form_password_recovery" METHOD="post" ACTION="recovery_password_server.html">
+	<FORM NAME="form_register_user" METHOD="post" ACTION="register_user_server.html">
 		<TR>
 			<TD VALIGN="top" CLASS="registerTD">
 				
@@ -75,7 +75,7 @@ if(curMode!="0") {
 	<%switch (curMode) {
 		case "email_send":
 	%>
-		<p style="text-align:justify;margin-bottom: 20px;"><b>В ближайшее время данные авторизации поступят на адрес электронной почты <%=partMail%>.<b/>
+		<p style="text-align:justify;margin-bottom: 20px;"><b>В ближайшее время данные авторизации поступят на адрес электронной почты <%=partMail%>***@nlmk.com.<b/>
 		<tr><td style="text-align:center;">
 		<INPUT TYPE="submit" NAME="go" VALUE="На главную" STYLE="width:150px;margin-bottom:20px;" CLASS="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" id="btSend" 
 		onClick="document.location.href = 'default.html'; return false;">
@@ -121,7 +121,6 @@ if(curMode!="0") {
 <%	break;
 	case "email_bad":
 %>
-		<!-- <p style="text-align:justify;margin-bottom: 2px;"><b>Код ошибки 27308/<%=userCode%></br>Введен неверный адрес электронной почты <%=badEmail%>. Введите данные повторно.</br>Если Вы уверены в том, что ввели правильный адрес электронной почты, <a href="mailto:nl-a-do@nlmk.com ?subject=27308/<%=userCode%> &Body=Не проходит верификацию адрес <%=badEmail%>">отправьте ошибку</a> администраторам дистанционного обучения.<b/></p> -->
 		<p style="text-align:justify;margin-bottom: 2px;"><b>Код ошибки 27308/<%=userCode%></br>Введен недопустимый адрес электронной почты <%=badEmail%>.</b></p>
 <%
 	break;
@@ -140,14 +139,14 @@ if(curMode!="0") {
 <%}%>
 				<TR>
 					<td class="registerRightTD" colspan="2">
-						<p style="text-align:justify;margin-bottom:2px;<%= (Int(step)>1) ? "color:#C0C0C0;" : "" %>"> <%= (Int(step)==1) ? "<b>Для восстановления пароля Вам необходимо заполнить поля ниже</b>" : "Для восстановления пароля Вам необходимо заполнить поля ниже" %></p>
+						<p style="text-align:justify;margin-bottom:2px;"><b>Для регистрации Вам необходимо заполнить поля ниже</b></p>
 					</td>
 				</TR>
 
 				<TR>
-					<TD CLASS="registerLeftTD" style=" <%= (Int(step)>1) ? "color:#C0C0C0;" : "" %>"><%= (Int(step)==1) ? "<b>Предприятие:</b>":"Предприятие:"%></TD>
+					<TD CLASS="registerLeftTD"><b>Предприятие:</b></TD>
 					<td CLASS="registerRightTD">
-						<select name="organisation" id="organisation" <%=(Int(step)>1)?"disabled":""%>>
+						<select name="organisation" id="organisation">
 							<option value="" disabled selected>Выберите организацию</option>
 <%
 var orgs = XQuery("for $elem in orgs order by $elem/name descending return $elem");
@@ -158,68 +157,33 @@ for (org in orgs) { %>
 					</td>
 				</TR>
 				<TR>
-					<TD CLASS="registerLeftTD"  style="<%=(Int(step)>1) ? "color:#C0C0C0;" : "" %>"><%= (Int(step)==1) ? "<b>Табельный номер:</b>":"Табельный номер:"%></TD>
-					<TD CLASS="registerRightTD"><INPUT TYPE="text" NAME="usercode" STYLE="width:297px;" CLASS="inputEdit" VALUE="<%=(error=='0'?userCode:'')%>" required <%=(Int(step)>1 && userCode!='') ? 'readonly=""' : ''%>/></TD>
+					<TD CLASS="registerLeftTD"><b>Подразделение:</b></TD>
+					<TD CLASS="registerRightTD"><INPUT TYPE="text" NAME="depname" STYLE="width:297px;" CLASS="inputEdit" required placeholder="Например: ДЦ-1, Копровый цех и т.п." value="КУ"/></TD>
 				</TR>
 				<TR>
-					<TD CLASS="registerLeftTD"  style="<%=(Int(step)>1) ? "color:#C0C0C0;" : "" %>"><%= (Int(step)==1) ? "<b>ФИО полностью:</b>":"ФИО полностью:"%></TD>
-					<TD CLASS="registerRightTD"><INPUT TYPE="text" NAME="fullname" STYLE="width:297px;" CLASS="inputEdit" VALUE="<%=(error=='0'?lastName:'')%>" required  <%=(Int(step)>1 && userCode!='') ? 'readonly=""' : ''%>/></TD>
+					<TD CLASS="registerLeftTD"><b>Должность сокращенно:</b></TD>
+					<TD CLASS="registerRightTD"><INPUT TYPE="text" NAME="posname" STYLE="width:297px;" CLASS="inputEdit" required placeholder="Например: специалист, энергетик и т.п." value="спец"/></TD>
 				</TR>
-<%if(Int(step)==1) {%>
 				<TR>
-					<TD CLASS="registerLeftTD"  style="<%=(Int(step)>1) ? "color:#C0C0C0;" : "" %>"><%= (Int(step)==1) ? "<b>Электронная почта*:</b>":"Электронная почта:"%></TD>
-					<TD CLASS="registerRightTD"><INPUT TYPE="text" NAME="email2" STYLE="width:297px;" CLASS="inputEdit" VALUE="<%=(error=='0' && Int(step)>1) ? 'Отличиется от почты в базе данных':''%>" required  <%=(Int(step)>1 && userCode!='') ? 'readonly=""' : ''%> pattern="[a-zA-Z]+[_]+[a-zA-Z0-9]+@nlmk+\.com" required oninvalid="alert('Введите адрес корпоративной электронной почты в формате f_io@nlmk.com');"/></TD>
+					<TD CLASS="registerLeftTD"><b>Табельный номер:</b></TD>
+					<TD CLASS="registerRightTD"><INPUT TYPE="text" NAME="usercode" STYLE="width:297px;" CLASS="inputEdit" required placeholder="Только цифры" value="151592"/></TD>
+				</TR>
+				<TR>
+					<TD CLASS="registerLeftTD"><b>ФИО полностью:</b></TD>
+					<TD CLASS="registerRightTD"><INPUT TYPE="text" NAME="fio" STYLE="width:297px;" CLASS="inputEdit" required placeholder="Например: Иванов Вадим Юсупович" value="Пололин С А"/></TD>
+				</TR>
+				<TR>
+					<TD CLASS="registerLeftTD"><b>Электронная почта*:</b></TD>
+					<TD CLASS="registerRightTD"><INPUT TYPE="text" NAME="email" STYLE="width:297px;" CLASS="inputEdit" required placeholder="Например: ivanov_vy@nlmk.com" value="pololin_sa@nlmk.com"/></TD>
 				</TR>
 				<TR>
 					<td class="registerRightTD" colspan="2">
 						<p style="text-align:justify;margin-bottom:2px;">*если у Вас нет личного адреса корпоративной электронной почты, необходимо указать адрес электронной почты непосредственного руководителя</p>
 					</td>
 				</TR>
-<%}%>
-<%if(Int(step)>1) {%>				
-				<TR>
-					<TD CLASS="registerRightTD" colspan="2">
-					<p style="text-align:left;margin-bottom:2px; margin-top:7px;<%= (Int(step)==3) ? "color:#C0C0C0;" : "" %>"><%=(Int(step)==2)? "<b>Выберите контрольный вопрос и дайте на него ответ. Система ранее запрашивала эти данные.<b>" : "Выберите контрольный вопрос и дайте на него ответ. Эти данные ранее система запрашивала у Вас"%></p>
-				</TR>
-				<TR>
-					<TD CLASS="registerLeftTD"  style="<%=(Int(step)>2) ? "color:#C0C0C0;" : "" %>"><%= (Int(step)>1) ? "<b>Контрольный вопрос:</b>":"Контрольный вопрос:"%></TD>
-					<td CLASS="registerRightTD">
-						<select name="question" <%=(Int(step)>2)?"disabled":""%>>
-							<option value="" disabled selected>Выберите вопрос</option>
-							<option value="0" id="0">В каком году Вы окончили школу?</option>
-							<option value="1" id="1">О какой профессии Вы мечтали в детстве?</option>
-							<option value="2" id="2">Какое отчество Вашей матери?</option>
-							<option value="3" id="3">Как имя Вашего лучшего друга детства?</option>
-							<option value="4" id="4">Город, где Вы отдыхали в прошлый раз?</option>
-						</select>
-					</td>
-				</TR>
-				<TR>
-					<TD CLASS="registerLeftTD" style="<%=(Int(step)>2) ? "color:#C0C0C0;" : "" %>"><%= (Int(step)>1) ? "<b>Ответ:</b>":"Ответ:"%></TD>
-					<TD CLASS="registerRightTD"><INPUT TYPE="password" NAME="answer" STYLE="width:247px;" CLASS="inputEdit" VALUE="<%=(Int(step)==3)?String("Верно! Совсем верно!"):""%>" <%=(Int(step)>2 && userCode!="") ? 'readonly=""' : ""%> required/></TD>
-				</TR>	
-
-<%if(Int(step)==3) {%>				
-				<TR>
-					<TD CLASS="registerRightTD" colspan="2">
-					<p style="text-align:justify;margin-bottom: 2px; margin-top: 7px;"><b>В базе данных нет Вашего корпоративного адреса электронной почты. Вам необходимо ввести его в поле ниже. На этот адрес будет поступать информация от системы дистанционного обучения. Если у Вас нет личного адреса корпоративной электронной почты, введите адрес электронной почты непосредственного руководителя.</b></p>
-				</TR>
-				<TR>
-					<TD CLASS="registerLeftTD"><b>Электронная почта:</b></TD>
-					<TD CLASS="registerRightTD"><INPUT TYPE="text" NAME="email" STYLE="width:247px;" CLASS="inputEdit" VALUE="" pattern="[a-z0-9]+[_-]+[a-z0-9]+@nlmk+\.com" required oninvalid="alert('Введите адрес корпоративной электронной почты в формате f_io@nlmk.com');"/></TD>
-				</TR>
-<%}%>				
-<%}%>				
-				<tr>
-					<td><input type="hidden" name="stepclient" value="<%=step%>"<td>
-				</tr>
-				<TR>
-<%if(Int(step)!=1) { %>
-				<TD style="vertical-align: bottom;"><-- <a href='recovery_password_server.html?m=reset'>Назад</a></TD>
-<%} else {%>
+								
 				<td></td>
-<%}%>
-				<TD><INPUT TYPE="submit" NAME="go" VALUE="Продолжить" STYLE="width:150px; margin-top: 10px;" CLASS="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" id="btSend">
+				<TD><INPUT TYPE="submit" NAME="go" VALUE="Отправить" STYLE="width:150px; margin-top: 10px;" CLASS="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" id="btSend">
 				</TD>
 			</TABLE>
 				

@@ -1,0 +1,274 @@
+<%
+	userCode = (Request.Query.HasProperty('user') ? String( Request.Query.user ) : '');
+	orgCode = (Request.Query.HasProperty('org') ? String( Request.Query.org ) : '0');
+	curMode = (Request.Query.HasProperty("m") ? String(Request.Query.m) : "0");
+	error = (Request.Query.HasProperty("err") ? String(Request.Query.err) : "0");
+%>
+<HTML XMLNS="http://www.w3.org/1999/xhtml">
+<HEAD>
+<TITLE>Регистрация в СДО NLMK-WebTutor</TITLE>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=windows-1251" />
+<%Server.Execute( "include/head.html" )%>
+<style type="text/css">
+	input.inputEdit {
+		padding: 0 4px;
+	}
+	td.paddingPic {
+		position: relative;
+	}
+	td.paddingPic:before {
+		content: url('pics/attention.png');
+		position: absolute;
+		left: 1px;
+		top: -0px;
+    }
+</style>
+</HEAD>
+
+<BODY class="defaultBody">
+
+<TABLE ID="loginBodyTable" CLASS="loginBodyTable" CELLPADDING="0" CELLSPACING="0" BORDER="0" ALIGN="center">
+<TR>
+	<TD ID="docBodyTableTop" CLASS="bgTopUnder">
+	
+	<TABLE WIDTH="100%" CELLPADDING="0" CELLSPACING="0" BORDER="0">
+		<TR>
+			<TD><DIV ID="bg_left_top" CLASS="loginLeftTop"><IMG SRC="pics/1blank.gif" BORDER="0" CLASS="bgLeftTopTangle"/></DIV></TD>
+			<TD><DIV ID="header_main" CLASS="loginHeader"><IMG SRC="pics/1blank.gif"/></DIV></TD>
+		</TR>
+	</TABLE>
+	
+	</TD>
+</TR>
+<TR>
+	<TD>
+	
+	<TABLE WIDTH="100%"  border="0" CELLSPACING="0" CELLPADDING="0">
+		<TR>
+			<TD CLASS="mainMenuTop"><IMG SRC="pics/1blank.gif" WIDTH="1" HEIGHT="0" /></TD>
+		</TR>
+		<TR>
+			<TD CLASS="mainMenuCenter"><IMG SRC="pics/1blank.gif" WIDTH="1" HEIGHT="15" /></TD>
+		</TR>
+		<TR>
+			<TD CLASS="mainMenuBottom"><IMG SRC="pics/1blank.gif" WIDTH="1" HEIGHT="0" /></TD>
+		</TR>
+	</TABLE>
+		
+	<TABLE WIDTH="100%"  border="0" CELLSPACING="0" CELLPADDING="0" ALIGN="center"  class="registerTable">
+	<FORM NAME="form_register_user" METHOD="post" ACTION="register_user_server.html">
+		<TR>
+			<TD VALIGN="top" CLASS="registerTD">
+				
+			<TABLE WIDTH="100%" BORDER="0" CELLSPACING="2" CELLPADDING="0">
+			
+<%
+if(curMode!="0") {
+%>
+	<tr>
+		<td CLASS="registerRightTD" colspan="2">
+	<%switch (curMode) {
+		case "ok":
+	%>
+		<p style="text-align:justify;margin-bottom: 20px;"><b>Регистрация прошла успешно!</br>В ближайшее время данные о регистрации поступят на адрес электронной почты, указанной при регистрации.<b/>
+		<tr><td style="text-align:center;">
+		<INPUT TYPE="submit" NAME="go" VALUE="На главную" STYLE="width:150px;margin-bottom:20px;" CLASS="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" id="btSend" 
+		onClick="document.location.href = 'default.html'; return false;">
+		</td></tr>
+	<%	break;
+		case "ok_not_send":
+	%>
+		<p style="text-align:justify;margin-bottom: 20px;"><b>Регистрация прошла успешно!</br>Однако нам не удалось отправить Вам приветственное письмо по техническим причинам. Вам необходимо перейти на форму напоминания логина и пароля.<b/></p>
+		<tr><td style="text-align:center;">
+		<INPUT TYPE="submit" NAME="go" VALUE="Напомнить пароль" STYLE="width:150px;margin-bottom:20px;" CLASS="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" id="btSend" 
+		onClick="document.location.href = 'recovery_password.html'; return false;">
+		</td></tr>
+<%		break;
+	}
+} else {%>
+<%if(error!="0") {%>
+	<tr>
+		<td CLASS="registerRightTD paddingPic" colspan="2" style="padding-left:40px;">
+<%switch (error) {
+	case "bad_data":
+%>
+		<p style="text-align:justify;margin-bottom: 2px;"><b>Код ошибки 27301</br>Заполнены не все обязательные поля.<b/></p>
+<%	break;
+	case "bad_name":
+%>
+		<p style="text-align:justify;margin-bottom: 2px;"><b>Код ошибки 27302</br>Некорректно заполнено поле ФИО.<b/></p>
+<%	break;
+	case "bad_usercode":
+%>			
+		<p style="text-align:justify;margin-bottom: 2px;"><b>Код ошибки 27303</br>В поле "Табельный номер" могут содержаться только цифры.<b/></p>
+<%	break;
+	case "bad_email":
+%>
+		<p style="text-align:justify;margin-bottom: 2px;"><b>Код ошибки 27304</br>Введен некорректный адрес корпоративной электронной почты.<b/></p>
+<%	break;
+	case "user_check_many":
+%>
+		<p style="text-align:justify;margin-bottom: 2px;"><b>Код ошибки 27305</br>Ошибка уникальности данных. <a href="mailto:nl-a-do@nlmk.com ?subject=27305 &Body=Double data: <%=orgCode%>/<%=userCode%>">Отправьте ошибку</a> администраторам СДО.<b/></p>
+<%	break;
+	case "bad_save":
+%>
+		<p style="text-align:justify;margin-bottom: 2px;"><b>Код ошибки 27306</br>По техническим причинам не удалось сохранить данные. Попробуйте заново.<b/></p>
+<%	break;
+	case "bad_name2":
+%>
+		<p style="text-align:justify;margin-bottom: 2px;"><b>Код ошибки 27307</br>Введенная фамилия не соответсвует табельному номеру.</b></p>
+<%
+	break;
+	case "bad_sap":
+%>
+		<p style="text-align:justify;margin-bottom: 2px;"><b>Код ошибки 27308</br>Не удалось выполнить проверку в SAP. <a href="mailto:nl-a-do@nlmk.com ?subject=27309 &Body=SAP error: <%=userCode%>">Отправьте ошибку</a> администраторам СДО.<b/></p>
+<%
+	break;
+	case "some_err":
+%>
+		<p style="text-align:justify;margin-bottom: 2px;"><b>Код ошибки 27310</br>Непредвиденная ошибка. <a href="mailto:nl-a-do@nlmk.com ?subject=27309 &Body=Some error: <%=userCode%>">Отправьте ошибку</a> администраторам СДО.<b/></p>
+<%
+}%>
+		</td>
+	</tr>
+<%}%>
+				<TR>
+					<td class="registerRightTD" colspan="2">
+						<p style="text-align:justify;margin-bottom:2px;">Зарегистрировать можно как себя, так и коллегу. Для того, чтобы зарегистрироваться в системе дистанционного обучения NLMK-WebTutor, заполните все указанные ниже поля:</p>
+						<li>
+							<b>Предприятие</b>. Выберите из списка компанию, сотрудником которой является регистрируемый;
+						</li>
+						<li>
+							<b>Структурное подразделение</b>. Введите название подразделения 2 уровня (цеха, отдела, группы, управления);
+						</li>
+						<li>
+							<b>Должность</b>. Введите должность, в которой регистрируемый числится на предприятии;
+						</li>
+						<li>
+							<b>Табельный номер</b>. Введите табелоьный номер, содержащий только цифры;
+						</li>
+						<li>
+							<b>ФИО</b>. Введите фамилию, имя и отчество полностью без сокращений;
+						</li>
+						<li style="text-align:justify;">
+							<b>Электронная почта</b>. Введите Ваш личный адрес корпоративной электронной почты .Если у Вас нет адреса корпоративной почты – укажите адрес корпоративной почты, Вашего непосредственного руководителя;
+						</li>
+						<p>Нажмите кнопку «Сохранить». Заявка автоматически обрабатывается системой дистанционного обучения. </p>
+						<p style="text-align:justify;">Далее Вы получите электронное сообщение о подтверждении регистрации в системе дистанционного обучения NLMK-WebTutor и дальнейшие инструкции по обучению. Обычно это занимает не более 5 минут. С этого момента Вам будут доступны все электронные курсы, которые есть в нашем каталоге.</p>
+						<p style="margin-bottom: 15px;">Остались вопросы? Напишите нам на почтовый ящик <a href="mailto:nl-a-do@nlmk.com">«Дистанционное обучение НЛМК»</a></p>
+						</p>
+					</td>
+				</TR>
+
+				<TR>
+					<TD CLASS="registerLeftTD"><b>Предприятие:</b></TD>
+					<td CLASS="registerRightTD">
+						<select name="organisation" id="organisation" style="width:350px;">
+							<option value="" disabled selected>Выберите организацию</option>
+<%
+var orgs = XQuery("for $elem in orgs order by $elem/name descending return $elem");
+for (org in orgs) { 
+	if (org.code=="1010") {
+		codeOrg = org.id;
+}%>
+							<option value='<%=org.code%>' id='<%=org.code%>'><%=org.name%></option>
+<%}%>
+						</select>
+					</td>
+				</TR>
+				<TR id="trhidden" hidden>
+					<TD CLASS="registerLeftTD"><b>Подразделение:</b></TD>				
+					<td CLASS="registerRightTD">
+						<select name="subdivision" id="subdivision" style="width:350px;">
+							<option value="" disabled selected>Выберите подразделение</option>
+<%
+var subs = XQuery("for $elem in subdivisions where $elem/org_id=" + codeOrg + " and $elem/code != '' order by $elem/code ascending return $elem");
+for (sub in subs) {
+	if (StrCharCount(sub.code)==1) {
+		sub.code="00"+sub.code;
+	}
+	if (StrCharCount(sub.code)==2) {
+		sub.code="0"+sub.code;
+	}
+}
+
+var count = ArrayCount(subs)-1;
+for (var i = count - 1; i > 0; i--) {
+	for (var j = 0; j < i; j++) {
+		if (subs[j].code > subs[j+1].code) {
+			tmp = subs[j];
+			subs[j] = subs[j+1];
+			subs[j+1] = tmp;
+		}
+	}  
+}
+for (sub in subs) {
+	str = "[" + sub.code + "] " + sub.name;
+%>					
+							<option value='<%=sub.code%>' id='<%=sub.code%>'><%=str%></option>
+<%}%>							
+						</select>
+					</td>
+				</TR>
+				<TR id="trhidden2">
+					<TD CLASS="registerLeftTD"><b>Подразделение:</b></TD>
+					<TD CLASS="registerRightTD"><INPUT TYPE="text" NAME="depname" STYLE="width:350px;" CLASS="inputEdit" placeholder="Например: ДЦ-1, Копровый цех и т.п."/></TD>
+				</TR>
+				<TR>
+					<TD CLASS="registerLeftTD"><b>Должность сокращенно:</b></TD>
+					<TD CLASS="registerRightTD"><INPUT TYPE="text" NAME="posname" STYLE="width:350px;" CLASS="inputEdit" required placeholder="Например: специалист, энергетик и т.п."/></TD>
+				</TR>
+				<TR>
+					<TD CLASS="registerLeftTD"><b>Табельный номер:</b></TD>
+					<TD CLASS="registerRightTD"><INPUT TYPE="text" NAME="usercode" STYLE="width:350px;" CLASS="inputEdit" required placeholder="Только цифры"/></TD>
+				</TR>
+				<TR>
+					<TD CLASS="registerLeftTD"><b>ФИО полностью:</b></TD>
+					<TD CLASS="registerRightTD"><INPUT TYPE="text" NAME="fio" STYLE="width:350px;" CLASS="inputEdit" required placeholder="Например: Иванов Вадим Юсупович"/></TD>
+				</TR>
+				<TR>
+					<TD CLASS="registerLeftTD"><b>Электронная почта*:</b></TD>
+					<TD CLASS="registerRightTD"><INPUT TYPE="text" NAME="email" STYLE="width:350px;" CLASS="inputEdit" required placeholder="Например: ivanov_vy@nlmk.com"/></TD>
+				</TR>
+				<TR>
+					<td class="registerRightTD" colspan="2">
+						<p style="text-align:justify;margin-bottom:2px;">*если у Вас нет личного адреса корпоративной электронной почты, необходимо указать адрес электронной почты непосредственного руководителя</p>
+					</td>
+				</TR>
+				<TR>
+				<TD style="vertical-align: bottom;"><-- <a href='default.html'>На главную</a></TD>
+	
+				
+				<TD><INPUT TYPE="submit" NAME="go" VALUE="Отправить" STYLE="width:150px; margin-top: 10px;" CLASS="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" id="btSend">
+				</TD>
+			</TABLE>
+				
+			</TD>
+		</TR>
+	</FORM>
+	</TABLE>
+<%}%>
+	</TD>
+</TR>
+<TR>
+	<TD>
+		<%Server.Execute( "include/user_footer.html" )%>
+    </TD>
+</TR>
+</TABLE>
+
+<script>
+$(function() {
+	$("#organisation").change(function() {
+	val = $('select[id=organisation]').attr('value');
+		if (val=="1010") {
+			$('#trhidden').attr('hidden', false);
+			$('#trhidden2').attr('hidden', true);
+		} else {
+			$('#trhidden').attr('hidden', true);
+			$('#trhidden2').attr('hidden', false);
+		}
+	});
+});
+</script>
+</HTML>

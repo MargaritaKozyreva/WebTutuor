@@ -1,0 +1,160 @@
+<HTML>
+<%Server.Execute( "include/head.html" )%>
+
+<BODY onLoad="loadThemAll();" onResize="onGlobalResize();">
+<IE:HOMEPAGE ID="oHomePage"/>
+
+<%
+bIsCommentPage=false;
+switch ( curHostSettings.default_portal_type )
+{
+    case 'sharepoint':
+%>
+<div style="position: absolute; top: 0px; left: 0px;">
+<%
+        break;
+		
+    default:
+		Server.Execute( "include/doc_header.html" );
+%>
+<div id="main_block" class="mainBlockDiv">
+<%
+        break;
+}
+%>
+<!--start of main block-->
+<table width="100%"  border="0" cellspacing="0" cellpadding="0">
+	<tr>
+<%
+	if ( _left_panel_execute != '' )
+	{
+%>
+		<td width="<%=curWebCommon.left_panel_width%>" class="leftPanel" valign="top">
+<!--start of left column-->
+		<table width="<%=curWebCommon.left_panel_width%>" border="0" cellspacing="0" cellpadding="5">
+        	<tr>
+        		<td valign="top" style="padding-top: 10px">
+<%
+		tools_web.place_zone_html( _left_panel_execute, "left" );
+%>
+				<br/>
+				</td>
+			</tr>
+        </table>
+<!--end of left column-->		
+		</td>
+<%
+	}
+%>	
+		<td valign="top" width="100%">
+<!--start of middle column-->		
+		<table width="100%" border="0" cellspacing="0" cellpadding="0">
+        	<tr>
+        		<td valign="top" class="mainBlockBody">
+<%
+	if ( _path_execute != '' )
+		tools_web.place_zone_html( _path_execute, "path" );
+
+	if ( _page_name != '' && curWebCommon.disp_page_name )
+	{
+%>			
+					<div id="courseHeader" style="text-align:center; margin:12px;" class="headerText"><%=_page_name%></div>
+<%
+	}
+	
+	tools_web.place_zone_html( _main_execute, "main" );
+%>
+				</td>
+			</tr>
+        </table>
+<%
+//---------------------
+try
+{
+
+	if ( ! curDoc.attributes.is_link && curDoc.attributes.allow_comment)	
+	{
+	
+		try
+		{
+			bIsCommentPage		
+		}
+		catch(ex)
+		{
+			bIsCommentPage=false
+		}
+		if (!bIsCommentPage)
+		{
+%>
+		<table width="100%" border="0" cellspacing="0" cellpadding="0">
+        	<tr>
+        		<td valign="top" class="mainBlockBody">
+<%
+			tools_web.place_zone_html( 'document_comment.html', "main" );
+%>
+				</td>
+			</tr>
+        </table>	
+<%
+		}
+	}
+
+}
+catch ( err )
+{
+	//Response.Write(err)
+}
+//-------------------
+%>			
+<!--end of middle column-->
+		</td>
+<%
+	if ( _right_panel_execute != '' )
+	{
+%>	
+		<td width="180" class="rightPanel" valign="top">
+<!--start of right column-->
+			<table width="180" border="0" cellspacing="0" cellpadding="5">
+        		<tr>
+        			<td valign="top">
+<%
+		tools_web.place_zone_html( _right_panel_execute, "right" );
+%>
+					</td>
+		   		</tr>
+         	</table>
+<!--end of right column-->
+		</td>
+<%
+	}
+%>
+	</tr>
+</table>
+<!--end of main block-->
+<% 
+switch ( curHostSettings.default_portal_type )
+{
+    case 'sharepoint':
+        break;
+		
+    default:
+		Server.Execute( "include/user_footer.html" );
+		break;
+}
+%>
+</div>
+
+<script language="javascript">
+if(evalAfterPaintActions)
+	for(var evalIndex=0; evalIndex<evalAfterPaintActions.length; evalIndex++)
+		try
+		{
+			eval(evalAfterPaintActions[evalIndex]);
+		}
+		catch(e)
+		{
+			alert(e);
+		}
+</script>
+</BODY>
+</HTML>

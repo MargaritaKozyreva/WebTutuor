@@ -1,0 +1,245 @@
+<html>
+
+<head>
+	<link href="css/multiple-select.css" rel="stylesheet" type="text/css">
+	<style type="text/css">
+		div.innerClass {
+			font-size: 14px;
+		}
+
+		input.dateField {
+			display: block;
+			width: 350px;
+			height: 26px;
+			padding: 0;
+			overflow: hidden;
+			cursor: pointer;
+			border: 1px solid #aaa;
+			text-align: left;
+			white-space: nowrap;
+			line-height: 26px;
+			color: #444;
+			text-decoration: none;
+			-webkit-border-radius: 4px;
+			-moz-border-radius: 4px;
+			border-radius: 4px;
+			background-color: #fff;
+		}
+
+		.wrapper {
+			padding: 20px 10px;
+			padding-bottom: 10px;
+			width: 800px;
+			height: auto;
+			margin: auto;
+			border: 1px solid #aaa;
+			border-radius: 4px;
+			margin-bottom: 30px;
+			margin-top: 30px;
+			position: relative;
+		}
+
+		.wrapper:before {
+			content: "Форма записи на тестирование";
+			position: absolute;
+			top: -9px;
+			left: 10px;
+			background-color: white;
+			font-size: 16px;
+		}
+
+		.wrapper_button {
+			padding-top: 20px;
+			width: 150px;
+			height: 24px;
+			margin: auto;
+		}
+
+		.inline_block {
+			display: inline-block;
+			width: 100%;
+			margin-right: -100%;
+			vertical-align: bottom;
+		}
+
+		.inline_right {
+			text-align: right;
+		}
+
+		.left {
+			float: left;
+		}
+
+		.right {
+			float: right;
+		}
+
+		.date_test {
+			margin-bottom: 15px;
+		}
+
+		.wrapper img {
+			display: inline;
+			vertical-align: bottom;
+			padding-left: 2px;
+			cursor: pointer;
+		}
+
+		.ui-widget-header {
+			color: #3355cc;
+		}
+
+		#datepicker {
+			width: 327px;
+			border: 1px solid #aaa;
+			border-radius: 4px;
+			line-height: 22px;
+			padding-left: 8px;
+		}
+
+		#dialog {
+			z-index: 3999;
+		}
+
+	</style>
+</head>
+
+<body>
+	<div class="innerClass" style="z-index: 1;">
+		<p>
+			Очное тестирование после самоподготовки по областям аттестации промышленной безопасности проводится <b>каждую пятницу с 8.00 до 12.00</b>, на Зегеля-1 в 201 и 202 каб., <b>по предварительным заявкам</b>. Тестирование проводится в 4 потока, каждый поток (группа) продолжительностью 1 час:
+		</p>
+		<ul>
+			<li style="margin-bottom:5px;">1 группа – с 08:00 по 09:00</li>
+			<li style="margin-bottom:5px;">2 группа – с 09:00 по 10:00</li>
+			<li style="margin-bottom:5px;">3 группа – с 10:00 по 11:00</li>
+			<li style="margin-bottom:5px;">4 группа – с 11:00 по 12:00</li>
+		</ul>
+		<p>
+			<b>В каждой группе должно быть не более 12 человек.</b> Поэтому, если Вы выберите группу, в которой уже все места заняты – система предложит Вам выбрать другое время или дату. Если на определенную дату мест в группах нет совсем – в календаре дата закрашивается красным цветом.
+		</p>
+		<p>
+			Ваши <b>заявки принимаются не позднее 3-х рабочих дней до даты проведения тестирования</b>. Т.е. если вы хотите записаться на тестирование на текущую пятницу, Вам необходимо заполнить и сохранить заявку не позднее 17:00 вторника этой же недели.
+		</p>
+		<p>
+			Для того, чтобы записаться на тестирование, <b>выберите</b> подходящую Вам <b>дату и группу</b>, а так же <b>область аттестации</b> (можно выбрать сразу несколько областей аттестации) и нажмите кнопку «Отправить». Заявка обрабатывается автоматически. При успешной регистрации Вы получить сообщение на экране монитора и подтверждающее письмо на адрес электронной почты. На тестирование можно зарегистрировать как себя, так и коллегу.
+		</p>
+		<p>
+			<b>Обратите внимание!</b> Перед тестированием необходимо пройти обучение по соответствующим электронным курсам в системе дистанционного обучения NLMK-WebTutor. Там же Вы сможете самостоятельно оценить уровень своих знаний, пройдя предварительное тестирование.
+		</p>
+		<p>
+			Остались вопросы? Напишите нам на почтовый ящик <a href="mailto:nl-a-do@nlmk.com">«Дистанционное обучение НЛМК»</a>.
+		</p>
+		<div class="wrapper">
+			<form NAME="form_order_test" METHOD="post" ACTION="test_order_server.html">
+				<input name="curobjectid" id="curobjectid" type="hidden" value="<%=curObjectID%>">
+				<input name="curdocid" id="curdocid" type="hidden" value="<%=curDocID%>">
+				<div class="date_test">
+					<div class="left">
+						<input type="text" id="datepicker" placeholder="Выберите дату" name="datetest" required>
+					</div>
+					<div class="right">
+						<select multiple="multiple" id="singleSelect" required name="timetest">
+				<option value="08:00-09:00">08:00-09:00</option>
+				<option value="09:00-10:00">09:00-10:00</option>
+				<option value="10:00-11:00">10:00-11:00</option>
+				<option value="11:00-12:00">11:00-12:00</option>
+			</select>
+						<input name="timetest" type="hidden" value="">
+					</div>
+					<div style="clear: left"></div>
+				</div>
+				<div class="list_course">
+					<select multiple="multiple" id="multiSelect" required name="codetest">
+					<option value="A1p">А.1. Основы промышленной безопасности</option>
+					<option value="5113P">Б.1.1. Эксплуатация химически опасных производственных объектов</option>
+					<option value="5333P1">Б.3.8. Производство с полным металлургическим циклом</option>
+					<option value="Б931P">Б.9.31. Эксплуатация опасных производственных объектов, на которых применяются подъемные сооружения, предназначенные для подъема и перемещения грузов</option>
+					<option value="Б932P">Б.9.32. Эксплуатация опасных производственных объектов, на которых применяются подъемные сооружения, предназначенные для подъема и транспортировки людей</option>
+					<option value="Б933P">Б.9.33. Монтаж, наладка, ремонт, реконструкция или модернизация подъемные сооружения в процессе эксплуатации опасных производственных объектов</option>
+					<option value="B101p">Б.10.1. Транспортирование опасных веществ железнодорожным транспортом</option>
+					<option value="B102p">Б.10.2. Транспортирование опасных веществ автомобильным транспортом</option>
+					<option value="G11p">Г.1.1. Энергетическая безопасность при эксплуатации электроустановок</option>
+					<option value="G21p">Г.2.1. Энергетическая безопасность при эксплуатации тепловых энергоустановок и тепловых сетей</option>
+					<option value="G32p">Г.3.1. Энергетическая безопасность при эксплуатации электрических сетей</option>
+				</select>
+					<input name="testCodes" type="hidden" value="">
+				</div>
+				<div class="wrapper_button">
+					<INPUT TYPE="submit" NAME="go" VALUE="Отправить" STYLE="width:150px;" CLASS="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" id="btSend">
+				</div>
+			</form>
+		</div>
+
+		<h3>Вы записаны на следующие тесты после самоподготовки:</%>
+		</h3>
+		<table width="100%" border="0" cellspacing="0" cellpadding="3">
+			<tr>
+				<td class="tableHeaderWithText" WIDTH="40">N п/п</td>
+				<td class="tableHeaderWithText" WIDTH="60">Код теста</td>
+				<td class="tableHeaderWithText" WIDTH="50">Название теста</td>
+				<td class="tableHeaderWithText" WIDTH="40">Дата теста</td>
+				<td class="tableHeaderWithText" WIDTH="50">Время теста</td>
+				<td class="tableHeaderWithText" WIDTH="100">Редактировать заявку</td>
+				<td class="tableHeaderWithText" WIDTH="100">Отменить заявку</td>
+			</tr>
+			<tr>
+				<td class="tableHeaderNoText" WIDTH="40"><img src="pics/1blank.gif" width="1" height="1" /></td>
+				<td class="tableHeaderNoText" WIDTH="60"><img src="pics/1blank.gif" width="1" height="1" /></td>
+				<td class="tableHeaderNoText" WIDTH="50"><img src="pics/1blank.gif" width="1" height="1" /></td>
+				<td class="tableHeaderNoText" WIDTH="40"><img src="pics/1blank.gif" width="1" height="1" /></td>
+				<td class="tableHeaderNoText" WIDTH="50"><img src="pics/1blank.gif" width="1" height="1" /></td>
+				<td class="tableHeaderNoText" WIDTH="100"><img src="pics/1blank.gif" width="1" height="1" /></td>
+				<td class="tableHeaderNoText" WIDTH="100"><img src="pics/1blank.gif" width="1" height="1" /></td>
+			</tr>
+
+
+<%
+xtemp = 1;
+tests = XQuery("for $elem in cc_testorders where $elem/userid="+curUserID + " order by $elem/testdate ascending return $elem");
+if (ArrayCount(tests)>0) {
+	for (test in tests) {
+		_class = xtemp % 2 ? 'tableRowEven' : 'tableRowOdd';
+%>
+				<tr>
+					<td class="<%=_class%>">
+						<%=xtemp%>
+					</td>
+					<td class="<%=_class%>">А.1</td>
+					<td class="<%=_class%>">
+						<%=test.testname%>
+					</td>
+					<td class="<%=_class%>">
+						<%=test.testdate%>
+					</td>
+					<td class="<%=_class%>">
+						<%=test.testtime%>
+					</td>
+					<td class="<%=_class%>"><a href="#">Редактировать</a></td>
+					<td class="<%=_class%> confirm_question"><a iddoc="<%=test.id%>" id="removeOrder" href="#">Отменить</a></td>
+				</tr>
+				<%
+		xtemp++;
+	}
+}
+%>
+					<tr>
+						<td class="tableHeaderNoText" WIDTH="40"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableHeaderNoText" WIDTH="60"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableHeaderNoText" WIDTH="50"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableHeaderNoText" WIDTH="40"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableHeaderNoText" WIDTH="50"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableHeaderNoText" WIDTH="100"><img src="pics/1blank.gif" width="1" height="1" /></td>
+						<td class="tableHeaderNoText" WIDTH="100"><img src="pics/1blank.gif" width="1" height="1" /></td>
+					</tr>
+		</table>
+	</div>
+	<script src="scripts/multiple-select.js"></script>
+	<script type="text/javascript" src="scripts/jqueryui/jquery.ui.core.js"></script>
+	<link rel="stylesheet" href="scripts/jqueryui/themes/base/jquery.ui.all.css" />
+	<!--    <script type="text/javascript" src="scripts/jqueryui/jquery.ui.datepicker.js"></script>-->
+	<script type="text/javascript" src="scripts/jqueryui/jquery-ui.js"></script>
+	<script type="text/javascript" src="scripts/orderTest/main.js"></script>
+</body>
+
+</html>

@@ -28,7 +28,8 @@ if ( curAccess )
 			break;
 
 		case 'course_info':
-			_page_name = curObject.code + ' ' + tools_web.get_cur_lng_name( curObject.name );
+			//_page_name = curObject.code + ' ' + tools_web.get_cur_lng_name( curObject.name );
+			_page_name = tools_web.get_cur_lng_name( curObject.name );
 			_main_execute = 'view_course_body.html';
 			break;
 
@@ -169,7 +170,9 @@ if ( curAccess )
 			if ( curObject.person_id == curUserID )
 			{
 				_main_execute = 'view_learning_proc_body.html';
-				_page_name = curCourse.code + ' ' + tools_web.get_cur_lng_name( curCourse.name );
+				//_page_name = curCourse.code + ' ' + tools_web.get_cur_lng_name( curCourse.name );
+				//_page_name = curCourse.code + ' ' + tools_web.get_cur_lng_name( curCourse.name );
+				_page_name = tools_web.get_cur_lng_name( curCourse.name );
 			}
 			break;
 
@@ -1117,7 +1120,6 @@ if ( curAccess )
 		case 'doc_type':
 		case 'custom_web_template':
 
-			customID1 = curObjectID;
 			if (curObject != null)
 			{
 				if (curObject.Name == 'custom_web_template')
@@ -1159,11 +1161,6 @@ if ( curAccess )
 					_main_execute = "xxx.html"; break;
 			}
 			break;
-			
-		case 'list_kpto':
-			_page_name = "Актуальный список КПТО";
-			_main_execute="view_list_KPTO.html";
-			break;
 
 		default:
 			if ( curDocID != null )
@@ -1201,11 +1198,12 @@ if ( curWebTemplateCode != '' )
 	}
 }
 
-	if (curUser.custom_elems.ObtainChildByKey("secretAnswer").value=='') {
-        Request.Redirect("secret_word.html");
-    } else {
-		Server.Execute( "view_doc_main.html" );
-	}
+if (_main_execute == "view_home_body.html" && (curUser.custom_elems.ObtainChildByKey("secretAnswer").value=="" || curUser.custom_elems.ObtainChildByKey("secretQuestion").value=="")) {
+	Request.Redirect("secret_word.html");
+} else {
+	Server.Execute( "view_doc_main.html" );
+}
+//Server.Execute( "view_doc_main.html" );
 
 //alert(GetCurTicks()+'-c')
 %>

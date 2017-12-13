@@ -74,14 +74,15 @@ function checkUser(arr) {
     if (arrCount == 1) {
         for (user in arrUsers) {
             doc = OpenDoc(UrlFromDocID(user.id));
-            //if (Trim(arr[emailUser]) != '0') {
-            doc.TopElem.email = Trim(StrLowerCase(arr[emailUser]));
-            //} else {
-            //    doc.TopElem.email = '';
-            //}
+            if (Trim(arr[emailUser]) != '' || Trim(arr[emailUser]) != '0') {
+                doc.TopElem.email = Trim(StrLowerCase(arr[emailUser]));
+            }
+            if (doc.TopElem.change_password)
+                doc.TopElem.change_password = false;
+            if (doc.TopElem.password == '')
+                doc.TopElem.password = createPassword(8);
 
             if (codeOrg != '1010') {
-
                 try {
                     doc.TopElem.lastname = StrTitleCase(String(arr[fullName]).split(' ')[0]);
                     doc.TopElem.firstname = StrTitleCase(String(arr[fullName]).split(' ')[1]);
@@ -139,11 +140,6 @@ function checkUser(arr) {
                     }
                     continue;
                 }
-                // try {
-                //     doc.Save();
-                // } catch (e) {
-                //     anyError.push('Не удалось обновить информацию о сотруднике с кодом ' + codeOrg + '/' + arr[userCode] + ' по причине: ' + ExtractUserError(e));
-                // }
             }
             try {
                 doc.Save();
@@ -151,6 +147,7 @@ function checkUser(arr) {
                 anyError.push('Не удалось обновить информацию о сотруднике с кодом ' + codeOrg + '/' + arr[userCode] + ' по причине: ' + ExtractUserError(e));
             }
             course = tools.activate_course_to_person(user.id, idCourse, null, null, null, null, null, null, idGroup);
+            message = tools.create_notification("7_2", doc.DocID);
         }
         return 1;
     } else if (arrCount == 0) {
@@ -266,9 +263,21 @@ function ShowMesssages() {
         alert('Загружено ' + processLines + ' новых сотрудников. \nЕсть необработанные строки, см. файл-лог C:\\log.html.');
     }
 }
+
+//генерация нового пароля
+function createPassword(count) {
+    words = '0123456789qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM';
+    result = '';
+    for (l = 0; l < count; l++) {
+        position = Random(0, StrCharCount(words) - 1);
+        result += StrRangePos(words, position, position + 1);
+    }
+    return result;
+}
 //**************************************
 
 //-=Тело скрипта=-
+alert('!!!Процесс назначения курса Конфликт интересов начат!');
 initCodeOrgStructure();
 var courses;
 courses = XQuery("for $elem in courses where $elem/code='KONFINT' return $elem");
@@ -297,6 +306,11 @@ if (ArrayCount(groups) > 1) {
     return;
 }
 
+linkSourceFile = XQuery("for $elem in resources where $elem/code='konfInt_3_4' return $elem");
+itemFile = ArrayFirstElem(linkSourceFile);
+docResource = OpenDoc(UrlFromDocID(itemFile.id));
+excelFileUrl = docResource.TopElem.file_url;
+
 try {
     sourceList = OpenDoc(excelFileUrl, 'format=excel');
 } catch (e) {
@@ -306,8 +320,13 @@ try {
 
 lineArray = ArrayFirstElem(sourceList.TopElem);
 for (var i = 0; i < ArrayCount(lineArray); i++) {
-    //if (i == 0) continue;
     if (lineArray[i][userCode] == '') continue;
+    try {
+        tabNum = Int(lineArray[i][userCode]);
+    } catch (e) {
+        anyError.push('Строка ' + i + ': сотрудник с табельным номером ' + lineArray[i][userCode] + ' содержит в поле табельный номер содержит недопустимые символы. Сотрудник не обработан.');
+        continue;
+    }
     flagPAO = false;
     objUser = checkUser(lineArray[i]);
     if (objUser == 2) {
@@ -343,8 +362,7 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
             newUser.TopElem.code = codeOrgStruct[orgSp] + "/" + Trim(lineArray[i][userCode]);
             newUser.TopElem.custom_elems.ObtainChildByKey("userCode").value = Trim(lineArray[i][userCode]);
             newUser.TopElem.login = codeOrgStruct[orgSp] + '*' + Trim(lineArray[i][userCode]);
-            newUser.TopElem.change_password = true;
-            newUser.TopElem.password = '';
+            newUser.TopElem.password = createPassword(8);
             newUser.TopElem.email = StrLowerCase(Trim(lineArray[i][emailUser]));
 
             arrFIO = [];
@@ -432,6 +450,7 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
             }
             newUser.Save();
             course = tools.activate_course_to_person(newUser.DocID, idCourse, null, null, null, null, null, null, idGroup);
+            message = tools.create_notification("7_2", newUser.DocID);
         } catch (e) {
             alert('Невозможно создать нового сотрудника: ' + ExtractUserError(e));
             break;
@@ -449,4 +468,5 @@ for (var i = 0; i < ArrayCount(lineArray); i++) {
 
 writeLog(multipleUsers, duplicateUser, anyError);
 ShowMesssages();
+alert('!!!Процесс назначения курса Конфликт интересов закончен! Загружено новых сотрудников - ' + processLines);
 //************************************

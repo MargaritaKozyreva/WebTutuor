@@ -1,0 +1,110 @@
+<%
+	Server.Execute("include/user_init.html");
+	Server.Execute("include/object_init.html");
+%>
+
+<%
+	objectID = (Request.Query.HasProperty("curobjectid") ? Trim(String(Request.Query.curobjectid)) : "");
+	docID = (Request.Query.HasProperty("curdocid") ? Trim(String(Request.Query.curdocid)) : "");
+	mode = (Request.Query.HasProperty("mode") ? Trim(String(Request.Query.mode)) : "");
+	iddoc = (Request.Query.HasProperty("id") ? Trim(String(Request.Query.id)) : "");
+	//alert(objectID + " -- " + docID);
+	//alert(customWebTemplateID);
+	//удаление заявки
+	if (iddoc!="") {
+		if (mode=="remove") {
+			err=false; 
+			err2 = false;
+			try {
+				iid = Int(iddoc);
+			} catch (e) {
+				err=true;
+			}
+			if (err) {
+				Request.Redirect("view_doc.html?mode=doc_type&object_id=" + objectID + "&doc_id=" + docID + "&err=1");
+				Cancel();
+			}
+			try {
+				DeleteDoc(UrlFromDocID(iid));
+			} catch (e) {
+				err2=true;
+			}
+			if (err2) {
+				Request.Redirect("view_doc.html?mode=doc_type&object_id=" + objectID + "&doc_id=" + docID + "&err=2");
+				Cancel();
+			}
+			Request.Redirect("view_doc.html?mode=doc_type&object_id=" + objectID + "&doc_id=" + docID);
+			Cancel();
+		} else if (move="edit") {
+			//TODO сделать редактирование
+		}
+	}
+	
+	//-=Раздел объявления переменных=-
+	dateTest = (Request.Query.HasProperty("datetest") ? Trim(String(Request.Query.datetest)) : "");
+	timeTest = (Request.Query.HasProperty("timetest") ? Trim(String(Request.Query.timetest)) : "");
+	codeTest = (Request.Query.HasProperty("codetest") ? Trim(String(Request.Query.codetest)) : "");
+
+	alert(codeTest + " " + dateTest + " " + timeTest);
+	
+	arr = [];
+	arr=dateTest.split(",");
+	if (ArrayCount(arr)<3 || ArrayCount(arr)>3) {
+		//TODO ошибка формата
+	} else{
+		dateTest = arr[1] + arr[2];
+	}
+	
+	alert(ParseDate(dateTest));
+	
+	if (dateTest == "" || timeTest == "" || codeTest == "") {
+		Request.Redirect("view_doc.html?mode=test_order&m=1");
+		Cancel();
+	}
+	//поиск теста
+	tests = XQuery("for $elem in assessments where $elem/code='" + codeTest + "' return $elem");
+	if (ArrayCount(tests) > 1) {
+		Request.Redirect("view_doc.html?mode=doc_type&err=1&object_id="+objectID);
+		Cancel();
+	} else if (ArrayCount(tests) == 0) {
+		Request.Redirect("view_doc.html?mode=doc_type&err=1&object_id="+objectID);
+		Cancel();
+	} else if (ArrayCount(tests) == 1) {
+		for (test in tests) {
+			idTest = test.id;
+			nameTest = test.title;
+		}
+	}
+
+	
+	resultXQTests = XQuery("for $elem in assessments where $elem/code='" + codeTest + "' return $elem");
+	test_learning = 0;
+	if (ArrayCount(resultXQTests) > 1 || ArrayCount(resultXQTests) == 0) {
+        Request.Redirect("view_doc.html?mode=doc_type&object_id=" + objectID + "&doc_id=" + docID + "&err=3");
+		Cancel();
+    } else {
+		test_learning = tools.activate_test_to_person(curUserID, ArrayFirstElem(resultXQTests).id);
+	}
+	if (test_learning == 0) {
+		Request.Redirect("view_doc.html?mode=doc_type&object_id=" + objectID + "&doc_id=" + docID + "&err=4");
+		Cancel();
+	}
+	try {
+		newOrder = OpenNewDoc("x-local://udt/udt_cc_testorder.xmd");
+		newOrder.BindToDb(DefaultDb);
+		newOrder.TopElem.userid = curUserID;
+		newOrder.TopElem.usercode = curUser.code;
+		newOrder.TopElem.username = curUser.fullname;
+		newOrder.TopElem.testcode = idTest;
+		newOrder.TopElem.testname = nameTest;
+		newOrder.TopElem.testdate = ParseDate(dateTest);
+		newOrder.TopElem.testtime = timeTest;
+		newOrder.Save();
+	} catch (e) {
+		alert("Ошибка при записи на тестирование: " + e);
+		Request.Redirect("view_doc.html?mode=doc_type&object_id=" + objectID + "&doc_id=" + docID + "&err=4");
+		Cancel();
+	}
+	Request.Redirect("view_doc.html?mode=doc_type&object_id=" + objectID + "&doc_id=" + docID);
+	Cancel();
+%>

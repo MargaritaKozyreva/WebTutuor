@@ -1,0 +1,409 @@
+<%
+	curUserID = null;
+	curUser = null;
+
+	Server.Execute( "include/host_init.html" );
+
+	_url_path = UrlPath( Request.Url );
+	if ( ( _url_path == '/' || _url_path == '/default.html' ) && curHostSettings.default_web_design != 'default' && curWebDesignUrl != '' )
+	{
+		Response.Redirect( curWebDesignUrl + '/default.html' );
+		Cancel();
+	}
+%>
+
+<!DOCTYPE html>
+<HTML XMLNS="http://www.w3.org/1999/xhtml">
+
+<%Server.Execute( "include/head.html" )%>
+
+<BODY class="defaultBody">
+
+<script>
+	if (document.all && !window.atob) {
+		alert("Вы используете устаревший браузер. Часть функций может быть недоступна или работать некорректно. Рекомендуем обновить браузер.");
+	}
+</script> 
+
+<div id="modal">
+	<div id="window">
+		<p><h3>Логины сотрудников в системе дистанционного обучения NLMK-WebTutor</h3></p>
+		<table width="100%" class="table_blur">
+			<tr>
+				<th>Предприятие группы НЛМК</th>
+				<th>Код предприятия</th>
+				<th>Формат логина</th>
+				<th>Пример логина</th>
+			</tr>
+			<tr>
+				<td>ПАО "НЛМК"</td>
+				<td>1010</td>
+				<td>1010*таб.№</td>
+				<td>1010*1234561</td>
+			</tr>
+			<tr>
+				<td>АО "НЛМК-Инжиниринг"</td>
+				<td>F050</td>
+				<td>F050*таб.№</td>
+				<td>F050*1234561</td>
+			</tr>
+			<tr>
+				<td>АО "НЛМК-Урал"</td>
+				<td>5010</td>
+				<td>5010*таб.№</td>
+				<td>5010*1234561</td>
+			</tr>
+			<tr>
+				<td>ОАО "АЛТАЙ-КОКС"</td>
+				<td>3010</td>
+				<td>3010*таб.№</td>
+				<td>3010*1234561</td>
+			</tr>
+			<tr>
+				<td>ОАО "ВИЗ"</td>
+				<td>F034</td>
+				<td>F034*таб.№</td>
+				<td>F034*1234561</td>
+			</tr>
+			<tr>
+				<td>ОАО "Вторчермет"</td>
+				<td>F013</td>
+				<td>F013*таб.№</td>
+				<td>F013*1234561</td>
+			</tr>
+			<tr>
+				<td>ОАО "ДОЛОМИТ"</td>
+				<td>F007</td>
+				<td>F007*таб.№</td>
+				<td>F007*1234561</td>
+			</tr>
+			<tr>
+				<td>ОАО "СТАГДОК"</td>
+				<td>F008</td>
+				<td>F008*таб.№</td>
+				<td>F008*1234561</td>
+			</tr>
+			<tr>
+				<td>ОАО "Стойленский ГОК"</td>
+				<td>2010</td>
+				<td>2010*таб.№</td>
+				<td>2010*1234561</td>
+			</tr>
+			<tr>
+				<td>ОАО "УралНИИАС"</td>
+				<td>F033</td>
+				<td>F033*таб.№</td>
+				<td>F033*1234561</td>
+			</tr>
+			<tr>
+				<td>ОАО "Чувашвтормет"</td>
+				<td>F032</td>
+				<td>F032*таб.№</td>
+				<td>F032*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "ВИЗ-СТАЛЬ"</td>
+				<td>1020</td>
+				<td>1020*таб.№</td>
+				<td>1020*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "Вторчермет НЛМК Башкортостан"</td>
+				<td>F018</td>
+				<td>F018*таб.№</td>
+				<td>F018*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "Вторчермет НЛМК Волга"</td>
+				<td>F019</td>
+				<td>F019*таб.№</td>
+				<td>F019*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "Вторчермет НЛМК Восток"</td>
+				<td>F020</td>
+				<td>F020*таб.№</td>
+				<td>F020*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "Вторчермет НЛМК Запад"</td>
+				<td>F022</td>
+				<td>F022*таб.№</td>
+				<td>F022*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "Вторчермет НЛМК Западная Сибирь"</td>
+				<td>F023</td>
+				<td>F023*таб.№</td>
+				<td>F023*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "Вторчермет НЛМК Пермь"</td>
+				<td>F024</td>
+				<td>F024*таб.№</td>
+				<td>F024*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "Вторчермет НЛМК Поволжье"</td>
+				<td>F025</td>
+				<td>F025*таб.№</td>
+				<td>F025*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "Вторчермет НЛМК Республика"</td>
+				<td>F026</td>
+				<td>F026*таб.№</td>
+				<td>F026*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "Вторчермет НЛМК Север"</td>
+				<td>F027</td>
+				<td>F027*таб.№</td>
+				<td>F027*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "Вторчермет НЛМК Сибирь"</td>
+				<td>F028</td>
+				<td>F028*таб.№</td>
+				<td>F028*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "Вторчермет НЛМК Урал"</td>
+				<td>F012</td>
+				<td>F012*таб.№</td>
+				<td>F012*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "Вторчермет НЛМК Центр"</td>
+				<td>F030</td>
+				<td>F030*таб.№</td>
+				<td>F030*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "Вторчермет НЛМК Черноземье"</td>
+				<td>F031</td>
+				<td>F031*таб.№</td>
+				<td>F031*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "Вторчермет НЛМК Юг"</td>
+				<td>F021</td>
+				<td>F021*таб.№</td>
+				<td>F021*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "Вторчермет НЛМК"</td>
+				<td>F014</td>
+				<td>F014*таб.№</td>
+				<td>F014*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "ГАЗОБЕТОН 48"</td>
+				<td>F006</td>
+				<td>F006*таб.№</td>
+				<td>F006*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "ГОК "Жерновский - 1"</td>
+				<td>2020</td>
+				<td>2020*таб.№</td>
+				<td>2020*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "ГОК "Усинский - 3"</td>
+				<td>2030</td>
+				<td>2030*таб.№</td>
+				<td>2030*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "НЛМК-ИТ"</td>
+				<td>9010</td>
+				<td>9010*таб.№</td>
+				<td>9010*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "НЛМК-КАЛУГА"</td>
+				<td>5020</td>
+				<td>5020*таб.№</td>
+				<td>5020*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "НЛМК-МЕТИЗ"</td>
+				<td>5030</td>
+				<td>5030*таб.№</td>
+				<td>5030*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "НЛМК-Связь"</td>
+				<td>9030</td>
+				<td>9030*таб.№</td>
+				<td>9030*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "НЛМК-Сорт"</td>
+				<td>F017</td>
+				<td>F017*таб.№</td>
+				<td>F017*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "НЛМК-Урал Сервис"</td>
+				<td>4010</td>
+				<td>4010*таб.№</td>
+				<td>4010*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "НЛМК-УЧЕТНЫЙ ЦЕНТР"</td>
+				<td>F001</td>
+				<td>F001*таб.№</td>
+				<td>F001*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "НОВОЛИПЕЦКАЯ МЕТАЛЛОБАЗА"</td>
+				<td>F009</td>
+				<td>F009*таб.№</td>
+				<td>F009*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "ПО Татвторчермет"</td>
+				<td>F029</td>
+				<td>F029*таб.№</td>
+				<td>F029*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "СТРОИТЕЛЬНО-МОНТАЖНЫЙ ТРЕСТ НЛМК"</td>
+				<td>F011</td>
+				<td>F011*таб.№</td>
+				<td>F011*1234561</td>
+			</tr>
+			<tr>
+				<td>ООО "Торговый дом НЛМК"</td>
+				<td>9020</td>
+				<td>9020*таб.№</td>
+				<td>9020*1234561</td>
+			</tr>
+		</table>
+		<a href="#" class="close" style="text-decoration: none;">Закрыть</a>
+	</div>
+</div>
+
+<TABLE ID="loginBodyTable" CLASS="loginBodyTable" CELLPADDING="0" CELLSPACING="0" BORDER="0" ALIGN="center">
+<TR>
+	<TD ID="docBodyTableTop" CLASS="bgTopUnder">
+		<TABLE WIDTH="100%" CELLPADDING="0" CELLSPACING="0" BORDER="0">
+			<TR>
+				<TD><DIV ID="bg_left_top" CLASS="loginLeftTop"><IMG SRC="pics/1blank.gif" BORDER="0"/></DIV></TD>
+				<TD><DIV ID="header_main" CLASS="loginHeader"><IMG SRC="pics/1blank.gif" BORDER="0"/></DIV></TD>
+			</TR>
+		</TABLE>
+	</TD>
+</TR>
+<tr>
+	<td style="text-align: center; vertical-align: middle;"><h1 style="margin-top: 10px; margin-bottom: 4px;">ВНИМАНИЕ!</h1></td>
+</tr>
+<tr>
+	<td style="text-align: center; vertical-align: middle;">
+		<h2 style="margin-bottom: 8px;"> С 18.09.2017 ИЗМЕНИЛСЯ ФОРМАТ ЛОГИНОВ ДЛЯ ДОСТУПА К СИСТЕМЕ ДИСТАНЦИОННОГО ОБУЧЕНИЯ.
+		</h2>
+	</td>
+</tr>
+<tr>
+	<td style="text-align: center; vertical-align: middle;"><h3 style="margin-bottom: 8px;">ЛОГИНЫ ДОСТУПНЫ ПО <a href="https://apps.nlmk.ru/sites/e-learning/_layouts/15/WopiFrame2.aspx?sourcedoc=/sites/e-learning/instructions/%D0%9B%D0%BE%D0%B3%D0%B8%D0%BD%D1%8B%20%D1%81%D0%BE%D1%82%D1%80%D1%83%D0%B4%D0%BD%D0%B8%D0%BA%D0%BE%D0%B2%20%D0%B2%20%D0%A1%D0%94%D0%9E%20NLMK-WebTutor.pdf&action=default" target="_blank">ССЫЛКЕ</a>.</h3></td>
+</tr>
+<tr>
+	<td style="margin-bottom: 5px;"><p style="margin-bottom: 5px; text-align: justify;"><b>Уважаемые коллеги, хорошая новость: нас становится больше!</b> К системе дистанционного обучения NLMK-WebTutor подключаются все российские площадки Группы НЛМК. Есть одно НО! На разных площадках могут быть одинаковые табельные номера. И, чтобы предотвратить потенциальные проблемы пользователей с доступом к системе, мы изменили формат логинов. <a href="https://apps.nlmk.ru/sites/e-learning/_layouts/15/WopiFrame.aspx?sourcedoc=/sites/e-learning/instructions/%D0%9B%D0%BE%D0%B3%D0%B8%D0%BD%D1%8B%20%D1%81%D0%BE%D1%82%D1%80%D1%83%D0%B4%D0%BD%D0%B8%D0%BA%D0%BE%D0%B2%20%D0%B2%20%D0%A1%D0%94%D0%9E%20NLMK-WebTutor.pdf&action=default">Новые логины пользователей СДО.</a> <b>Обратите внимание, Ваши пароли не изменились!</b>
+	</td>
+</tr>
+
+<tr>
+	<td>
+	<p style="margin-bottom: 15px; text-align: justify;">Вопросы можно задавать нашей службе поддержки: т.: <b>8-4742-446-237</b>, вн.: <b>46-237</b>, email: <b><a href="mailto:nl-a-do@nlmk.com">Дистанционное обучение НЛМК</a></b></p>
+	</td>
+</tr>
+<TR>
+	<TD>
+		<TABLE WIDTH="100%"  border="0" CELLSPACING="0" CELLPADDING="0">
+			<TR>
+				<TD CLASS="mainMenuTop" style="font-size:2px;"><IMG SRC="pics/1blank.gif" WIDTH="1" HEIGHT="1" /></TD>
+			</TR>
+			<TR>
+				<TD CLASS="mainMenuCenter" style="font-size:2px;"><IMG SRC="pics/1blank.gif" WIDTH="1" HEIGHT="1" /></TD>
+			</TR>
+			<TR>
+				<TD CLASS="mainMenuBottom" style="font-size:2px;"><IMG SRC="pics/1blank.gif" WIDTH="1" HEIGHT="1" /></TD>
+			</TR>
+		</TABLE>
+
+		<TABLE WIDTH="100%"  border="0" CELLSPACING="0" CELLPADDING="0" ALIGN="center" CLASS="loginMainTable">
+		<FORM NAME="form1" METHOD="post" ACTION="enter.html">
+			<TR>
+				<TD CLASS="loginMainTDleft">
+					<H3 ALIGN="center"><%=tools.get_web_str('welcome_login')%></H3>
+					<div class="loginBlock">
+						<p style="text-align: justify; margin:0;"><%=tools.get_web_str('welcome_text')%></p></br></br>
+						<CENTER><INPUT NAME="submit" TYPE="submit" CLASS="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" VALUE="РЕГИСТРАЦИЯ" onClick="document.location.href = 'register_user.html'; return false;"/></CENTER>
+					</div>
+					<DIV style="margin-top: 5px; text-align: center;letter-spacing: 0.2px;" CLASS="loginBlock" STYLE="margin-top:5px; text-align:center"><b>А Вы уже были на <a href="https://apps.nlmk.ru/sites/e-learning/SitePages/home_page.aspx" target="_blank">сайте дистанционного обучения?</a></b></DIV>
+				</TD>
+				<TD CLASS="loginMainTDright" style="background-color:white; border-left:2px solid #2c5697;">
+					<H3 ALIGN="center"><%=tools.get_web_str('enter_login')%></H3>
+					<DIV CLASS="loginBlock" style="">
+					<p style="text-align: justify; margin:0;"><%=tools.get_web_str('login_registered')%></p><BR /><BR />	
+					<CENTER><INPUT NAME="submit" style="width:105px;" TYPE="submit" CLASS="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" VALUE="<%=tools.get_web_str('def_enter')%>" /></CENTER>
+					</DIV>
+<%
+if ( global_settings.settings.allow_self_register )
+{
+%>
+					<DIV CLASS="loginBlock" STYLE="margin-top:5px;"><%=tools.get_web_str('login_unregistered')%>&nbsp;<B><A HREF="<%=(global_settings.settings.self_register_form_page == 'user_form_selecting' ? 'user_form_selecting.html' : 'user_form.html')%>"><%=tools.get_web_str('self_register')%></A></B></DIV>
+<%
+}
+if ( global_settings.settings.allow_password_reminder )
+{
+%>
+					
+					<DIV style="margin-top: 5px; text-align: center;" CLASS="loginBlock" STYLE="margin-top:5px; text-align:center">
+					<div style="display: inline-block;float:left;"><b><a href="#modal">Логины пользователей СДО</a></b></div>
+					<div style="display: inline-block;float:right;"><b><a href="recovery_password.html">Напомнить логин/пароль</a></b></div>
+					<div style="clear:both"></div>
+					</DIV>
+<%
+}
+if ( global_settings.settings.disp_anonymous_polls )
+{
+	xarrPolls = XQuery( 'for $elem in polls where $elem/is_anonymous = true() order by $elem/name return $elem' );
+	if ( ArrayOptFirstElem( xarrPolls ) != undefined )
+	{
+%>					
+					<DIV CLASS="loginBlock" STYLE="margin-top:5px; text-align:center"><%=tools_web.get_web_str('c_ononimny_poll')%>:<br/>
+<%
+		for ( catPollElem in xarrPolls )
+		{
+%>
+					<a href="view_poll_body.html?object_id=<%=catPollElem.PrimaryKey%>"><%=catPollElem.name%></a><br/>
+<%
+		}
+%>
+					</DIV>
+<%
+	}
+}
+%>
+				</TD>
+			</TR>
+		</FORM>
+		</TABLE>
+	</TD>
+</TR>
+<TR>
+	<TD>
+		<%Server.Execute( "include/user_footer.html" )%>
+	</TD>
+</TR>
+</TABLE>
+</BODY>
+<script>
+  document.addEventListener('keypress', function (e) {
+    if(e.keyCode === 27) document.getElementById('modal').hidden= 1;
+  }); 
+</script>
+</HTML>

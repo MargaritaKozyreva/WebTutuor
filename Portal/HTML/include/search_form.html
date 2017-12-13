@@ -1,0 +1,53 @@
+<%
+	try
+	{
+		editSize;
+	}
+	catch ( dd )
+	{
+		editSize = 14;
+	}
+	try
+	{
+		curSearch = curMode;
+	}
+	catch ( de )
+	{
+		curSearch = 'search';
+	}
+%>
+<script language="JavaScript">
+	function check_submit()
+	{
+		if ( document.search_form.word.value == '' )
+			alert( '<%=tools.get_web_str('sf_text_alert')%>' );
+		else
+			document.search_form.submit();
+	}
+	
+	function submitenter(myfield,e)
+	{
+		var keycode;
+		if (window.event) keycode = window.event.keyCode;
+		else if (e) keycode = e.which;
+		else return true;
+		
+		if (keycode == 13)
+		{
+		   myfield.form.submit();
+		   return false;
+		}
+		else
+		   return true;
+	}
+</script>
+<table width="100%"  border="0" cellspacing="0" class="searchFormTable">
+     <tr>
+	 <form action="view_doc.html?mode=<%=curSearch%>" name="search_form" method=POST>
+	 <input type="hidden" name="sid" value="<%=tools.get_sum_sid( curDocID )%>"/>
+     	<td width="50%" align="right" class="searchFormTD"><%=tools.get_web_str('sf_desc_text')%></span></td>
+		<td align="center" class="searchFormTD"><input name="word" type="text" class="inputEdit" id="searchfield2" size="<%=editSize%>" onKeyPress="return submitenter(this,event)"/></td>
+		<td width="50%" align="left" class="searchFormTD"><input type="button" name="searchButton" value="<%=HtmlEncode( tools.get_web_str('sf_submit') )%>" class="inputButton" style="width:80px; text-align:center; height: 19px;" onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';" onclick="check_submit();"/></td>
+	</form>
+     </tr>
+</table>

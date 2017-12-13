@@ -195,20 +195,33 @@ try {
 source = ArrayFirstElem(sourceList.TopElem);
 for (var i = 0; i < ArrayCount(source); i++) {
     if (i == 0) continue;
-    if (source[i][userCode] == '') continue;
+    if (source[i][userCode] == '' && source[i][fullName] == '') {
+        alert("В строке " + i + " отсутствует табельный номер или ФИО сотрудника! Строка не обработана")
+        continue;
+    }
     logActivateTest = '';
     activateCodeTest = '';
     try {
         codeExcel = Int(Trim(source[i][userCode]));
     } catch (e) {
-        errMess = 'Ошибка в строке ' + i + ': в поле Табельный номер в Excel могут присутствовать только цифры! Загрузка отменена';
+        errMess = 'Ошибка в строке ' + i + ': в поле Табельный номер в Excel могут присутствовать только цифры! Загрузка прервана';
         if (i == 1) {
             alert(errMess);
-        } else {
-            alert(errMess + '. Результаты обработки см. в log.html.');
-        }
-        return;
+        } else (
+            alert(errMess + '. Результаты обработки см. в log.html.')
+        )
+        break;
     }
+    if (codeExcel > 999999) {
+        errMess = 'Ошибка в строке ' + i + ': в поле Табельный номер должен быть записан табельный номер старого формата - без двухзначного кода и добавочных нулей! Загрузка прервана';
+        if (i == 1) {
+            alert(errMess);
+        } else (
+            alert(errMess + '. Результаты обработки см. в log.html.')
+        )
+        break;
+    }
+
     if (codeExcel) {
         if (StrLowerCase(Trim(source[i][orgFlag])) == 'сгок') {
             resultXQUsers = XQuery("for $elem in collaborators where $elem/code='2010/" + source[i][userCode] + "' return $elem");

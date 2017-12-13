@@ -1,0 +1,62 @@
+<%
+curActiveLearnings = XQuery( 'for $active_learning in active_learnings where $active_learning/person_id = ' + curUserID + ' return $active_learning' );
+countActiveLearnings = ArrayCount( curActiveLearnings );
+curActiveTestLearnings = XQuery( 'for $active_test_learning in active_test_learnings where $active_test_learning/person_id = ' + curUserID + ' return $active_test_learning' );
+countActiveTestLearnings = ArrayCount( curActiveTestLearnings );
+%>
+
+<div id="personalDiv" class="personalDiv">
+<table border="0" width="100%" cellspacing="2" cellpadding="3">
+	<tr>
+		<td class="personalText"><%=curUser.fullname%></td>
+	</tr>
+	<tr>
+		<td class="personalText">
+		<%
+			try
+			{
+				_cur_org = curUser.org_id.ForeignElem;
+				Response.Write( _cur_org.disp_name.HasValue ? _cur_org.disp_name : _cur_org.name );
+			}
+			catch ( gg )
+			{
+				Response.Write( '--' );
+			}
+		%>
+		&nbsp;</td>
+	</tr>
+	<tr>
+		<td class="personalText"><%=tools.get_web_str('ui_unfinished')%>&nbsp;
+<%
+	if ( countActiveLearnings )
+	{
+%>
+		<A class="personalCoursesLink" href="view_doc.html?mode=active_learning&doc_code=active_learnings"><%=tools.get_web_str('ui_courses')%></a>-<%=countActiveLearnings%>
+<%
+	}
+	else
+	{
+%>
+		<%=tools.get_web_str('ui_courses')%>-0
+<%
+	}
+%>	
+	,&nbsp;
+<%
+	if ( countActiveTestLearnings )
+	{
+%>
+		<A class="personalTestsLink" href="view_doc.html?mode=active_test_learning&doc_code=active_test_learnings"><%=tools.get_web_str('ui_tests')%></a>-<%=countActiveTestLearnings%>
+<%
+	}
+	else
+	{
+%>
+		<%=tools.get_web_str('ui_tests')%>-0
+<%
+	}
+%>	
+	</td>
+	</tr>
+</table>
+</div>

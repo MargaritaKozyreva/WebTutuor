@@ -19,23 +19,19 @@ function checkUser() {
         for (user in arrUsers) {
             try {
                 doc = OpenDoc(UrlFromDocID(user.id));
+
                 if (orgCode != '1010') {
                     doc.TopElem.lastname = arrFIO[0];
                     doc.TopElem.firstname = arrFIO[1];
                     doc.TopElem.middlename = arrFIO[2];
                 }
 
-                if (checkEmailFormat(emailUser)) {
-                    doc.TopElem.email = StrLowerCase(emailUser);
-                } else {
-                    Request.Redirect("register_user.html?err=bad_email");
-                    //Cancel();
-                }
+                doc.TopElem.email = StrLowerCase(emailUser);
                 doc.Save();
             } catch (e) {
                 alert('ERR: Регистрация нового сотрудника. Обновление существующего: ' + ExtractUserError(e));
                 Request.Redirect("register_user.html?m=bad_save");
-                //Cancel();
+                Cancel();
             }
 
             flag = tools.create_notification("7_1", doc.DocID);
@@ -161,24 +157,17 @@ function checkEmailFormat(email) {
     }
 }
 
-function checkFIO() {
+function checkFormatFIO() {
     arr = String(fullName).split(' ');
 
     for (k = 0; k < ArrayCount(arr); k++) {
-        if (arr[k] != '') arrFIO.push(arr[k]);
+        if (arr[k] != "") arrFIO.push(arr[k]);
     }
 
-    if (ArrayCount(arrFIO) != 3 || StrCharCount(arrFIO[1]) < 2 || StrCharCount(arrFIO[2]) < 6) {
+    if (ArrayCount(arrFIO) != 3 || StrCharCount(arrFIO[1]) < 2 || StrCharCount(arrFIO[2]) < 6 || StrCharCount(arrFIO[0]) < 2) {
         return false;
     }
 
-    try {
-        tmp = arrFIO[0];
-        tmp = arrFIO[1];
-        tmp = arrFIO[2];
-    } catch (e) {
-        return false;
-    }
     return true;
 }
 
@@ -196,43 +185,53 @@ function checkUserCode() {
 
 //-=Тело скрипта=-
 
+//проверка заполнения данных
 if (fullName == "" || depName == "" || orgCode == "" || userCode == "" || emailUser == "" || posName == "") {
     Request.Redirect("register_user.html?err=bad_data");
-    //Cancel();
+    Cancel();
 }
 
-if (!checkFIO()) {
+//проверка формата ФИО
+if (!checkFormatFIO()) {
     Request.Redirect("register_user.html?err=bad_name");
-    //Cancel();
+    Cancel();
 }
 
+//Проверка табельного номера на цифры
 if (!checkUserCode()) {
     Request.Redirect("register_user.html?err=bad_usercode");
+    Cancel();
 }
+
+if (!checkFormatEmail()) {
+    Request.Redirect("register_user.html?err=bad_email");
+    Cancel();
+}
+
 flagPAO = false;
 
 objUser = checkUser();
 if (objUser == 2) {
-    Request.Redirect("register_user.html?err=user_check_many");
-    //Cancel();
+    Request.Redirect("register_user.html?err=user_check_many&user=" + userCode + "&org=" + orgCode);
+    Cancel();
 } else if (objUser == 0) {
     //проверка SAP
-    if (orgCode == '1010') {
+    if (orgCode == "1010") {
         usersSAP = XQuery("for $elem in cc_standartsapusers where $elem/code='" + userCode + "' return $elem");
         if (ArrayCount(usersSAP) == 1) {
             userSAP = ArrayFirstElem(usersSAP);
-            if (StrLowerCase(String(userSAP.name).split(' ')[0]) == StrLowerCase(String(fullName)).split(' ')[0]) {
+            if (StrLowerCase(String(userSAP.name).split(" ")[0]) == StrLowerCase(String(fullName)).split(" ")[0]) {
                 flagPAO = true;
             } else {
-                Request.Redirect("register_user.html?err=bad_name");
-                //Cancel();
+                Request.Redirect("register_user.html?err=bad_name2");
+                Cancel();
             }
         } else if (ArrayCount(usersSAP) > 1) {
             Request.Redirect("register_user.html?err=bad_sap&user=" + userCode);
-            //Cancel();
+            Cancel();
         } else if (ArrayCount(usersSAP) == 0) {
             Request.Redirect("register_user.html?err=bad_sap&user=" + userCode);
-            //Cancel();
+            Cancel();
         }
     }
 
@@ -241,9 +240,9 @@ if (objUser == 2) {
         newUser = OpenNewDoc('x-local://wtv/wtv_collaborator.xmd');
         newUser.BindToDb(DefaultDb);
 
-        newUser.TopElem.code = orgCode + '/' + userCode;
+        newUser.TopElem.code = orgCode + "/" + userCode;
         newUser.TopElem.custom_elems.ObtainChildByKey("userCode").value = userCode;
-        newUser.TopElem.login = orgCode + '*' + userCode;
+        newUser.TopElem.login = orgCode + "*" + userCode;
 
         newUser.TopElem.password = createPassword(8);
         newUser.TopElem.change_password = true;
@@ -254,20 +253,17 @@ if (objUser == 2) {
         newUser.TopElem.firstname = arrFIO[1];
         newUser.TopElem.middlename = arrFIO[2];
 
-        if (flagPAO) {
-            linkOrg = findOrg('1010');
-        } else {
-            linkOrg = findOrg(Trim(orgCode));
-        }
+        org = (flagPAO) ? org = '1010' : org = Trim(orgCode);
+        linkOrg = findOrg(org);
+
         if (linkOrg.length == 2) {
             newUser.TopElem.org_id = linkOrg[0];
-            if (flagPAO) {
-                linkDep = findDep(Trim(userSAP.codedep), Trim(userSAP.namedep), linkOrg);
-            } else {
-                linkDep = findDep(0, depName, linkOrg);
-            }
+
+            dep = (flagPAO) ? Trim(userSAP.namedep) : depName;
+            linkDep = (flagPAO) ? findDep(Trim(userSAP.codedep), dep, linkOrg) : findDep(0, dep, linkOrg);
             if (linkDep.length == 2) {
                 newUser.TopElem.position_parent_id = linkDep[0];
+
                 if (flagPAO) {
                     pos = StrTitleCase(String(Trim(userSAP.namepos)).substr(0, 1)) + String(Trim(userSAP.namepos)).substr(1);
                 } else {
@@ -280,10 +276,11 @@ if (objUser == 2) {
                     switch (linkPos[0]) {
                         case 0:
                             Request.Redirect("register_user.html?err=bad_save");
-                        //Cancel();
+                            Cancel();
                         case 2:
-                            Request.Redirect("register_user.html?err=pos_many");
-                        //Cancel();
+                            alert('ERR: Регистрация нового сотрудника. Множественное совпадение должностей: ' + pos);
+                            Request.Redirect("register_user.html?err=some_err&user=" + userCode);
+                            Cancel();
                         default:
                             break;
                     }
@@ -293,10 +290,11 @@ if (objUser == 2) {
                 switch (linkDep[0]) {
                     case 0:
                         Request.Redirect("register_user.html?err=bad_save");
-                    //Cancel();
+                        Cancel();
                     case 2:
-                        Request.Redirect("register_user.html?err=dep_many");
-                    //Cancel();
+                        alert('ERR: Регистрация нового сотрудника. Множественное совпадение подразделений: ' + dep);
+                        Request.Redirect("register_user.html?err=some_err&user=" + userCode);
+                        Cancel();
                     default:
                         break;
                 }
@@ -305,32 +303,33 @@ if (objUser == 2) {
         } else {
             switch (linkOrg[0]) {
                 case 0:
-                    Request.Redirect("register_user.html?err=bad_org");
-                //Cancel();
+                    alert('ERR: Регистрация нового сотрудника. Не найдена организация: ' + org);
+                    Request.Redirect("register_user.html?err=some_err&user=" + userCode);
+                    Cancel();
                 case 2:
-                    Request.Redirect("register_user.html?err=org_many");
-                //Cancel();
+                    alert('ERR: Регистрация нового сотрудника. Множественное совпадение организаций: ' + org);
+                    Request.Redirect("register_user.html?err=some_err&user=" + userCode);
+                    Cancel();
                 default:
                     break;
             }
             continue;
         }
-
         newUser.Save();
     } catch (e) {
         alert('ERR: Регистрация нового сотрудника. Создание нового: ' + ExtractUserError(e));
-        Request.Redirect("register_user.html?m=not_save");
-        //Cancel();
+        Request.Redirect("register_user.html?err=bad_save");
+        Cancel();
     }
 
     try {
         flagNew = tools.create_notification("7_1", newUser.DocID);
         if (flagNew) {
             Request.Redirect("register_user.html?m=ok");
-            //Cancel();
+            Cancel();
         } else {
             Request.Redirect("register_user.html?m=ok_not_send");
-            //Cancel();
+            Cancel();
         }
     } catch (e) {
         alert('ERR: Регистрация нового сотрудника. Создание оповещения: ' + e);
@@ -338,10 +337,10 @@ if (objUser == 2) {
 } else if (objUser == 1) {
     //есть юзер и сообщение отправлено
     Request.Redirect("register_user.html?m=ok");
-    //Cancel();
+    Cancel();
 } else if (objUser == 3) {
     //есть юзер и сообщение не отправлено
     Request.Redirect("register_user.html?m=ok_not_send");
-    //Cancel();
+    Cancel();
 }
 //************************************

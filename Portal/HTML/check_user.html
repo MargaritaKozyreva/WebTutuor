@@ -1,0 +1,23 @@
+<%
+  Server.Execute( "include/access_init.html" );
+  check = ( Request.Query.HasProperty( 'p' ) ? String( Request.Query.p ) : '0' );
+%>
+<HTML XMLNS="http://www.w3.org/1999/xhtml">
+	<head>
+	<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=windows-1251" />
+	</head>
+
+	<body>
+		<form name="form_check_user" METHOD="post" ACTION="check_user_server.html">
+			<label for="input1">Табельный номер </label><input type="text" id="input1" placeholder="Коньяк" name="usercode">
+			<INPUT TYPE="submit" NAME="go" VALUE="Проверить" STYLE="width:110px;" CLASS="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';" id="btSend">
+			<% if (check=='no') { %>
+			<p><b>Сотрудник не зарегистрирован в WebTutor</b><p>
+			<%} else if (check=='change') { %>
+			<p><b>Пароль сброшен</b><p>
+			<%} else if (check != '0') { %>
+			<p>Пароль - <b><%=check%></b><p>
+			<%}%>
+		</form>
+	</body>
+</html>

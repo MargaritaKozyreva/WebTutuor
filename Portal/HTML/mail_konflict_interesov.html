@@ -1,0 +1,93 @@
+<%
+    docActiveNotification.TopElem.sender.name='Дистанционное обучение (НЛМК)';
+
+    files = XQuery("for $elem in resources where $elem/code='info_KonfInt' return $elem");
+    for (file in files) {
+        resDoc = OpenDoc(UrlFromDocID(file.id)).TopElem;
+        _sUrl = resDoc.file_url;
+        _sTempFileUrl = ObtainTempFile(UrlPathSuffix(_sUrl));
+        resDoc.get_data(_sTempFileUrl);
+        fldAttachmentChild = docActiveNotification.TopElem.attachments.AddChild();
+        fldAttachmentChild.data.LoadFromFile(_sTempFileUrl);
+        fldAttachmentChild.name = UrlFileName(resDoc.file_name);
+    }
+%>
+    <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+    <html>
+
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    </head>
+
+    <body style="font-family: Calibri, serif;font-size: 12pt;margin: 10px;">
+        <TABLE WIDTH="600" CELLPADDING=9 CELLSPACING=0 STYLE="page-break-before: always">
+            <tr>
+                <td width="100%" VALIGN=TOP STYLE="border: none; padding: 0in;">
+                    <h3 style="margin-bottom: 0px;margin-top: 0px;">
+                        <B>Здравствуйте, <%=objDoc.fullname%>!</B>
+                    </h3>
+                    <P CLASS="western" STYLE="margin-top: 0.08in;margin-bottom: 0.08in;direction: ltr;line-height: 100%;widows: 2;orphans: 2;line-height: 1.2;">Вам назначен курс "<b>Конфликт интересов</b>". Для его прохождения:</P>
+                    <ol style="margin-top: 0px;">
+                        <li style="margin-bottom: 5px;">
+                            Перейдите по следующей ссылке: <a href="http://webtutor.nlmk.ru/newdesign6/view_doc.html?mode=course_info&doc_id=6148914691236517142&object_id=6455608289916961174"
+                                style="color: #0000ff;font-weight: bold;">Конфликт интересов</a>;
+                        </li>
+                        <li style="margin-bottom: 5px;">
+                            В поле "<b>Имя пользователя</b>" введите свой логин: <b><%=objDoc.login%></b>;
+                        </li>
+                        <li style="margin-bottom: 5px;">
+                            В поле "<b>Пароль</b>" введите свой пароль: <b><%=objDoc.password%></b>;
+                        </li>
+                        <li style="margin-bottom: 5px;">
+                            Нажмите кнопку "<b>Вход</b>", а затем "<b>Продолжить</b>";
+                        </li>
+                        <li style="margin-bottom: 5px;">
+                            После успешного прохождения курса необходимо нажать кнопку "<b>Завершить обучение</b>";
+                        </li>
+                        <li style="margin-bottom: 5px;">
+                            Если Вы хотите сменить пароль: на <a href="http://webtutor.nlmk.ru/newdesign6/view_doc.html"
+                                style="color: #0000ff;font-weight: bold;">главной панели</a> системы нажмите кнопку "<b>Сменить пароль</b>",
+                            введите новые данные и нажмите кнопку "
+                            <b>Отправить</b>".
+                        </li>
+                    </ol>
+                    <div class="about_text">
+                        <p style="margin-bottom: 0.08in;direction: ltr;line-height: 100%;widows: 2;orphans: 2;line-height: 1.2;font-size: 12px;font-family: 'Times New Roman', Times, Georgia, sans-serif;">
+                            В соответствии с письмом № 132-08/00203 от 21.09.2017 Вам был назначен курс "Конфликт интересов" в системе дистанционного
+                            обучения NLMK-Webtutor. Завершение изучения курса - 25.12.2017.
+                        </p>
+                        <p style="margin-bottom: 0.08in;direction: ltr;line-height: 100%;widows: 2;orphans: 2;line-height: 1.2;font-size: 12px;font-family: 'Times New Roman', Times, Georgia, sans-serif;">
+                            Цель данного курса - помочь Вам лучше распознавать ситуации конфликта интересов и правильно реагировать в случае его наличия
+                            или появления. В нем Вы сможете изучить теоретические сведения о конфликте интересов, а так же
+                            получить практический опыт по его определению в различных сферах деятельности человека.
+                        </p>
+                        <p style="margin-bottom: 0.08in;direction: ltr;line-height: 100%;widows: 2;orphans: 2;line-height: 1.2;font-size: 12px;font-family: 'Times New Roman', Times, Georgia, sans-serif;">
+                            Курс доступен для прохождения, как на ПК, так и на мобильных платформах. Прохождение курса не займет у вас много времени:
+                            от 45 - 80 минут.
+                        </p>
+                        <p style="margin-bottom: 0.08in;direction: ltr;line-height: 100%;widows: 2;orphans: 2;line-height: 1.2;font-size: 12px;font-family: 'Times New Roman', Times, Georgia, sans-serif;">
+                            Куратор вашего обучения - Виталий Якушин, 40-379, +7 (4742) 44-03-79, yakushin_vv@nlmk.com. Он с удовольствием поможет вам
+                            и ответит на ваши вопросы.
+                        </p>
+                        <p style="margin-bottom: 0.08in;direction: ltr;line-height: 100%;widows: 2;orphans: 2;line-height: 1.2;font-size: 12px;font-family: 'Times New Roman', Times, Georgia, sans-serif;">
+                            Если у вас появятся предложения, замечания, комментарии по курсу - мы с нетерпением будем ждать вашей обратной связи, которую
+                            вы можете направить ответом на это сообщение или в адрес куратора вашего обучения.
+                        </p>
+                        <p style="margin-bottom: 0.08in;direction: ltr;line-height: 100%;widows: 2;orphans: 2;line-height: 1.2;font-size: 12px;font-family: 'Times New Roman', Times, Georgia, sans-serif;">
+                            Подробная инструкция доступна для скачивания по <a href="http://nlmk-webtutor.nlmk:80/download_file.html?file_id=6493366335940723338"
+                                style="color: #0000ff;font-weight: bold;">ссылке</a>.
+                        </p>
+                    </div>
+                    <P STYLE="margin-bottom: 0in; font-size: 18px; margin-top: 14px;margin-bottom: 0.08in;direction: ltr;line-height: 100%;widows: 2;orphans: 2;line-height: 1.2;">
+                        <B>Успехов вам в обучении!</B>
+                    </P>
+                </td>
+            </tr>
+        </TABLE>
+
+        <P STYLE="margin-bottom: 0in;margin-bottom: 0.08in;direction: ltr;line-height: 100%;widows: 2;orphans: 2;line-height: 1.2;">
+            <BR>
+        </P>
+    </body>
+
+    </html>

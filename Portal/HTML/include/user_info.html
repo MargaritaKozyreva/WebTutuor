@@ -1,0 +1,75 @@
+<%
+curActiveLearnings = XQuery( 'for $active_learning in active_learnings where $active_learning/person_id = ' + curUserID + ' return $active_learning' );
+countActiveLearnings = ArrayCount( curActiveLearnings );
+curActiveTestLearnings = XQuery( 'for $active_test_learning in active_test_learnings where $active_test_learning/person_id = ' + curUserID + ' return $active_test_learning' );
+countActiveTestLearnings = ArrayCount( curActiveTestLearnings );
+%>
+
+<div id="personalDiv" class="personalDiv">
+<table border="0" width="100%" cellspacing="2" cellpadding="3">
+	<tr>
+		<td class="personalText"><%=curUser.fullname%></td>
+	</tr>
+	<tr>
+		<td class="personalText"><%=tools.get_web_str('ui_unfinished')%>&nbsp;
+<%
+	if ( countActiveLearnings )
+	{
+%>
+		<a class="personalCoursesLink" href="view_doc.html?mode=active_learning&doc_code=<%=tools.get_web_str('c_doc_active_learnings')%>"><%=tools.get_web_str('ui_courses')%></a>-<%=countActiveLearnings%>
+<%
+	}
+	else
+	{
+%>
+		<%=tools.get_web_str('ui_courses')%>-0
+<%
+	}
+%>	
+	,&nbsp;
+<%
+	if ( countActiveTestLearnings )
+	{
+%>
+		<a class="personalTestsLink" href="view_doc.html?mode=active_test_learning&doc_code=<%=tools.get_web_str('c_doc_active_test_learnings')%>"><%=tools.get_web_str('ui_tests')%></a>-<%=countActiveTestLearnings%>
+<%
+	}
+	else
+	{
+%>
+		<%=tools.get_web_str('ui_tests')%>-0
+<%
+	}
+%>	
+	</td>
+	</tr>
+<%
+try
+{
+	_personal_data_str = tools.get_web_str('c_doc_personal_data');
+	_doc_elem = ArrayFirstElem( XQuery( "for $document in documents where $document/code = '" + ( _personal_data_str == '' || _personal_data_str == 'UNDEFINED' ? 'personal_data' : _personal_data_str ) + "' return $document" ) );
+%>	
+					<tr>
+						<td class="personalText">
+							<select size="1" class="personalMenu" id="persMenu" onchange="if ( this.value != '' ) document.location.href = this.value;return false">
+								<option value="" selected="true"><%=_doc_elem.name%></option>
+<%
+	for ( _cur_doc in XQuery( "for $document in documents where $document/parent_document_id = " + _doc_elem.id + " order by $document/position return $document" ) )
+	{
+%>			
+								<option value="<%=HtmlEncode( tools_web.put_query_string( _cur_doc.id, _cur_doc.template ) )%>"><%=_cur_doc.name%></option>
+<%
+	}
+%>			
+							</select>
+						</td>
+					</tr>
+<%
+}
+catch ( tcd )
+{
+}
+%>
+
+</table>
+</div>

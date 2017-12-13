@@ -1,0 +1,13 @@
+<%
+  Server.Execute( "include/access_init.html" );
+  check = Trim( Request.Query.HasProperty( 'usercode' ) ? String( Request.Query.usercode ) : '0' );
+  
+  users = XQuery("for $elem in collaborators where $elem/code='1010/"+check+"' return $elem");
+  if (ArrayCount(users)==0) Request.Redirect( "check_user.html?p=no" );
+  for (user in users) {
+	doc = OpenDoc(UrlFromDocID(user.id)).TopElem;
+	pass = doc.password;
+	if (pass != '')  Request.Redirect( "check_user.html?p=" + pass);
+	if (pass == '' && doc.change_password) Request.Redirect( "check_user.html?p=change");
+  }
+%>

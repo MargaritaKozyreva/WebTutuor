@@ -20,34 +20,6 @@ function checkUser() {
     arrCount = ArrayCount(arrUsers);
     if (arrCount == 1) {
 		return 1;
-//        for (user in arrUsers) {
-//            try {
-//                doc = OpenDoc(UrlFromDocID(user.id));
-//
-//               if (orgCode != "1010") {
-//                    doc.TopElem.lastname = arrFIO[0];
-//                    doc.TopElem.firstname = arrFIO[1];
-//                    doc.TopElem.middlename = arrFIO[2];
-//                }
-//				doc.TopElem.password = createPassword(8);
-//                doc.TopElem.email = StrLowerCase(emailUser);
-//                doc.Save();
-//            } catch (e) {
-//                alert("ERR: Регистрация нового сотрудника. Обновление существующего: " + ExtractUserError(e));
-//				err = true;
-//			}
-//			if (err) {
-//                Request.Redirect("register_user.html?m=bad_save");
-//                Cancel();
-//			}            
-//
-//            flag = tools.create_notification("7_1", doc.DocID);
-//            if (flag) {
-//                return 1;
-//            } else {
-//                return 3;
-//            }
-//        }
     } else if (arrCount == 0) {
         return 0;
     } else if (arrCount > 1) {
@@ -195,6 +167,7 @@ function checkUserCode() {
     }
 	if (tmp>999999) 
 		return 1;
+	userCode = tmp;
 	return 2;
 }
 
@@ -209,6 +182,9 @@ if (fullName == "" || depName == "" || orgCode == "" || userCode == "" || emailU
     Request.Redirect("register_user.html?err=bad_data");
     Cancel();
 }
+
+orgCodeSAP = orgCode;
+orgCode = String(orgCode).split("/")[0];
 
 //проверка формата ФИО
 if (!checkFormatFIO()) {
@@ -275,7 +251,7 @@ if (objUser == 2) {
         newUser.TopElem.firstname = arrFIO[1];
         newUser.TopElem.middlename = arrFIO[2];
 
-        org = (flagPAO) ? org = '1010' : org = Trim(orgCode);
+        org = (flagPAO) ? org = "1010/00" : org = Trim(orgCodeSAP);
         linkOrg = findOrg(org);
 
         if (linkOrg.length == 2) {

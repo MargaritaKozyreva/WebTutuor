@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ru">
+	<head>
+		<meta charset="utf-8">
+		<title>Заявка на отпуск</title>
+		<meta name="viewport" content="initial-scale=1">
+		<!--styles-->
+		<link rel="stylesheet" href="css/app.min.css">
+		<!--styles-->
+	</head>
+	<body>
+	<header>
+		<div class="wrapper">
+			<div class="logo">
+				<a href="/">
+					<img src="img/logo.png" alt="">
+					<span>Корпоративный<br> портал</span>
+				</a>
+			</div>
+			<div class="btn"></div>
+			<div class="menu">
+				<ul>
+					<li class="active"><a href="#">Лента</a></li>
+					<li><a href="#">Коллеги</a></li>
+					<li><a href="#">Сервисы</a></li>
+				</ul>
+			</div>
+			<div class="panel_user">
+				<div class="search"></div>
+				<div class="message">
+					<div class="count">2</div>
+				</div>
+				<div class="favorite"></div>
+			</div>
+			<div class="profile">
+				<a href="#">
+					<div class="ava"><img src="img/photo.png" alt=""></div>
+					<span class="user">
+						<span class="name">Виктор Никифоров</span>
+						<span class="prof">Администратор</span>
+					</span>
+				</a>
+			</div>
+		</div>
+	</header>
+	<div class="middle">
+		<div class="sidebar">
+			<div class="menu">
+				<ul>
+					<li class="question"><a href="#">Задать вопроc</a></li>
+					<li class="salary"><a href="#">Зарплатный лист </a></li>
+					<li class="help"><a href="#">Заказать справку</a></li>
+					<li class="adressbook"><a href="#">Адресная книга</a></li>
+					<li class="vacation"><a href="#">Заявление на отпуск</a></li>
+					<li class="sites"><a href="#">Сайты подразделений</a></li>
+				</ul>
+			</div>
+			<div class="customize">
+				<a href="#">Настроить меню</a>
+			</div>
+			<div class="calendar">
+				<img src="img/calendar.jpg" alt="">
+			</div>
+		</div>
+		<div class="main">		
+			<!--vacation-->
+	     		    <div class="beadcrumbs">
+                <a href="">Сервис заявка на отпуск</a><p>Подать заявку на отпуск</p>
+		    </div>
+            <div class="flex_jc">
+                <h2>Подать заявку на отпуск</h2> 
+            </div>
+		    <div class="form_standart">
+				<form action="">
+					<div class="field">
+						<div class="label">Тип отпуска:</div>
+	                    <p class="grey">Основной отпуск</p>
+					</div>
+					<div class="field">
+						<div class="label">Даты отпуска:<span>*</span></div>
+	                    <div class="calendar">
+	                        <input type="text" placeholder="ДД/MM/ГГГГ">
+	                        <div class="datepicker_icon"></div>
+	                    </div> 
+	                    <span class="def">-</span>
+	                    <div class="calendar">
+	                        <input type="text" placeholder="ДД/MM/ГГГГ">
+	                        <div class="datepicker_icon"></div>
+	                    </div> 
+					</div>
+					<div class="field">
+						<div class="label">Заместитель на время отпуска:</div>
+	                    <input type="text" placeholder="Ввести имя">
+					</div>
+					<div class="field">
+                        <div class="label">Непосредственный руководитель:<span>*</span></div>
+	                    <input type="text" placeholder="Ввести имя">
+					</div>
+					<div class="field">
+						<div class="label"></div>
+						<div class="value">
+                            <a href="" class="add-func-manager">Добавить функционального руководителя</a>
+		                    <p class="tip"><span>*</span> - обязательно для заполнения</p>
+		                    <div class="wrap-btn">
+			                    <div class="confirm"><input type="submit" value="Отправить на согласование"></div>
+			                    <a class="cancel">Отменить заявку</a>
+		                    </div>
+						</div>
+					</div>
+				</form>
+		    </div>
+            <div class="flex_jc desc-marg">
+                <h2>Мой график отпусков</h2> 
+            </div>
+            <div class="vacation-graphic">
+                <div class="graphic-table">
+                    <div class="row row-head">
+                        <div class="td"><span class="upper">Год /месяц</span></div>
+                        <div class="td">Январь</div>
+                        <div class="td">Февраль</div>
+                        <div class="td">Март</div>
+                        <div class="td">Апрель</div>
+                        <div class="td">Май</div>
+                        <div class="td">Июнь</div>
+                        <div class="td">Июль</div>
+                        <div class="td">Август</div>
+                        <div class="td">Сентябрь</div>
+                        <div class="td">Октябрь</div>
+                        <div class="td">Ноябрь</div>
+                        <div class="td">Декабрь</div>
+                    </div>
+                    <div class="row">
+                        <div class="td">2016</div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                    </div>
+                    <div class="row">
+                        <div class="td">2017</div>
+                        <div class="td"><div class="half-day blue-light">14 дн.</div><div class="half-day blue-dark"></div></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"><div class="all-day blue-light">30 дн.</div></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                    </div>
+                    <div class="row">
+                        <div class="td">2018</div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                        <div class="td"></div>
+                    </div>
+                    <div class="tips">
+                        <div class="tip">
+                            <div class="color-tip blue-light"></div>
+                            <p>- Запланировано дней</p>
+                        </div>
+                        <div class="tip">
+                            <div class="color-tip blue-dark"></div>
+                            <p>- Использовано дней</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+			<!--end vacation-->
+		</div>
+	</div>
+		<!--scripts-->
+		<script src="js/jquery.js"></script>
+		<script src="js/jquery-ui.min.js"></script>
+		<script src="js/masonry.pkgd.min.js"></script>
+		<script src="js/jquery.custom-scroll.min.js"></script>
+		<script src="js/jquery.bxslider.min.js"></script>
+		<script src="js/main.js"></script>
+		<!--scripts-->
+	</body>
+</html>

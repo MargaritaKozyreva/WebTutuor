@@ -179,7 +179,7 @@ if(curMode!="0") {
 <%
 var orgs = XQuery("for $elem in orgs order by $elem/name descending return $elem");
 for (org in orgs) { 
-	if (org.code=="1010") {
+	if (org.code=="1010/00") {
 		codeOrg = org.id;
 }%>
 							<option value='<%=org.code%>' id='<%=org.code%>'><%=org.name%></option>

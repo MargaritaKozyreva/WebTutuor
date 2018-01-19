@@ -7,11 +7,15 @@ Server.Execute( 'view_desc.html' );
 curObject = tempCurObject;
 curObjectID = tempCurObjectID;
 workIE = curCourse.custom_elems.ObtainChildByKey("workInIE").value;
+if (workIE=="")	workIE=false;
 workChrome = curCourse.custom_elems.ObtainChildByKey("workInChrome").value;
+if (workChrome=="")	workChrome=false;
 workMobile = curCourse.custom_elems.ObtainChildByKey("workInMobile").value;
+if (workMobile=="") workMobile=false;
 testCourse = curCourse.custom_elems.ObtainChildByKey("testCourse").value;
-if (testCourse=="")
-	testCourse=false;
+if (testCourse==false) testCourse=true;
+if (testCourse=="")	testCourse=false;
+
 %>
 <br/>
 <%
@@ -136,8 +140,8 @@ function course_launch( _width, _height, _index, _scrolling, _type )
 			|| /1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(navigator.userAgent.substr(0,4))) 
 				isMobile = true;
 		if (isMobile) {
-			if (!(<%=curCourse.custom_elems.ObtainChildByKey("workAdaptInMobile").value%>)) {
-				if (!(<%=(curCourse.custom_elems.ObtainChildByKey("workInMobile").value)==false%> || <%=(curCourse.custom_elems.ObtainChildByKey("workInMobile").value)==""%>)) {
+			if (!(<%=workMobile%>)) {
+				if (!(<%=(workMobile)==false%> || <%=(workMobile)==""%>)) {
 					alert("Данный курс не работает на мобильных устройствах. Необходимо изучать этот курс на компьютере или ноутбуке.");
 					return;
 				} else {
@@ -148,14 +152,17 @@ function course_launch( _width, _height, _index, _scrolling, _type )
 			}
 		} else {
 			if (navigator.userAgent.match(/msie/i) || navigator.userAgent.match(/trident/i)) {
-				if (!(<%=workIE%>)) {
+				if (!(<%=workIE%>) && <%=workChrome%>) {
 					alert("Данный курс не работает в браузере Internet Explorer. Для прохождения курса воспользультесь другим браузером на компьютере.");
 					return;
+				} else if (!(<%=workIE%>) && !(<%=workChrome%>)) {
+					return;
 				}
-			/* } else if (navigator.userAgent.match(/chrome/i)) { */
-			} else {
-				if (!(<%=workChrome%>)) {
+			} else if (navigator.userAgent.match(/chrome/i) || navigator.userAgent.match(/opera/i) || navigator.userAgent.match(/safari/i) ) {
+				if (!(<%=workChrome%>) && <%=workIE%>) {
 					alert("Данный курс работает только в браузере Internet Explorer.");
+					return;
+				} else if (!(<%=workChrome%>) && !(<%=workIE%>)) {
 					return;
 				}
 			}
@@ -387,7 +394,7 @@ function course_attempt_finish(_part_code)
 			}
 %>
 		</td>
-		<td class="<%=_class%>" align="center" width="120">&nbsp;
+		<td class="<%=_class%>" align="center" width="120">
 <%
 			if ( _part_course != undefined && bIsActive )
 			{
@@ -421,7 +428,7 @@ function course_attempt_finish(_part_code)
 						if ( _completed_parent_parts_flag )
 						{
 %>
-			<a href="#" onclick="course_launch('<%=_win_width%>','<%=_win_height%>','<%=_cur_code%>',<%=_scrolling%>,'<%=_type%>');"><%=tools.get_web_str('vlpb_start')%></a><br/>
+			<input type="button" value="<%=tools.get_web_str('vlpb_start')%>" class="inputButtonOver" style=" width:140px " onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';" onclick="course_launch('<%=_win_width%>','<%=_win_height%>','<%=_cur_code%>',<%=_scrolling%>,'<%=_type%>');">
 <%
 						}
 					}
@@ -433,14 +440,14 @@ function course_attempt_finish(_part_code)
 							{
 %>
 			<a href="#" onclick="course_attempt_finish('<%=_part.code%>');"><%=tools.get_web_str('vlpb_attempt_finish')%></a><br/><br/>
-			<a href="#" onclick="course_launch('<%=_win_width%>','<%=_win_height%>','<%=_cur_code%>',<%=_scrolling%>,'<%=_type%>');"><%=( _part.state_id == 2 ? tools.get_web_str('vlpb_show') : tools.get_web_str('vlpb_next') )%></a><br/>
+			<input type="button" value="<%=( _part.state_id == 2 ? tools.get_web_str('vlpb_show') : tools.get_web_str('vlpb_next') )%>" class="inputButtonOver" style=" width:140px " onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';" onclick="course_launch('<%=_win_width%>','<%=_win_height%>','<%=_cur_code%>',<%=_scrolling%>,'<%=_type%>');">
 <%
 							}
 						}
 						else if ( _next_flag )
 						{
 %>
-        	<a href="#" onclick="course_launch('<%=_win_width%>','<%=_win_height%>','<%=_cur_code%>',<%=_scrolling%>,'<%=_type%>');"><%=( _part.state_id == 2 ? tools.get_web_str('vlpb_show') : tools.get_web_str('vlpb_next') )%></a><br/>
+			<input type="button" value="<%=( _part.state_id == 2 ? tools.get_web_str('vlpb_show') : tools.get_web_str('vlpb_next') )%>" class="inputButtonOver" style=" width:140px " onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';" onclick="course_launch('<%=_win_width%>','<%=_win_height%>','<%=_cur_code%>',<%=_scrolling%>,'<%=_type%>');">
 <%
 						}
 					}
@@ -461,7 +468,7 @@ function course_attempt_finish(_part_code)
 			if ( _part_course != undefined && _part_course.desc.HasValue )
 			{
 %>
-			<a href="#" onclick="course_launch('<%=_win_width%>','<%=_win_height%>','<%=_cur_code%>',<%=_scrolling%>,'<%=_type%>');"><%=tools.get_web_str('vlpb_show')%></a>
+			<a href="#" onclick="course_launch('<%=_win_width%>','<%=_win_height%>','<%=_cur_code%>',<%=_scrolling%>,'<%=_type%>');"><%=tools.get_web_str('lpb_show')%></a>
 <%
 			}
 %>
@@ -587,12 +594,6 @@ if ( bIsActive )
 		if ( curCourse.default_response_type_id.HasValue && ArrayCount( responseArray ) == 0 )
 		{
 			resp_href="view_doc.html?mode=response&doc_id="+curDocID+"&response_object_id="+curCourseID+"&response_type_id="+curCourse.default_response_type_id;
-%>
-			<a href="#" onClick="document.location.href='<%=resp_href%>';return false;" CLASS="inputButton" onMouseOver="this.className='inputButtonOver';" onMouseOut="this.className='inputButton';"><%=tools.get_web_str('c_text_create_response')%></a>
-
-			<br>
-			<br>
-<%
 		}
 
 	forumArray = XQuery( 'for $forum in forums where $forum/course_id = ' + curCourseID + ' return $forum' );
@@ -634,7 +635,19 @@ if ( bIsActive )
 	if ( curObject.state_id == 4 || curObject.state_id == 2 || curCourse.finish_without_mastery_score  )
 	{
 %>
-			<a href="#" onclick="course_finish();"><%=tools.get_web_str('vlpb_stop_edu')%></a>
+<%
+		responseArray = XQuery(" for $elem in responses where $elem/object_id = " + curCourseID + " and $elem/person_id = " + curUserID + " return $elem");
+		resp_href='';
+		if ( curCourse.default_response_type_id.HasValue && ArrayCount( responseArray ) == 0 )
+		{
+			resp_href="view_doc.html?mode=response&doc_id="+curDocID+"&response_object_id="+curCourseID+"&response_type_id="+curCourse.default_response_type_id;
+		
+%>
+			<input type="button" value="<%=tools.get_web_str('c_text_create_response')%>" class="inputButtonOver" style="width:140px; margin-right:5px;" onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';" onclick="document.location.href='<%=resp_href%>';return false;">
+<%		
+		}
+%>
+			<input type="button" value="<%=tools.get_web_str('vlpb_stop_edu')%>" class="inputButtonOver" style=" width:140px " onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';" onclick="course_finish();">
 <%
 	}
 	else
@@ -642,13 +655,13 @@ if ( bIsActive )
 		if ( curObject.state_id != 2 && curObject.state_id != 4 )
 		{
 %>
-			<a href="#" onclick="alert( &quot;<%=tools.get_web_str('vlpb_message6')%>&quot; );"><%=tools.get_web_str('vlpb_stop_edu')%></a>
+			<input type="button" value="<%=tools.get_web_str('vlpb_stop_edu')%>" class="inputButtonOver" style=" width:140px " onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';" onclick="alert( &quot;<%=tools.get_web_str('vlpb_message6')%>&quot; );">
 <%
 		}
 		else
 		{
 %>
-			<a href="#" onclick="alert( &quot;<%=tools.get_web_str('vlpb_message7')%><%=curCourse.mastery_score%>.&quot; );"><%=tools.get_web_str('vlpb_stop_edu')%></a>
+			<input type="button" value="<%=tools.get_web_str('vlpb_stop_edu')%>" class="inputButtonOver" style=" width:140px " onmouseover="this.className='inputButtonOver';" onmouseout="this.className='inputButton';" onclick="alert( &quot;<%=tools.get_web_str('vlpb_message7')%><%=curCourse.mastery_score%>.&quot; );">
 <%
 		}
 	}
@@ -663,14 +676,6 @@ if ( bIsActive )
 		<br>
 		<br>
 		<i><%=tools.get_web_str('vlpb_text5')%></i>
-<%
-		}
-		else
-		{
-%>
-		<br>
-		<br>
-		<i>Курс назначен сотрудником <a href="view_doc.html?mode=collaborator&object_id=<%=catUser.id%>&doc_id=<%=curDocID%>"><%=catUser.fullname%></a></i>
 <%
 		}
 	}
@@ -692,7 +697,9 @@ if ( bIsActive )
 			_win_height = curCourse.Height( firstCoursePart.code );
 			_scrolling = curCourse.DispScrolling( firstCoursePart.code );
 %>
-		<td align="right" width="33%" class="activator"><a href="#" onclick="course_launch( '<%=_win_width%>', '<%=_win_height%>', '<%=firstCoursePart.code%>', <%=_scrolling%>, '<%=firstCoursePart.type%>' );"><%=tools.get_web_str('vlpb_start')%></a></td>
+		<td align="right" width="33%" class="activator">
+		</td>
+		
 <%
 		}
 
@@ -710,7 +717,8 @@ if ( bIsActive )
 				_type = 'course';
 			}
 %>
-		<td align="right" width="33%" class="activator"><a href="#" onclick="course_launch( '<%=_win_width%>', '<%=_win_height%>', '<%=curObject.last_usage_part_code%>', <%=_scrolling%>, '<%=_type%>' );"><%=tools.get_web_str('vlpb_next')%></a></td>
+		<td align="right" width="33%" class="activator">
+		</td>
 <%
 		}
 	}

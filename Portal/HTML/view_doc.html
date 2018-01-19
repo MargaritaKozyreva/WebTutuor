@@ -508,13 +508,14 @@ if ( curAccess )
 			{
 				curResponseObjectID = Int( Request.Query.response_object_id );
 				curObject.object_id = curResponseObjectID;
+				_page_name = 'Отзыв о курсе "' + OpenDoc(UrlFromDocID(Int(curResponseObjectID))).TopElem.name + '"';
 			}
 
 			curAction = 'response_create.html?doc_id=' + curDocID + '&response_type_id=' + curObject.response_type_id + '&object_id=' + curObject.object_id + '&sid=' + tools.get_sum_sid( curDocID );
 			readOnly = ( curObjectID != null );
 
 			_main_execute = 'view_custom_templates.html';
-			_page_name = ( curObjectID != null ? ' &quot;' + StrDate( curObject.create_date, false ) + ' ' + curObject.person_fullname + '&quot;' : ( curResponseTypeID != null ? ' &quot;' + tools_web.get_cur_lng_name( curResponseType.name ) + '&quot;' : '' ) );
+			//_page_name = ( curObjectID != null ? StrDate( curObject.create_date, false ) + ' ' + curObject.person_fullname : ( curResponseTypeID != null ? tools_web.get_cur_lng_name( curResponseType.name ) : '' ) );
 			break;
 
 		case 'vacancy':
